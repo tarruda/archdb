@@ -1,5 +1,5 @@
 describe('Normalization/denormalization', function() {
-  var n = archdb.normalize, d = archdb.denormalize;
+  var n = normalize, d = denormalize;
 
   it('normalize shallow date', function() {
     expect(n(new Date(343434))).to.eql('!dt53d8a');

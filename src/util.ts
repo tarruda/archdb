@@ -1,21 +1,20 @@
-module archdb {
-  export function isArray(obj: any) {
+  function isArray(obj: any) {
     return Object.prototype.toString.call(obj) === '[object Array]';
   }
 
-  export function isDate(obj: any) {
+  function isDate(obj: any) {
     return Object.prototype.toString.call(obj) === '[object Date]';
   }
 
-  export function isRegExp(obj) {
+  function isRegExp(obj) {
     return Object.prototype.toString.call(obj) === '[object RegExp]';
   }
 
-  export function isString(obj) {
+  function isString(obj) {
     return Object.prototype.toString.call(obj) === '[object String]';
   }
 
-  export function isNumber(obj) {
+  function isNumber(obj) {
     return Object.prototype.toString.call(obj) === '[object Number]';
   }
 
@@ -30,7 +29,7 @@ module archdb {
          to a format that is friendly for storage using mechanisms
          such as json or message pack
   */
-  export function normalize(obj) {
+  function normalize(obj) {
     var rv;
 
     if (obj === null) {
@@ -63,7 +62,7 @@ module archdb {
     return rv;
   }
 
-  export function denormalize(obj) {
+  function denormalize(obj) {
     var rv;
 
     if (obj === null || typeof obj === 'boolean' ||
@@ -127,4 +126,3 @@ module archdb {
   function hasProp(obj, name: string){
     return Object.prototype.hasOwnProperty.call(obj, name);
   }
-}

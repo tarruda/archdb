@@ -2,7 +2,7 @@ describe('BitArray', function() {
   var array;
 
   beforeEach(function () {
-    array = new archdb.BitArray();
+    array = new BitArray();
   });
 
   it('starts with a zero-length array', function() {
@@ -301,7 +301,7 @@ describe('BitArray', function() {
 
 
   function pack(obj) {
-    var rv = new archdb.BitArray(obj);
+    var rv = new BitArray(obj);
     return rv;
   }
 });

@@ -1,27 +1,22 @@
-module archdb {
-  export enum DbObjectType {
-    IndexNode,
-    Document
-  }
+enum DbObjectType {
+  IndexNode,
+  Document
+}
 
-  export interface DbObject {
-    get namespace(): string;
-    get type(): DbObjectType;
-  }
+interface DbObject {
+  getNamespace(): string;
+  getType(): DbObjectType;
+}
 
-  export interface DoneCallback { (err?: Error); }
+interface DoneCallback { (err: Error); }
 
-  export interface DbObjectCallback { (err?: Error, obj: DbObject); }
+interface DbObjectCallback { (err: Error, obj: DbObject); }
 
-  export interface IdCallback { (err?: Error, id: string); }
+interface IdCallback { (err: Error, id: string); }
 
-  export interface DbStorage {
-    get(id: string, cb: DbObjectCallback);
-
-    save(obj: DbObject, cb: IdCallback);
-
-    get rootId(cb: IdCallback);
-
-    set rootId(id: string, cb: DoneCallback);
-  }
+interface DbStorage {
+  get(id: string, cb: DbObjectCallback);
+  save(obj: DbObject, cb: IdCallback);
+  getRootId(cb: IdCallback);
+  setRootId(id: string, cb: DoneCallback);
 }
