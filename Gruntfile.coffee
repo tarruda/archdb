@@ -11,7 +11,7 @@ module.exports = (grunt) ->
         base_path: 'src'
         sourcemap: true
       browser:
-        src: 'src/**/*.ts'
+        src: ['src/platform/browser.ts', 'src/*.ts']
         dest: 'tmp'
 
     mapcat:
