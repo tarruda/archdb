@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>archdb test suite</title>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../node_modules/mocha/mocha.css" />
+</head>
+<body>
+<div id="mocha">
+  <script src="http://192.168.56.50:35729/livereload.js"></script>
+  <script src="../node_modules/chai/chai.js"></script>
+  <script src="../node_modules/mocha/mocha.js"></script>
+  <script>
+    mocha.setup('bdd');
+    var expect = chai.expect;
+    var disconnected = false;
+    LiveReload.options.maxdelay = 1000;
+    LiveReload.on('connect', function() {
+      if (disconnected) location.reload(true);
+    });
+    LiveReload.on('disconnect', function() {
+      disconnected = true;
+    });
+  </script>
+  <script src="../build/browser.js"></script>
+  <script src="unit/bit_array.js"></script>
+  <script src="unit/normalization.js"></script>
+  <script>
+  mocha.checkLeaks();
+  mocha.globals(['expect', 'disconnected']);
+  mocha.run();
+  </script>
+</div>
+</body>
+</html>
