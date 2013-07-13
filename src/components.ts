@@ -3,9 +3,17 @@ enum DbObjectType {
   Document
 }
 
-interface DbObject {
+interface Normalizable {
+  normalize(): Object;
+}
+
+interface DbObject extends Normalizable {
   getNamespace(): string;
   getType(): DbObjectType;
+}
+
+interface IndexKey extends Normalizable {
+  compareTo(other: IndexKey): number;
 }
 
 interface DoneCallback { (err: Error); }
