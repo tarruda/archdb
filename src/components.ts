@@ -3,6 +3,20 @@ enum DbObjectType {
   Document
 }
 
+interface DoneCallback { (err: Error); }
+
+interface DbObjectCallback { (err: Error, obj: DbObject); }
+
+interface IdCallback { (err: Error, id: string); }
+
+interface UpdateIndexCallback { (err: Error, oldId: string); }
+
+interface NextNodeCallback { (stop: boolean) }
+
+interface VisitNodeCallback {
+  (err: Error, key: IndexKey, id: string, next: NextNodeCallback)
+}
+
 interface Normalizable {
   normalize(): Object;
 }
@@ -16,11 +30,13 @@ interface IndexKey extends Normalizable {
   compareTo(other: IndexKey): number;
 }
 
-interface DoneCallback { (err: Error); }
-
-interface DbObjectCallback { (err: Error, obj: DbObject); }
-
-interface IdCallback { (err: Error, id: string); }
+interface DbIndex {
+  get(key: IndexKey, cb: IdCallback);
+  set(key: IndexKey, id: string, cb: UpdateIndexCallback);
+  del(key: IndexKey, cb: UpdateIndexCallback);
+  inOrder(minKey: IndexKey, cb: VisitNodeCallback);
+  revInOrder(maxKey: IndexKey, cb: VisitNodeCallback);
+}
 
 interface DbStorage {
   get(id: string, cb: DbObjectCallback);
