@@ -70,12 +70,12 @@ class AvlTree implements DbIndexTree {
     };
     var getCb = (err: Error, node: AvlNode) => {
       this.root = node;
-      this.search(node, key, searchCb);
+      this.search(false, key, searchCb);
     }
 
     if (!this.rootId) return cb(null, null);
     if (this.root) {
-      this.search(this.root, key, searchCb);
+      this.search(false, key, searchCb);
     } else {
       this.dbStorage.get(this.rootId, getCb);
     }
@@ -86,7 +86,6 @@ class AvlTree implements DbIndexTree {
       var node, oldValue;
       if (err) return cb(err, null);
       node = path[path.length - 1];
-      if (!node.isNew()) node = node.clone();
       if (comp === 0) {
         oldValue = node.value;
         node.value = value;
@@ -105,7 +104,7 @@ class AvlTree implements DbIndexTree {
     var getCb = (err: Error, node: AvlNode) => {
       if (err) return cb(err, null);
       this.root = node;
-      this.search(node, key, searchCb);
+      this.search(true, key, searchCb);
     };
 
     if (!this.rootId) {
@@ -113,7 +112,7 @@ class AvlTree implements DbIndexTree {
       this.rootId = this.root.id;
       return cb(null, null);
     } else if (this.root) {
-      this.search(this.root, key, searchCb);
+      this.search(true, key, searchCb);
     } else {
       this.dbStorage.get(this.rootId, getCb);
     }
@@ -129,7 +128,7 @@ class AvlTree implements DbIndexTree {
     var getCb = (err: Error, node: AvlNode) => {
       if (err) return cb(err, null);
       this.root = node;
-      this.search(node, key, searchCb);
+      this.search(true, key, searchCb);
     };
     var delCb = (err: Error, oldValue: string) => {
       if (err) return cb(err, null);
@@ -142,7 +141,7 @@ class AvlTree implements DbIndexTree {
     if (!this.rootId) {
       return cb(null, null);
     } else if (this.root) {
-      this.search(this.root, key, searchCb);
+      this.search(true, key, searchCb);
     } else {
       this.dbStorage.get(this.rootId, getCb);
     }
@@ -150,9 +149,51 @@ class AvlTree implements DbIndexTree {
 
   inOrder(minKey: IndexKey, cb: VisitNodeCb) { }
   revInOrder(maxKey: IndexKey, cb: VisitNodeCb) { }
-  getRootId(cb: IdCb) { }
-  setRootId(id: string, cb: DoneCb) { }
-  commit(cb: DoneCb) { }
+
+  commit(cb: DoneCb) {
+    var flushNodeCb = (err: Error, id: string) => {
+      var parent, currentId;
+      if (err) return cb(err);
+      currentId = current.id;
+      current.id = id; 
+      if (parents.length) {
+        parent = parents.pop();
+        if (parent.leftId === currentId) {
+          parent.leftId = current.id;
+        } else {
+          parent.rightId = current.id;
+        }
+        pending.push(parent);
+        visit();
+      } else {
+        this.rootId = id;
+        this.root = null;
+        cb(null);
+      }
+    };
+    var visit = () => {
+      current = pending.pop();
+      if (current.left && current.left.isNew()) {
+        parents.push(current);
+        pending.push(current.left);
+        return yield(visit);
+      } else if (current.right && current.right.isNew()) {
+        parents.push(current);
+        pending.push(current.right);
+        return yield(visit);
+      } else {
+        this.dbStorage.save(current, flushNodeCb);
+      }
+    };
+
+    var current, pending, parents;
+
+    if (!this.root.isNew()) return cb(null);
+
+    pending = [this.root];
+    parents = [];
+    visit();
+  }
 
   private getLeft(from: AvlNode, cb: DbObjectCb) {
     var getCb = (err: Error, node: AvlNode) => {
@@ -178,10 +219,22 @@ class AvlTree implements DbIndexTree {
     this.dbStorage.get(from.rightId, getCb);
   }
 
-  private search(root: AvlNode, key: IndexKey, cb: AvlSearchCb) {
+  private search(copyPath: boolean, key: IndexKey, cb: AvlSearchCb) {
     var nodeCb = (err: Error, node: AvlNode) => {
+      var nodeId;
       if (err) return cb(err, null, null);
       if (!node) return cb(null, comp, path);
+      if (copyPath && !node.isNew()) {
+        nodeId = node.id;
+        node = node.clone();
+        if (nodeId === current.leftId) {
+          current.leftId = node.id;
+          current.left = node;
+        } else {
+          current.rightId = node.id;
+          current.right = node;
+        }
+      }
       current = node;
       get();
     }
@@ -196,11 +249,14 @@ class AvlTree implements DbIndexTree {
         cb(null, comp, path);
       }
     };
+    var comp, current;
     var path = [];
-    var current: AvlNode;
-    var comp: number;
 
-    current = root;
+    if (copyPath && !this.root.isNew()) {
+      this.root = this.root.clone();
+      this.rootId = this.root.id;
+    }
+    current = this.root;
     get();
   }
 

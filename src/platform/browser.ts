@@ -1,3 +1,3 @@
-function nextStack(fn: ()=> void) {
-  setTimeout(fn);
+function yield(fn: () => any) {
+  window.setImmediate(fn);
 }

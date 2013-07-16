@@ -1,4 +1,4 @@
-declare var nextStack: () => void;
+var yield: (fn: () => any) => any;
 
 enum DbObjectType {
   IndexNode,
@@ -38,8 +38,6 @@ interface DbIndexTree {
   del(key: IndexKey, cb: UpdateIndexCb);
   inOrder(minKey: IndexKey, cb: VisitNodeCb);
   revInOrder(maxKey: IndexKey, cb: VisitNodeCb);
-  getRootId(cb: IdCb);
-  setRootId(id: string, cb: DoneCb);
   commit(cb: DoneCb);
 }
 

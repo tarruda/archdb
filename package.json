@@ -9,6 +9,9 @@
     "name": "Thiago de Arruda",
     "email": "tpadilha84@gmail.com"
   },
+  "dependencies": {
+    "setimmediate": "~1.0.1"
+  },
   "devDependencies": {
     "grunt": "~0.4.1",
     "grunt-contrib-uglify": "~0.2.0",
