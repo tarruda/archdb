@@ -40,12 +40,12 @@ describe('AvlTree', function() {
     return rv;
   }
   function insert(tree, from, to) {
-    for (var i = from;i <= to;i++) {
+    for (var i = from;from < to ? i <= to : i >= to;from < to ? i++ : i--) {
       tree.set(i, (i * 2).toString(), function() {});
     }
   }
   function del(tree, from, to) {
-    for (var i = from;i <= to;i++) {
+    for (var i = from;from < to ? i <= to : i >= to;from < to ? i++ : i--) {
       tree.del(i, function() {});
     }
   }
@@ -64,7 +64,212 @@ describe('AvlTree', function() {
     });
 
     describe(title, function() {
-      describe('insert rotations ascending', function() {
+      describe('descending insert rotations', function() {
+        it('24-22', function() {
+          ins(tree, 24, 22);
+          expect(inspect(tree)).to.deep.eql([
+                                       23, 
+                       22,                            24
+          ]);
+        });
+
+        it('24-20', function() {
+          ins(tree, 24, 20);
+          expect(inspect(tree)).to.deep.eql([
+                                       23, 
+                       21,                            24,
+               20,             22
+          ]);
+        });
+
+        it('24-19', function() {
+          ins(tree, 24, 19);
+          expect(inspect(tree)).to.deep.eql([
+                                       21, 
+                       20,                            23,
+               19,                            22,             24
+          ]);
+        });
+
+        it('24-18', function() {
+          ins(tree, 24, 18);
+          expect(inspect(tree)).to.deep.eql([
+                                       21, 
+                       19,                            23,
+               18,             20,            22,             24
+          ]);
+        });
+
+        it('24-16', function() {
+          ins(tree, 24, 16);
+          expect(inspect(tree)).to.deep.eql([
+                                       21, 
+                       19,                            23,
+               17,             20,            22,             24,
+            16,   18
+          ]);
+        });
+
+        it('24-15', function() {
+          ins(tree, 24, 15);
+          expect(inspect(tree)).to.deep.eql([
+                                       21, 
+                       17,                            23,
+               16,             19,            22,             24,
+            15,             18,   20
+          ]);
+        });
+
+        it('24-15', function() {
+          ins(tree, 24, 15);
+          expect(inspect(tree)).to.deep.eql([
+                                       21, 
+                       17,                            23,
+               16,             19,            22,             24,
+            15,             18,   20
+          ]);
+        });
+
+        it('24-14', function() {
+          ins(tree, 24, 14);
+          expect(inspect(tree)).to.deep.eql([
+                                       21, 
+                       17,                             23,
+               15,              19,            22,             24,
+            14,   16,        18,   20
+          ]);
+        });
+
+        it('24-13', function() {
+          ins(tree, 24, 13);
+          expect(inspect(tree)).to.deep.eql([
+                                       17, 
+                       15,                             21,
+               14,             16,              19,          23,
+            13,                              18,   20,    22,   24
+          ]);
+        });
+
+        it('24-12', function() {
+          ins(tree, 24, 12);
+          expect(inspect(tree)).to.deep.eql([
+                                       17, 
+                       15,                             21,
+               13,             16,              19,          23,
+            12,   14,                        18,   20,    22,   24
+          ]);
+        });
+
+        it('24-11', function() {
+          ins(tree, 24, 11);
+          expect(inspect(tree)).to.deep.eql([
+                                       17, 
+                       13,                             21,
+               12,             15,              19,          23,
+            11,             14,   16,        18,   20,    22,   24
+          ]);
+        });
+
+        it('24-10', function() {
+          ins(tree, 24, 10);
+          expect(inspect(tree)).to.deep.eql([
+                                       17, 
+                       13,                             21,
+               11,             15,              19,          23,
+            10,   12,       14,   16,        18,   20,    22,   24
+          ]);
+        });
+
+        it('24-8', function() {
+          ins(tree, 24, 8);
+          expect(inspect(tree)).to.deep.eql([
+                                       17, 
+                       13,                             21,
+               11,             15,              19,          23,
+             9,   12,       14,   16,        18,   20,    22,   24,
+           8, 10
+          ]);
+        });
+
+        it('24-7', function() {
+          ins(tree, 24, 7);
+          expect(inspect(tree)).to.deep.eql([
+                                       17, 
+                       13,                             21,
+                9,             15,              19,          23,
+             8,   11,       14,   16,        18,   20,    22,   24,
+           7,   10, 12
+          ]);
+        });
+
+        it('24-6', function() {
+          ins(tree, 24, 6);
+          expect(inspect(tree)).to.deep.eql([
+                                        17, 
+                        13,                             21,
+                9,              15,              19,          23,
+            7,      11,      14,   16,        18,   20,    22,   24,
+          6,  8,  10, 12
+          ]);
+        });
+
+        it('24-5', function() {
+          ins(tree, 24, 5);
+          expect(inspect(tree)).to.deep.eql([
+                                         17, 
+                          9,                             21,
+                7,               13,               19,          23,
+            6,      8,       11,     15,        18,   20,    22,   24,
+          5,               10, 12, 14, 16
+          ]);
+        });
+
+        it('24-4', function() {
+          ins(tree, 24, 4);
+          expect(inspect(tree)).to.deep.eql([
+                                         17, 
+                          9,                             21,
+                7,               13,               19,          23,
+            5,      8,       11,     15,        18,   20,    22,   24,
+          4,  6,           10, 12, 14, 16
+          ]);
+        });
+
+        it('24-3', function() {
+          ins(tree, 24, 3);
+          expect(inspect(tree)).to.deep.eql([
+                                         17, 
+                          9,                             21,
+                5,               13,               19,          23,
+            4,      7,       11,     15,        18,   20,    22,   24,
+          3,      6,  8,   10, 12, 14, 16
+          ]);
+        });
+
+        it('24-2', function() {
+          ins(tree, 24, 2);
+          expect(inspect(tree)).to.deep.eql([
+                                         17, 
+                          9,                             21,
+                5,               13,               19,          23,
+            3,      7,       11,     15,        18,   20,    22,   24,
+          2,  4,  6,  8,   10, 12, 14, 16
+          ]);
+        });
+
+        it('24-1', function() {
+          ins(tree, 24, 1);
+          expect(inspect(tree)).to.deep.eql([
+                                         9, 
+                          5,                             17,
+                3,                 7,             13,             21,
+            2,      4,         6,      8,     11,     15,     19,     23, 
+          1,                                10, 12, 14, 16, 18, 20, 22, 24
+          ]);
+        });
+      });
+
+      describe('acending insert rotations', function() {
         it('1-3', function() {
           ins(tree, 1, 3);
           expect(inspect(tree)).to.deep.eql([
@@ -270,7 +475,7 @@ describe('AvlTree', function() {
         });
       });
 
-      describe('delete rotations ascending', function() {
+      describe('ascending delete rotations', function() {
         beforeEach(function() {
           ins(tree, 1, 24);
         });
