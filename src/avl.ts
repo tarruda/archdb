@@ -45,6 +45,92 @@ class AvlNode implements DbObject {
     rv.rightId = this.rightId;
     return rv; 
   }
+
+  rotateLeft() {
+    var right = this.right;
+    var left = this.left;
+    var leftId = this.leftId;
+    var newLeft = new AvlNode(this.key, this.value);
+
+    if (!right) {
+      // FIXME remove debug assertion
+      throw new Error('left node not resolved!')
+    }
+
+    // update key/value
+    this.key = right.key;
+    this.value = right.value;
+    // set new left
+    newLeft.left = left;
+    newLeft.leftId = leftId;
+    this.left = newLeft;
+    this.leftId = newLeft.id;
+    // set new right
+    this.right = right.right;
+    this.rightId = right.rightId;
+    // transfer the old right's left to the new left's right
+    newLeft.right = right.left;
+    newLeft.rightId = right.leftId;
+    // recalculate heights;
+    this.recalculateHeights();
+  }
+
+  rotateRight() {
+    var right = this.right;
+    var rightId = this.rightId;
+    var left = this.left;
+    var newRight = new AvlNode(this.key, this.value);
+
+    if (!left) {
+      // FIXME remove debug assertion
+      throw new Error('left node not resolved!')
+    }
+
+    // update key/value
+    this.key = left.key;
+    this.value = left.value;
+    // set new right
+    newRight.right = right;
+    newRight.rightId = rightId;
+    this.right = newRight;
+    this.rightId = newRight.id;
+    // set new left
+    this.left = left.left;
+    this.leftId = left.leftId;
+    // transfer the old left's right to the new right's left
+    newRight.left = left.right;
+    newRight.leftId = left.rightId;
+    // recalculate heights;
+    this.recalculateHeights();
+  }
+
+  calculateHeight() {
+    var rv = -1, left = this.left, right = this.right;
+
+    rv = Math.max(rv, (left === null ? -1 : left.height) + 1);
+    rv = Math.max(rv, (right === null ? -1 : right.height) + 1);
+    return rv;
+  }
+
+  recalculateHeights() {
+    var left, right;
+
+    left = this.left;
+    right = this.right;
+    if (left !== null)
+      left.height = left.calculateHeight();
+    if (right !== null)
+      right.height = right.calculateHeight();
+    this.height = this.calculateHeight();
+  }
+
+  balanceFactor() {
+    var left = this.left, right = this.right;
+    var leftHeight = left === null ? -1 : left.height;
+    var rightHeight = right === null ? -1 : right.height
+
+    return leftHeight - rightHeight;
+  }
 }
 
 interface AvlSearchCb {
@@ -98,7 +184,7 @@ class AvlTree implements DbIndexTree {
         node.right = new AvlNode(key, value);
         node.rightId = node.right.id;
       }
-      ensureIsBalanced(path);
+      this.ensureIsBalanced(path);
       cb(null, null);
     };
     var getCb = (err: Error, node: AvlNode) => {
@@ -132,7 +218,7 @@ class AvlTree implements DbIndexTree {
     };
     var delCb = (err: Error, oldValue: string) => {
       if (err) return cb(err, null);
-      ensureIsBalanced(path);
+      this.ensureIsBalanced(path);
       cb(null, oldValue);
     };
 
@@ -337,117 +423,27 @@ class AvlTree implements DbIndexTree {
 
     return current;
   }
-}
 
-function ensureIsBalanced(path: Array<AvlNode>) {
-  var bf, node;
+  private ensureIsBalanced(path: Array<AvlNode>) {
+    var bf, node;
 
-  while (path.length) {
-    node = path.pop();
-    node.height = calculateHeight(node);
-    bf = balanceFactor(node);
+    while (path.length) {
+      node = path.pop();
+      node.height = node.calculateHeight();
+      bf = node.balanceFactor();
 
-    if (bf === -2) {
-      if (balanceFactor(node.right) === 1)
-        rotateRight(node.right);
-      rotateLeft(node);
-    } else if (bf === 2) {
-      if (balanceFactor(node.left) === -1)
-        rotateLeft(node.left);
-      rotateRight(node);
-    } else if (bf > 2 || bf < -2) {
-      // FIXME remove debug assertion
-      throw new Error('Invalid tree state');
+      if (bf === -2) {
+        if (node.right.balanceFactor() === 1)
+          node.right.rotateRight();
+        node.rotateLeft();
+      } else if (bf === 2) {
+        if (node.left.balanceFactor() === -1)
+          node.left.rotateLeft();
+        node.rotateRight();
+      } else if (bf > 2 || bf < -2) {
+        // FIXME remove debug assertion
+        throw new Error('Invalid tree state');
+      }
     }
   }
-}
-
-function rotateLeft(node: AvlNode) {
-  var right = node.right;
-  var left = node.left;
-  var leftId = node.leftId;
-  var newLeft = new AvlNode(node.key, node.value);
-
-  if (!right) {
-    // FIXME remove debug assertion
-    throw new Error('left node not resolved!')
-  }
-
-  // update root
-  node.key = right.key;
-  node.value = right.value;
-  // set new left
-  newLeft.left = left;
-  newLeft.leftId = leftId;
-  node.left = newLeft;
-  node.leftId = newLeft.id;
-  // set new right
-  node.right = right.right;
-  node.rightId = right.rightId;
-  // transfer the old right's left to the new left's right
-  newLeft.right = right.left;
-  newLeft.rightId = right.leftId;
-  // recalculate heights;
-  recalculateHeights(node);
-}
-
-function rotateRight(node: AvlNode) {
-  var right = node.right;
-  var rightId = node.rightId;
-  var left = node.left;
-  var newRight = new AvlNode(node.key, node.value);
-
-  if (!left) {
-    // FIXME remove debug assertion
-    throw new Error('left node not resolved!')
-  }
-
-  // set new root
-  node.key = left.key;
-  node.value = left.value;
-  // set new right
-  newRight.right = right;
-  newRight.rightId = rightId;
-  node.right = newRight;
-  node.rightId = newRight.id;
-  // set new left
-  node.left = left.left;
-  node.leftId = left.leftId;
-  // transfer the old left's right to the new right's left
-  newRight.left = left.right;
-  newRight.leftId = left.rightId;
-  // recalculate heights;
-  recalculateHeights(node);
-}
-
-function calculateHeight(node: AvlNode) {
-  var rv = -1;
-  rv = Math.max(rv, nodeHeight(node.left) + 1);
-  rv = Math.max(rv, nodeHeight(node.right) + 1);
-  return rv;
-}
-
-function recalculateHeights(node: AvlNode) {
-  var left, right;
-
-  if (node !== null) {
-    left = node.left;
-    right = node.right;
-    if (left !== null)
-      left.height = calculateHeight(left);
-    if (right !== null)
-      right.height = calculateHeight(right);
-    node.height = calculateHeight(node);
-  }
-}
-
-function balanceFactor(node) {
-  var leftHeight = nodeHeight(node.left);
-  var rightHeight = nodeHeight(node.right);
-
-  return leftHeight - rightHeight;
-}
-
-function nodeHeight(node: AvlNode) {
-  return node === null ? -1 : node.height;
 }
