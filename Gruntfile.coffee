@@ -10,14 +10,17 @@ module.exports = (grunt) ->
         target: 'es3'
         base_path: 'src'
         sourcemap: true
+      common:
+        src: 'src/*.ts'
+        dest: 'tmp'
       browser:
-        src: ['src/platform/browser.ts', 'src/*.ts']
+        src: 'src/platform/browser.ts'
         dest: 'tmp'
 
     mapcat:
       browser:
         cwd: 'tmp'
-        src: ['**/*.js']
+        src: ['platform/browser.js', '*.js']
         dest: 'build/browser.js'
 
     connect:
@@ -68,7 +71,7 @@ module.exports = (grunt) ->
       sourceMapPath = filepath + ".map"
       src = grunt.file.read filepath
       src = src.replace(/\/\/@\ssourceMappingURL[^\r\n]*/g, '//')
-      buffer.push src
+      buffer.push src.replace('\r', '')
       orig = new SourceMapConsumer grunt.file.read(sourceMapPath)
       orig.eachMapping (m) ->
         gen.addMapping
@@ -97,6 +100,6 @@ module.exports = (grunt) ->
     typescript.changed = {}
     if /\.ts$/.test filepath
       tsFile = path.relative(typescript.options.base_path, filepath)
-      typescript.changed.src = tsFile
+      typescript.changed.src = path.join('src', tsFile)
       typescript.changed.dest = 'tmp'
     grunt.regarde = changed: ['browser.js']

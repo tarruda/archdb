@@ -1,3 +1,5 @@
+declare var nextStack: () => void;
+
 enum DbObjectType {
   IndexNode,
   Document
@@ -22,20 +24,23 @@ interface Normalizable {
 }
 
 interface DbObject extends Normalizable {
-  getNamespace(): string;
   getType(): DbObjectType;
 }
 
 interface IndexKey extends Normalizable {
   compareTo(other: IndexKey): number;
+  clone(): IndexKey;
 }
 
-interface DbIndex {
+interface DbIndexTree {
   get(key: IndexKey, cb: IdCallback);
   set(key: IndexKey, id: string, cb: UpdateIndexCallback);
   del(key: IndexKey, cb: UpdateIndexCallback);
   inOrder(minKey: IndexKey, cb: VisitNodeCallback);
   revInOrder(maxKey: IndexKey, cb: VisitNodeCallback);
+  getRootId(cb: IdCallback);
+  setRootId(id: string, cb: DoneCallback);
+  commit(cb: DoneCallback);
 }
 
 interface DbStorage {

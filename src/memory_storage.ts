@@ -1,3 +1,5 @@
+/// <reference path="./components.ts"/>
+
 class MemoryStorage implements DbStorage {
   uid: number;
   rootId: string;
