@@ -5,18 +5,18 @@ enum DbObjectType {
   Document
 }
 
-interface DoneCallback { (err: Error); }
+interface DoneCb { (err: Error); }
 
-interface DbObjectCallback { (err: Error, obj: DbObject); }
+interface DbObjectCb { (err: Error, obj: DbObject); }
 
-interface IdCallback { (err: Error, id: string); }
+interface IdCb { (err: Error, id: string); }
 
-interface UpdateIndexCallback { (err: Error, oldId: string); }
+interface UpdateIndexCb { (err: Error, oldId: string); }
 
-interface NextNodeCallback { (stop: boolean) }
+interface NextNodeCb { (stop: boolean) }
 
-interface VisitNodeCallback {
-  (err: Error, key: IndexKey, id: string, next: NextNodeCallback)
+interface VisitNodeCb {
+  (err: Error, key: IndexKey, id: string, next: NextNodeCb)
 }
 
 interface Normalizable {
@@ -33,19 +33,19 @@ interface IndexKey extends Normalizable {
 }
 
 interface DbIndexTree {
-  get(key: IndexKey, cb: IdCallback);
-  set(key: IndexKey, id: string, cb: UpdateIndexCallback);
-  del(key: IndexKey, cb: UpdateIndexCallback);
-  inOrder(minKey: IndexKey, cb: VisitNodeCallback);
-  revInOrder(maxKey: IndexKey, cb: VisitNodeCallback);
-  getRootId(cb: IdCallback);
-  setRootId(id: string, cb: DoneCallback);
-  commit(cb: DoneCallback);
+  get(key: IndexKey, cb: IdCb);
+  set(key: IndexKey, id: string, cb: UpdateIndexCb);
+  del(key: IndexKey, cb: UpdateIndexCb);
+  inOrder(minKey: IndexKey, cb: VisitNodeCb);
+  revInOrder(maxKey: IndexKey, cb: VisitNodeCb);
+  getRootId(cb: IdCb);
+  setRootId(id: string, cb: DoneCb);
+  commit(cb: DoneCb);
 }
 
 interface DbStorage {
-  get(id: string, cb: DbObjectCallback);
-  save(obj: DbObject, cb: IdCallback);
-  getRootId(cb: IdCallback);
-  setRootId(id: string, cb: DoneCallback);
+  get(id: string, cb: DbObjectCb);
+  save(obj: DbObject, cb: IdCb);
+  getRootId(cb: IdCb);
+  setRootId(id: string, cb: DoneCb);
 }

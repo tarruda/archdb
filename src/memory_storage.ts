@@ -11,21 +11,21 @@ class MemoryStorage implements DbStorage {
     this.data = {};
   }
 
-  get(id: string, cb: DbObjectCallback) {
+  get(id: string, cb: DbObjectCb) {
     cb(null, this.data[id]);
   }
 
-  save(obj: DbObject, cb: IdCallback) {
+  save(obj: DbObject, cb: IdCb) {
     var id: string = (this.uid++).toString();
     this.data[id] = obj;
     cb(null, id);
   }
 
-  getRootId(cb: IdCallback) {
+  getRootId(cb: IdCb) {
     cb(null, this.rootId);
   }
 
-  setRootId(id: string, cb: DoneCallback) {
+  setRootId(id: string, cb: DoneCb) {
     this.rootId = id;
     cb(null);
   }

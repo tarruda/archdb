@@ -44,6 +44,11 @@ describe('AvlTree', function() {
       tree.set(i, (i * 2).toString(), function() {});
     }
   }
+  function del(tree, from, to) {
+    for (var i = from;i <= to;i++) {
+      tree.del(i, function() {});
+    }
+  }
   function lookup(tree, key) {
     var rv;
     tree.get(key, function(err, value) { rv = value; });
@@ -260,10 +265,97 @@ describe('AvlTree', function() {
                         8,                             20,
                 4,            12,              18,            22,
             2,      6,    10,     14,      17,     19,    21,     23,
-          1,  3,  5,  7, 9, 11,  13, 15,                             24 
+          1,  3,  5,  7, 9, 11, 13, 15,                             24 
           ]);
         });
       });
+
+      describe('delete rotations ascending', function() {
+        beforeEach(function() {
+          ins(tree, 1, 24);
+        });
+
+        it('1-3', function() {
+          del(tree, 1, 3);
+          expect(inspect(tree)).to.deep.eql([
+                                        16, 
+                        8,                             20,
+                6,            12,              18,            22,
+            4,      7,    10,     14,      17,     19,    21,     23,
+              5,         9, 11, 13, 15,                             24 
+          ]);
+        });
+
+        it('1-6', function() {
+          del(tree, 1, 6);
+          expect(inspect(tree)).to.deep.eql([
+                                        16, 
+                        12,                             20,
+                8,            14,              18,            22,
+            7,     10,    13,     15,      17,     19,    21,     23,
+                  9, 11,                                            24 
+          ]);
+        });
+
+        it('1-9', function() {
+          del(tree, 1, 9);
+          expect(inspect(tree)).to.deep.eql([
+                                       16, 
+                       12,                             20,
+                10,           14,              18,            22,
+                   11,    13,     15,      17,     19,    21,     23,
+                                                                    24
+          ]);
+        });
+
+        it('1-12', function() {
+          del(tree, 1, 12);
+          expect(inspect(tree)).to.deep.eql([
+                                       20, 
+                       16,                            22,
+               14,             18,             21,            23,
+           13,     15,     17,     19,                           24
+          ]);
+        });
+
+        it('1-15', function() {
+          del(tree, 1, 15);
+          expect(inspect(tree)).to.deep.eql([
+                                       20, 
+                       18,                            22,
+               16,             19,             21,            23,
+                  17,                                            24
+          ]);
+        });
+
+        it('1-18', function() {
+          del(tree, 1, 18);
+          expect(inspect(tree)).to.deep.eql([
+                                       22, 
+                       20,                            23,
+               19,             21,                             24
+          ]);
+        });
+
+        it('1-21', function() {
+          del(tree, 1, 21);
+          expect(inspect(tree)).to.deep.eql([
+                                       23, 
+                       22,                            24,
+          ]);
+        });
+
+        it('1-23', function() {
+          del(tree, 1, 23);
+          expect(inspect(tree)).to.deep.eql([24]);
+        });
+
+        it('1-24', function() {
+          del(tree, 1, 24);
+          expect(inspect(tree)).to.deep.eql([]);
+        });
+      });
+
 
       describe('random access', function() {
         beforeEach(function() { ins(tree, 1, 80); });
@@ -320,7 +412,7 @@ describe('AvlNode', function() {
 
   it('has attributes correctly set', function() {
     expect(node.key).to.eql(5);
-    expect(node.valueId).to.eql('value');
+    expect(node.value).to.eql('value');
     expect(node.leftId).to.eql('abc');
     expect(node.rightId).to.eql('def');
   });
