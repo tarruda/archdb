@@ -269,6 +269,92 @@ describe('AvlTree', function() {
         });
       });
 
+      describe('descending delete rotations', function() {
+        beforeEach(function() {
+          ins(tree, 24, 1);
+        });
+
+        it('24-22', function() {
+          del(tree, 24, 22);
+          expect(inspect(tree)).to.deep.eql([
+                                         9, 
+                          5,                             17,
+                3,                 7,             13,             19,
+            2,      4,         6,      8,     11,     15,     18,     21, 
+          1,                                10, 12, 14, 16,         20
+          ]);
+        });
+
+        it('24-19', function() {
+          del(tree, 24, 19);
+          expect(inspect(tree)).to.deep.eql([
+                                         9, 
+                          5,                             13,
+                3,                 7,             11,             17,
+            2,      4,         6,      8,     10,     12,     15,     18, 
+          1,                                                14, 16
+          ]);
+        });
+
+        it('24-16', function() {
+          del(tree, 24, 16);
+          expect(inspect(tree)).to.deep.eql([
+                                         9, 
+                          5,                             13,
+                3,                 7,             11,             15,
+            2,      4,         6,      8,     10,     12,     14,
+          1
+          ]);
+        });
+
+        it('24-13', function() {
+          del(tree, 24, 13);
+          expect(inspect(tree)).to.deep.eql([
+                                         5, 
+                          3,                             9,
+                2,                 4,            7,             11,
+            1,                               6,      8,     10,     12
+          ]);
+        });
+
+        it('24-10', function() {
+          del(tree, 24, 10);
+          expect(inspect(tree)).to.deep.eql([
+                                         5, 
+                          3,                             7,
+                2,                 4,            6,             9,
+            1,                                              8
+          ]);
+        });
+
+        it('24-7', function() {
+          del(tree, 24, 7);
+          expect(inspect(tree)).to.deep.eql([
+                                         3, 
+                          2,                             5,
+                1,                                4,            6
+          ]);
+        });
+
+        it('24-4', function() {
+          del(tree, 24, 4);
+          expect(inspect(tree)).to.deep.eql([
+                                         2, 
+                          1,                             3
+          ]);
+        });
+
+        it('24-2', function() {
+          del(tree, 24, 2);
+          expect(inspect(tree)).to.deep.eql([1]);
+        });
+
+        it('24-1', function() {
+          del(tree, 24, 1);
+          expect(inspect(tree)).to.deep.eql([]);
+        });
+      });
+
       describe('acending insert rotations', function() {
         it('1-3', function() {
           ins(tree, 1, 3);
