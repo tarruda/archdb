@@ -29,6 +29,7 @@ interface DbObject extends Normalizable {
 
 interface IndexKey extends Normalizable {
   compareTo(other: IndexKey): number;
+  normalize(): any;
   clone(): IndexKey;
 }
 
