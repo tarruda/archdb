@@ -41,8 +41,13 @@ describe('AvlTree', function() {
   }
   function insert(tree, from, to) {
     for (var i = from;i <= to;i++) {
-      tree.set(i, i, function() {});
+      tree.set(i, (i * 2).toString(), function() {});
     }
+  }
+  function lookup(tree, key) {
+    var rv;
+    tree.get(key, function(err, value) { rv = value; });
+    return rv;
   }
 
   function generateAvlSuite(title, ins) {
@@ -54,7 +59,19 @@ describe('AvlTree', function() {
     });
 
     describe(title, function() {
-      describe('insert', function() {
+      describe('lookup', function() {
+        it('random access', function() {
+          ins(tree, 1, 80);
+          expect(lookup(tree, 1)).to.eql('2');
+          expect(lookup(tree, 2)).to.eql('4');
+          expect(lookup(tree, 10)).to.eql('20');
+          expect(lookup(tree, 45)).to.eql('90');
+          expect(lookup(tree, 50)).to.eql('100');
+          expect(lookup(tree, 80)).to.eql('160');
+        });
+      });
+
+      describe('rotations', function() {
         it('1-3', function() {
           ins(tree, 1, 3);
           expect(inspect(tree)).to.deep.eql([
