@@ -59,19 +59,7 @@ describe('AvlTree', function() {
     });
 
     describe(title, function() {
-      describe('lookup', function() {
-        it('random access', function() {
-          ins(tree, 1, 80);
-          expect(lookup(tree, 1)).to.eql('2');
-          expect(lookup(tree, 2)).to.eql('4');
-          expect(lookup(tree, 10)).to.eql('20');
-          expect(lookup(tree, 45)).to.eql('90');
-          expect(lookup(tree, 50)).to.eql('100');
-          expect(lookup(tree, 80)).to.eql('160');
-        });
-      });
-
-      describe('rotations', function() {
+      describe('insert rotations ascending', function() {
         it('1-3', function() {
           ins(tree, 1, 3);
           expect(inspect(tree)).to.deep.eql([
@@ -276,6 +264,37 @@ describe('AvlTree', function() {
           ]);
         });
       });
+
+      describe('random access', function() {
+        beforeEach(function() { ins(tree, 1, 80); });
+
+        it('inserted keys', function() {
+          expect(lookup(tree, 1)).to.eql('2');
+          expect(lookup(tree, 2)).to.eql('4');
+          expect(lookup(tree, 10)).to.eql('20');
+          expect(lookup(tree, 45)).to.eql('90');
+          expect(lookup(tree, 50)).to.eql('100');
+          expect(lookup(tree, 80)).to.eql('160');
+        });
+
+        it('updated keys', function() {
+          tree.set(1, 1, function() {});
+          tree.set(2, 2, function() {});
+          tree.set(10, 10, function() {});
+          tree.set(45, 45, function() {});
+          expect(lookup(tree, 1)).to.eql(1);
+          expect(lookup(tree, 2)).to.eql(2);
+          expect(lookup(tree, 10)).to.eql(10);
+          expect(lookup(tree, 45)).to.eql(45);
+        });
+
+        it('inexistent keys', function() {
+          expect(lookup(tree, 0)).to.be.null;
+          expect(lookup(tree, 81)).to.be.null;
+          expect(lookup(tree, 100)).to.be.null;
+        });
+      });
+
     });
   }
 
