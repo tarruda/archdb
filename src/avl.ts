@@ -386,6 +386,13 @@ class AvlTree implements DbIndexTree {
       }
       cb(null, oldValue);
     };
+    var inOrderCb = (err: Error, inOrderPredecessor: AvlNode) => {
+      if (err) return cb(err, null);
+      node.key = inOrderPredecessor.key;
+      node.value = inOrderPredecessor.value;
+      this.delNode(path, delCb);
+    
+    };
     var nodeCb = (err: Error, child: AvlNode) => {
       if (err) return cb(err, null);
       // replace the node with its child
@@ -406,17 +413,14 @@ class AvlTree implements DbIndexTree {
       cb(null, oldValue);
     };
 
-    var inOrderPredecessor, oldValue;
+    var oldValue;
     var node = path[path.length - 1];
     var parent = path[path.length - 2];
 
     oldValue = node.value;
 
     if (node.leftId && node.rightId) {
-      inOrderPredecessor = this.findInOrderPredecessor(path);
-      node.key = inOrderPredecessor.key;
-      node.value = inOrderPredecessor.value;
-      this.delNode(path, delCb);
+      this.findInOrderPredecessor(path, inOrderCb);
     } else {
       if (!node.leftId && !node.rightId) {
         if (parent) {
@@ -441,18 +445,22 @@ class AvlTree implements DbIndexTree {
     }
   }
 
-  private findInOrderPredecessor(path: Array<AvlNode>) {
-    var node = path[path.length - 1];
-    var current = node.left;
-
-    if (current !== null) {
-      while (current.right !== null) {
+  private findInOrderPredecessor(path: Array<AvlNode>,
+      cb: (err: Error, node: AvlNode) => any) {
+    var currentCb = (err: Error, current: AvlNode) => {
+      if (err) return cb(err, null);
+      if (current === null) throw new Error('invalid tree state');
+      if (current.rightId !== null) {
         path.push(current);
-        current = current.right;
+        return this.getRight(current, currentCb);
       }
-    }
+      path.push(current);
+      cb(null, current);
+    };
 
-    return current;
+    var node = path[path.length - 1];
+
+    this.getLeft(node, currentCb);
   }
 
   private ensureIsBalanced(oldValue: string, path: Array<AvlNode>,
@@ -461,9 +469,6 @@ class AvlTree implements DbIndexTree {
       if (err) return cb(err, null);
       if (child.id === node.leftId) node.left = child;
       else node.right = child;
-      if ((node.leftId && !node.left) || (node.rightId && !node.right)) {
-        throw new Error('crap!');
-      }
       checkBalance();
     };
     var nextParent = () => {

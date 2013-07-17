@@ -4,10 +4,10 @@ Number.prototype.compareTo = function(other) {
   return this - other;
 };
 Number.prototype.normalize = function() {
-  return this;
+  return this.valueOf();
 };
 Number.prototype.clone = function() {
-  return this;
+  return this.valueOf();
 };
 
 describe('AvlTree', function() {
@@ -78,7 +78,7 @@ describe('AvlTree', function() {
     });
   });
 
-  function generateAvlRotationSuite(title, ins, del, inspect) {
+  function generateAvlRotationSuite(title, ins, del, delSeq, inspect) {
     describe(title, function() {
       describe('descending insert rotations', function() {
         it('24-22', function(done) {
@@ -779,6 +779,169 @@ describe('AvlTree', function() {
         });
       });
 
+      describe('delete internal nodes', function() {
+        beforeEach(function(done) {
+          ins(tree, 1, 24, done);
+        });
+
+        it('20', function(done) {
+          delSeq(tree, 20, function(err) {
+            expect(inspect(tree)).to.deep.eql([
+                                          16, 
+                          8,                             19,
+                  4,            12,              18,            22,
+              2,      6,    10,     14,      17,            21,     23,
+            1,  3,  5,  7, 9, 11, 13, 15,                             24 
+            ]);
+            done();
+          });
+        });
+
+        it('16', function(done) {
+          delSeq(tree, 20, 16, function(err) {
+            expect(inspect(tree)).to.deep.eql([
+                                          15, 
+                          8,                             19,
+                  4,            12,              18,            22,
+              2,      6,    10,     14,      17,            21,     23,
+            1,  3,  5,  7, 9, 11, 13,                                 24 
+            ]);
+            done();
+          });
+        });
+
+        it('12', function(done) {
+          delSeq(tree, 20, 16, 12, function(err) {
+            expect(inspect(tree)).to.deep.eql([
+                                          15, 
+                          8,                             19,
+                  4,            11,              18,            22,
+              2,      6,    10,     14,      17,            21,     23,
+            1,  3,  5,  7, 9,     13,                                 24 
+            ]);
+            done();
+          });
+        });
+
+        it('11', function(done) {
+          delSeq(tree, 20, 16, 12, 11, function(err) {
+            expect(inspect(tree)).to.deep.eql([
+                                          15, 
+                          8,                             19,
+                  4,            10,              18,            22,
+              2,      6,     9,     14,      17,            21,     23,
+            1,  3,  5,  7,        13,                                 24 
+            ]);
+            done();
+          });
+        });
+
+        it('10', function(done) {
+          delSeq(tree, 20, 16, 12, 11, 10, function(err) {
+            expect(inspect(tree)).to.deep.eql([
+                                          15, 
+                          8,                             19,
+                  4,            13,              18,            22,
+              2,      6,     9,     14,      17,            21,     23,
+            1,  3,  5,  7,                                            24 
+            ]);
+            done();
+          });
+        });
+
+        it('13', function(done) {
+          delSeq(tree, 20, 16, 12, 11, 10, 13, function(err) {
+            expect(inspect(tree)).to.deep.eql([
+                                          15, 
+                          8,                             19,
+                  4,             9,              18,            22,
+              2,      6,            14,      17,            21,     23,
+            1,  3,  5,  7,                                            24 
+            ]);
+            done();
+          });
+        });
+
+        it('9', function(done) {
+          delSeq(tree, 20, 16, 12, 11, 10, 13, 9, function(err) {
+            expect(inspect(tree)).to.deep.eql([
+                                          15, 
+                          4,                             19,
+                  2,             8,              18,            22,
+              1,      3,     6,     14,      17,            21,     23,
+                           5,  7,                                      24 
+            ]);
+            done();
+          });
+        });
+
+        it('19', function(done) {
+          delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, function(err) {
+            expect(inspect(tree)).to.deep.eql([
+                                          15, 
+                          4,                             22,
+                  2,             8,              18,            23,
+              1,      3,     6,     14,      17,     21,            24,
+                           5,  7
+            ]);
+            done();
+          });
+        });
+
+        it('22', function(done) {
+          delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, function(err) {
+            expect(inspect(tree)).to.deep.eql([
+                                          15, 
+                          4,                             21,
+                  2,             8,              18,            23,
+              1,      3,     6,     14,      17,                    24,
+                           5,  7
+            ]);
+            done();
+          });
+        });
+
+        it('21', function(done) {
+          delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, function(err) {
+            expect(inspect(tree)).to.deep.eql([
+                                          15, 
+                          4,                             18,
+                  2,             8,              17,            23,
+              1,      3,     6,     14,                             24,
+                           5,  7
+            ]);
+            done();
+          });
+        });
+
+        it('15', function(done) {
+          delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, 15,
+                 function(err) {
+            expect(inspect(tree)).to.deep.eql([
+                                          14, 
+                          4,                             18,
+                  2,             6,              17,            23,
+              1,      3,     5,     8,                              24,
+                                  7
+            ]);
+            done();
+          });
+        });
+
+        it('18', function(done) {
+          delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, 15, 18,
+                 function(err) {
+            expect(inspect(tree)).to.deep.eql([
+                                          6, 
+                          4,                            14,
+                  2,             5,              8,             23,
+              1,      3,                     7,              17,    24
+            ]);
+            done();
+          });
+        });
+      });
+
       describe('random access', function() {
         beforeEach(function(done) { ins(tree, 1, 80, done); });
 
@@ -886,6 +1049,32 @@ describe('AvlTree', function() {
     };
     next();
   }
+  function delSeqTransaction() {
+    var args = arguments;
+    var tree = args[0];
+    var cb = args[arguments.length - 1];
+    var i = 1;
+    var next = function(err) {
+      if (i === args.length - 1) {
+        return cb();
+      }
+      tree.del(args[i++], next);
+    };
+    next();
+  }
+  function delSeqCommit() {
+    var args = arguments;
+    var tree = args[0];
+    var cb = args[arguments.length - 1];
+    var i = 1;
+    var next = function(err) {
+      if (i === args.length - 1) {
+        return tree.commit(cb);
+      }
+      tree.del(args[i++], next);
+    };
+    next();
+  }
   function insTransaction(tree, from, to, cb) {
     var i = from;
     var next = function(err) {
@@ -913,9 +1102,9 @@ describe('AvlTree', function() {
   }
 
   generateAvlRotationSuite('uncommitted', insTransaction, delTransaction,
-                           inspect);
+                           delSeqTransaction, inspect);
   generateAvlRotationSuite('committed', insCommit, delCommit,
-                           inspectStorageTree);
+                           delSeqCommit, inspectStorageTree);
 });
 
 describe('AvlNode', function() {
