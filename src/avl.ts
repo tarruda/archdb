@@ -237,6 +237,34 @@ class AvlTree implements DbIndexTree {
   inOrder(minKey: IndexKey, cb: VisitNodeCb) { }
   revInOrder(maxKey: IndexKey, cb: VisitNodeCb) { }
 
+  levelOrder(cb) {
+    var leftCb = (err: Error, left: AvlNode) => {
+      q.push(left);
+      if (node.rightId) this.getRight(node, rightCb);
+      else yield(nextNode);
+    };
+    var rightCb = (err: Error, right: AvlNode) => {
+      q.push(right);
+      yield(nextNode);
+    };
+    var nextNode = () => {
+      if (!q.length) return cb(null, rv);
+      node = q.shift();
+      rv.push(node.key.normalize());
+      if (node.leftId) this.getLeft(node, leftCb);
+      else if (node.rightId) this.getRight(node, rightCb);
+      else yield(nextNode);
+    };
+    var rv = [], q, node;
+
+    if (!this.rootId) return cb(null, rv);
+
+    q = [];
+
+    if (!this.root) this.resolveNode(this.rootId, rightCb);
+    else rightCb(null, this.root);
+  }
+
   commit(cb: DoneCb) {
     var flushNodeCb = (err: Error, id: string) => {
       var parent, currentId;
@@ -478,4 +506,5 @@ class AvlTree implements DbIndexTree {
     };
     this.dbStorage.get(id, getCb);
   }
+
 }

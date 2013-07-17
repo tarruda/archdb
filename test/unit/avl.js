@@ -33,33 +33,61 @@ describe('AvlTree', function() {
       });
     });
 
-    it('merges committed and uncommitted insert data', function(done) {
-      ins(tree, 1, 1, true, function(err) {
-        if (err) return done(err);
+    it('manages committed and uncommitted data transparently', function(done) {
+      var rootId;
+      ins(tree, 1, 1, true, function() {
         expect(inspectStorage(tree.rootId)).to.deep.eql([1]);
-        ins(tree, 2, 3, true, function(err) {
+        ins(tree, 2, 3, true, function() {
           expect(inspectStorage(tree.rootId)).to.deep.eql([
             2,
           1,  3
           ]);
-          ins(tree, 4, 4, true, function(err) {
+          ins(tree, 4, 7, true, function() {
             expect(inspectStorage(tree.rootId)).to.deep.eql([
-              2,
-            1,  3,
-                  4
+                  4, 
+              2,      6,
+            1,  3,  5,  7
             ]);
-            done();
-            // ins(tree, 16, 31);
-            // tree.commit(function(err) {
-            //   expect(inspectStorage(tree.rootId)).to.deep.eql([
-            //   16,
-            //   8, 24,
-            //   4, 12, 20, 28,
-            //   2, 6, 10, 14, 18, 22, 26, 30,
-            //   1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31
-            //   ]);
-            //   done();
-            // });
+            ins(tree, 8, 15, true, function() {
+              expect(inspectStorage(tree.rootId)).to.deep.eql([
+                             8, 
+                    4,               12,
+                2,      6,      10,       14,
+              1,  3,  5,  7,   9, 11,   13, 15
+              ]);
+              // save the persisted rootId
+              rootId = tree.rootId;
+              ins(tree, 16, 31, function() {
+                tree.levelOrder(function(err, items) {
+                  // this state is only visible in the current transaction
+                  expect(items).to.deep.eql([
+                  16,
+                  8, 24,
+                  4, 12, 20, 28,
+                  2, 6, 10, 14, 18, 22, 26, 30,
+                  1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31
+                  ]);
+                  // not committed, so the persisted tree state wasn't
+                  // modified
+                  expect(inspectStorage(rootId)).to.deep.eql([
+                                 8, 
+                        4,               12,
+                    2,      6,      10,       14,
+                  1,  3,  5,  7,   9, 11,   13, 15
+                  ]);
+                  tree.commit(function(err) {
+                    expect(inspectStorage(tree.rootId)).to.deep.eql([
+                    16,
+                    8, 24,
+                    4, 12, 20, 28,
+                    2, 6, 10, 14, 18, 22, 26, 30,
+                    1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31
+                    ]);
+                    done();
+                  });
+                });
+              });
+            });
           });
         });
       });
