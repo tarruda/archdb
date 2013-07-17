@@ -305,7 +305,7 @@ class AvlTree implements DbIndexTree {
 
     var current, pending, parents;
 
-    if (!this.root.isNew()) return cb(null);
+    if (!this.root || !this.root.isNew()) return cb(null);
 
     pending = [this.root];
     parents = [];
