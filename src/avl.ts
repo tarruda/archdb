@@ -311,10 +311,9 @@ class AvlTree implements DbIndexTree {
   private delNode(path: Array<AvlNode>, cb: UpdateIndexCb) {
     var delCb = (err: Error, old: string) => {
       if (err) return cb(err, null);
-      if (old !== node.value) {
-        // FIXME remove debug assertion
+      if (old !== node.value)
+        // TODO remove debug assert
         throw new Error('invalid expected value');
-      }
       cb(null, oldValue);
     };
     var inOrderCb = (err: Error, inOrderPredecessor: AvlNode) => {
@@ -338,7 +337,6 @@ class AvlTree implements DbIndexTree {
         this.rootId = child.id;
         this.root = child;
       }
-      if (node !== path[path.length -1]) throw new Error('adssad')
       path.pop();
       cb(null, oldValue);
     };
@@ -380,7 +378,9 @@ class AvlTree implements DbIndexTree {
     var currentCb = (err: Error, current: AvlNode) => {
       var currentId;
       if (err) return cb(err, null);
-      if (current === null) throw new Error('invalid tree state');
+      if (current === null) 
+        // TODO remove debug assert
+        throw new Error('invalid tree state');
       if (!current.volatile()) {
         currentId = current.id;
         current = current.clone();
@@ -422,6 +422,7 @@ class AvlTree implements DbIndexTree {
       if (child.id === node.leftId) node.left = child;
       else node.right = child;
       if ((node.leftId && !node.left) || (node.rightId && !node.right))
+        // TODO remove debug assert
         throw new Error('invalid tree state');
       checkBalance();
     };
@@ -431,7 +432,9 @@ class AvlTree implements DbIndexTree {
       bf = node.balanceFactor();
       if (bf === -2) this.getLeft(node.right, rightLeftCb);
       else if (bf === 2) this.getLeft(node.left, leftLeftCb);
-      else if (bf > 2 || bf < -2) throw new Error('Invalid tree state');
+      else if (bf > 2 || bf < -2) 
+        // TODO remove debug assert
+        throw new Error('Invalid tree state');
       else yield(nextParent);
     };
     var rightLeftCb = (err: Error, rightLeft: AvlNode) => {
@@ -504,10 +507,9 @@ class AvlTree implements DbIndexTree {
     var leftId = node.leftId;
     var newLeft = new AvlNode(node.key, node.value);
 
-    if (!right) {
-      // FIXME remove debug assertion
+    if (!right)
+      // TODO remove debug assert
       throw new Error('right node not resolved!');
-    }
 
     // update key/value
     node.key = right.key;
@@ -544,10 +546,9 @@ class AvlTree implements DbIndexTree {
     var left = node.left;
     var newRight = new AvlNode(node.key, node.value);
 
-    if (!left) {
-      // FIXME remove debug assertion
+    if (!left)
+      // TODO remove debug assert
       throw new Error('left node not resolved!')
-    }
 
     // update key/value
     node.key = left.key;
