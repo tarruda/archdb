@@ -35,7 +35,7 @@ class AvlNode implements DbObject {
     this.rightId, this.height];
   }
 
-  isNew(): boolean {
+  volatile(): boolean {
     return this.id[0] === '-';
   }
 
@@ -221,11 +221,11 @@ class AvlTree implements DbIndexTree {
     };
     var visit = () => {
       current = pending.pop();
-      if (current.left && current.left.isNew()) {
+      if (current.left && current.left.volatile()) {
         parents.push(current);
         pending.push(current.left);
         return yield(visit);
-      } else if (current.right && current.right.isNew()) {
+      } else if (current.right && current.right.volatile()) {
         parents.push(current);
         pending.push(current.right);
         return yield(visit);
@@ -236,7 +236,7 @@ class AvlTree implements DbIndexTree {
 
     var current, pending, parents;
 
-    if (!this.root || !this.root.isNew()) return cb(null);
+    if (!this.root || !this.root.volatile()) return cb(null);
 
     pending = [this.root];
     parents = [];
@@ -272,7 +272,7 @@ class AvlTree implements DbIndexTree {
       var nodeId;
       if (err) return cb(err, null, null);
       if (!node) return cb(null, comp, path);
-      if (copyPath && !node.isNew()) {
+      if (copyPath && !node.volatile()) {
         nodeId = node.id;
         node = node.clone();
         if (nodeId === current.leftId) {
@@ -300,7 +300,7 @@ class AvlTree implements DbIndexTree {
     var comp, current;
     var path = [];
 
-    if (copyPath && !this.root.isNew()) {
+    if (copyPath && !this.root.volatile()) {
       this.root = this.root.clone();
       this.rootId = this.root.id;
     }
@@ -381,7 +381,7 @@ class AvlTree implements DbIndexTree {
       var currentId;
       if (err) return cb(err, null);
       if (current === null) throw new Error('invalid tree state');
-      if (!current.isNew()) {
+      if (!current.volatile()) {
         currentId = current.id;
         current = current.clone();
         if (parent.leftId === currentId) {
@@ -441,7 +441,7 @@ class AvlTree implements DbIndexTree {
     var rightRightCb = (err: Error, rightRight: AvlNode) => {
       if (err) return cb(err, null);
       if (node.right.balanceFactor() === 1) {
-        if (!node.right.isNew()) {
+        if (!node.right.volatile()) {
           node.right = node.right.clone();
           node.rightId = node.right.id;
         }
@@ -457,7 +457,7 @@ class AvlTree implements DbIndexTree {
     var leftRightCb = (err: Error, leftLeft: AvlNode) => {
       if (err) return cb(err, null);
       if (node.left.balanceFactor() === -1) {
-        if (!node.left.isNew()) {
+        if (!node.left.volatile()) {
           node.left = node.left.clone();
           node.leftId = node.left.id;
         }
