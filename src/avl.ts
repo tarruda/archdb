@@ -171,7 +171,7 @@ class AvlTree implements DbIndexTree {
   levelOrder(cb) {
     var leftCb = (err: Error, left: AvlNode) => {
       q.push(left);
-      if (node.rightId) this.getRight(node, rightCb);
+      if (node.rightId) this.resolveRight(node, rightCb);
       else yield(nextNode);
     };
     var rightCb = (err: Error, right: AvlNode) => {
@@ -182,8 +182,8 @@ class AvlTree implements DbIndexTree {
       if (!q.length) return cb(null, rv);
       node = q.shift();
       rv.push(node.key.normalize());
-      if (node.leftId) this.getLeft(node, leftCb);
-      else if (node.rightId) this.getRight(node, rightCb);
+      if (node.leftId) this.resolveLeft(node, leftCb);
+      else if (node.rightId) this.resolveRight(node, rightCb);
       else yield(nextNode);
     };
     var rv = [], q, node;
@@ -243,30 +243,6 @@ class AvlTree implements DbIndexTree {
     visit();
   }
 
-  private getLeft(from: AvlNode, cb: DbObjectCb) {
-    var getCb = (err: Error, node: AvlNode) => {
-      if (err) return cb(err, null);
-      from.left = node;
-      cb(null, node);
-    }
-
-    if (from.left) return cb(null, from.left);
-    if (!from.leftId) return cb(null, null);
-    this.resolveNode(from.leftId, getCb);
-  }
-
-  private getRight(from: AvlNode, cb: DbObjectCb) {
-    var getCb = (err: Error, node: AvlNode) => {
-      if (err) return cb(err, null);
-      from.right = node;
-      cb(null, node);
-    }
-
-    if (from.right) return cb(null, from.right);
-    if (!from.rightId) return cb(null, null);
-    this.resolveNode(from.rightId, getCb);
-  }
-
   private search(copyPath: boolean, key: IndexKey, cb: AvlSearchCb) {
     var nodeCb = (err: Error, node: AvlNode) => {
       var nodeId;
@@ -290,9 +266,9 @@ class AvlTree implements DbIndexTree {
       path.push(current);
       comp = key.compareTo(current.key);
       if (comp < 0) {
-        this.getLeft(current, nodeCb);
+        this.resolveLeft(current, nodeCb);
       } else if (comp > 0) {
-        this.getRight(current, nodeCb);
+        this.resolveRight(current, nodeCb);
       } else {
         cb(null, comp, path);
       }
@@ -366,9 +342,9 @@ class AvlTree implements DbIndexTree {
         path.pop();
         cb(null, oldValue);
       } else if (!node.leftId) {
-        this.getRight(node, nodeCb);
+        this.resolveRight(node, nodeCb);
       } else if (!node.rightId) {
-        this.getLeft(node, nodeCb);
+        this.resolveLeft(node, nodeCb);
       }
     }
   }
@@ -395,7 +371,7 @@ class AvlTree implements DbIndexTree {
       if (current.rightId !== null) {
         parent = current; 
         path.push(parent);
-        return this.getRight(current, currentCb);
+        return this.resolveRight(current, currentCb);
       }
       path.push(current);
       cb(null, current);
@@ -403,7 +379,7 @@ class AvlTree implements DbIndexTree {
 
     var parent = path[path.length - 1]
 
-    this.getLeft(parent, currentCb);
+    this.resolveLeft(parent, currentCb);
   }
 
   private ensureIsBalanced(oldValue: string, path: Array<AvlNode>,
@@ -413,8 +389,8 @@ class AvlTree implements DbIndexTree {
       node = path.pop();
       // it is possible one of the node's child was not retrieved
       // from db storage yet
-      if (node.leftId && !node.left) this.getLeft(node, childCb);
-      else if (node.rightId && !node.right) this.getRight(node, childCb);
+      if (node.leftId && !node.left) this.resolveLeft(node, childCb);
+      else if (node.rightId && !node.right) this.resolveRight(node, childCb);
       else checkBalance();
     };
     var childCb = (err: Error, child: AvlNode) => {
@@ -430,8 +406,8 @@ class AvlTree implements DbIndexTree {
       var bf;
       node.refreshHeight();
       bf = node.balanceFactor();
-      if (bf === -2) this.getLeft(node.right, rightLeftCb);
-      else if (bf === 2) this.getLeft(node.left, leftLeftCb);
+      if (bf === -2) this.resolveLeft(node.right, rightLeftCb);
+      else if (bf === 2) this.resolveLeft(node.left, leftLeftCb);
       else if (bf > 2 || bf < -2) 
         // TODO remove debug assert
         throw new Error('Invalid tree state');
@@ -439,7 +415,7 @@ class AvlTree implements DbIndexTree {
     };
     var rightLeftCb = (err: Error, rightLeft: AvlNode) => {
       if (err) return cb(err, null);
-      this.getRight(node.right, rightRightCb);
+      this.resolveRight(node.right, rightRightCb);
     };
     var rightRightCb = (err: Error, rightRight: AvlNode) => {
       if (err) return cb(err, null);
@@ -455,7 +431,7 @@ class AvlTree implements DbIndexTree {
     };
     var leftLeftCb = (err: Error, leftLeft: AvlNode) => {
       if (err) return cb(err, null);
-      this.getRight(node.left, leftRightCb);
+      this.resolveRight(node.left, leftRightCb);
     };
     var leftRightCb = (err: Error, leftLeft: AvlNode) => {
       if (err) return cb(err, null);
@@ -483,13 +459,13 @@ class AvlTree implements DbIndexTree {
     nextParent(null);
   }
 
-  rotateLeft(node: AvlNode, cb: DoneCb) {
+  private rotateLeft(node: AvlNode, cb: DoneCb) {
     var rightRightCb = (err: Error) => {
       if (err) return cb(err);
       // set new right
       node.right = right.right;
       node.rightId = right.rightId;
-      this.getLeft(right, rightLeftCb);
+      this.resolveLeft(right, rightLeftCb);
     };
     var rightLeftCb = (err: Error) => {
       if (err) return cb(err);
@@ -519,16 +495,16 @@ class AvlTree implements DbIndexTree {
     newLeft.leftId = leftId;
     node.left = newLeft;
     node.leftId = newLeft.id;
-    this.getRight(right, rightRightCb);
+    this.resolveRight(right, rightRightCb);
   }
 
-  rotateRight(node: AvlNode, cb: DoneCb) {
+  private rotateRight(node: AvlNode, cb: DoneCb) {
     var leftLeftCb = (err: Error) => {
       if (err) return cb(err);
       // set new left
       node.left = left.left;
       node.leftId = left.leftId;
-      this.getRight(left, leftRightCb);
+      this.resolveRight(left, leftRightCb);
     };
     var leftRightCb = (err: Error) => {
       if (err) return cb(err);
@@ -558,7 +534,7 @@ class AvlTree implements DbIndexTree {
     newRight.rightId = rightId;
     node.right = newRight;
     node.rightId = newRight.id;
-    this.getLeft(left, leftLeftCb);
+    this.resolveLeft(left, leftLeftCb);
   }
 
   private resolveNode(id: string, cb: DbObjectCb) {
@@ -569,4 +545,27 @@ class AvlTree implements DbIndexTree {
     this.dbStorage.get(id, getCb);
   }
 
+  private resolveLeft(from: AvlNode, cb: DbObjectCb) {
+    var getCb = (err: Error, node: AvlNode) => {
+      if (err) return cb(err, null);
+      from.left = node;
+      cb(null, node);
+    }
+
+    if (from.left) return cb(null, from.left);
+    if (!from.leftId) return cb(null, null);
+    this.resolveNode(from.leftId, getCb);
+  }
+
+  private resolveRight(from: AvlNode, cb: DbObjectCb) {
+    var getCb = (err: Error, node: AvlNode) => {
+      if (err) return cb(err, null);
+      from.right = node;
+      cb(null, node);
+    }
+
+    if (from.right) return cb(null, from.right);
+    if (!from.rightId) return cb(null, null);
+    this.resolveNode(from.rightId, getCb);
+  }
 }
