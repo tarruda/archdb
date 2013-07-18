@@ -14,7 +14,7 @@ interface IdCb { (err: Error, id: string); }
 interface NextNodeCb { (stop: boolean) }
 
 interface VisitNodeCb {
-  (err: Error, key: IndexKey, id: string, next: NextNodeCb)
+  (err: Error, next: NextNodeCb, node: IndexNode)
 }
 
 interface Normalizable {
@@ -23,6 +23,11 @@ interface Normalizable {
 
 interface DbObject extends Normalizable {
   getType(): DbObjectType;
+}
+
+interface IndexNode extends DbObject {
+  getKey(): IndexKey;
+  getValue(): any;
 }
 
 interface IndexKey extends Normalizable {

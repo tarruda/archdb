@@ -80,6 +80,53 @@ describe('AvlTree', function() {
 
   function generateAvlRotationSuite(title, ins, del, delSeq, inspect) {
     describe(title, function() {
+      describe('iterate', function() {
+        var size = 80;
+        beforeEach(function(done) {
+          ins(tree, size, 1, done);
+        });
+
+        it('in order', function(done) {
+          inOrder(null, tree, function(items) {
+            expectFromTo(items, 1, size);
+            done();
+          });
+        });
+
+        it('in order with filter', function(done) {
+          var i = 1;
+          function testFilter() {
+            inOrder(i, tree, function(items) {
+              expectFromTo(items, i, size);
+              i++;
+              if (i <= size) setImmediate(testFilter());
+              else done();
+            });
+          }
+          testFilter();
+        });
+
+        it('reverse in order', function(done) {
+          revOrder(null, tree, function(items) {
+            expectFromTo(items, size, 1);
+            done();
+          });
+        });
+
+        it('reverse in order with filter', function(done) {
+          var i = size;
+          function testFilter() {
+            revOrder(i, tree, function(items) {
+              expectFromTo(items, i, 1);
+              i--;
+              if (i >= 1) setImmediate(testFilter());
+              else done();
+            });
+          }
+          testFilter();
+        });
+      });
+
       describe('descending insert rotations', function() {
         it('24-22', function(done) {
           ins(tree, 24, 22, function(err) {
@@ -1131,6 +1178,32 @@ describe('AvlTree', function() {
 
   function inspectStorageTree(tree) {
     return inspectStorage(tree.rootId);
+  }
+
+  function inOrder(min, tree, cb) {
+    var rv = [];
+    tree.inOrder(min, function(err, next, node) {
+      if (!next) return cb(rv);
+      rv.push(node.key);
+      next();
+    });
+  };
+
+  function revOrder(max, tree, cb) {
+    var rv = [];
+    tree.revInOrder(max, function(err, next, node) {
+      if (!next) return cb(rv);
+      rv.push(node.key);
+      next();
+    });
+  };
+
+  function expectFromTo(items, from, to) {
+    var expected = [];
+    for (var i = from;from < to ? i <= to : i >= to;from < to ? i++ : i--) {
+      expected.push(i);
+    }
+    expect(expected).to.deep.eql(items);
   }
 
   function inspectStorage(rootId) {

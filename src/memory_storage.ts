@@ -17,7 +17,8 @@ class MemoryStorage implements DbStorage {
 
   save(obj: DbObject, cb: IdCb) {
     var id: string = (this.uid++).toString();
-    this.data[id] = obj;
+    if (obj.normalize) this.data[id] = obj.normalize();
+    else this.data[id] = obj;
     cb(null, id);
   }
 

@@ -5,7 +5,7 @@
 // identify if the node is new(was not persisted yet)
 var avlNodeId: number = -1;
 
-class AvlNode implements DbObject {
+class AvlNode implements IndexNode {
   height: number;
   key: IndexKey;
   value: any;
@@ -26,12 +26,21 @@ class AvlNode implements DbObject {
     this.id = (avlNodeId--).toString();
   }
 
+  getKey(): IndexKey {
+    return this.key;
+  }
+
+  getValue(): any {
+    return this.value;
+  }
+
   getType(): DbObjectType {
     return DbObjectType.IndexNode;
   }
 
-  normalize(): Object {
-    return [this.key, this.value, this.leftId, this.rightId, this.height];
+  normalize(): any {
+    return [this.key.normalize(), this.value, this.leftId, this.rightId,
+           this.height];
   }
 
   volatile(): boolean {
@@ -164,8 +173,105 @@ class AvlTree implements DbIndexTree {
     }
   }
 
-  inOrder(minKey: IndexKey, cb: VisitNodeCb) { }
-  revInOrder(maxKey: IndexKey, cb: VisitNodeCb) { }
+  inOrder(minKey: IndexKey, cb: VisitNodeCb) {
+    var rootCb = (err: Error, root: AvlNode) => {
+      if (err) return cb(err, null, null);
+      if (minKey) searchMinCb(null, root);
+      else nodeCb(null, root);
+    };
+    var nextNodeCb = (stop: boolean) => {
+      if (paused) throw new Error('called too many times');
+      paused = true;
+      if (stop) return cb(null, null, null);
+      yield(visitNext);
+    };
+    var visitNext = () => {
+      this.resolveRight(nextNode, nodeCb);
+    };
+    var searchMinCb = (err: Error, node: AvlNode) => {
+      var comp;
+      if (err) return cb(err, null, null);
+      if (!node) return nodeCb(null, null);
+      comp = minKey.compareTo(node.key);
+      if (comp < 0) {
+        path.push(node);
+        this.resolveLeft(node, searchMinCb);
+      } else if (comp > 0) {
+        this.resolveRight(node, searchMinCb);
+      } else {
+        nextNode = node;
+        cb(null, nextNodeCb, node)
+      }
+    };
+    var nodeCb = (err: Error, node: AvlNode) => {
+      if (err) return cb(err, null, null);
+      if (!node && !path.length) return cb(null, null, null);
+      if (node) {
+        path.push(node);
+        return this.resolveLeft(node, nodeCb);
+      }
+      node = path.pop();
+      nextNode = node;
+      paused = false;
+      cb(null, nextNodeCb, node);
+    };
+
+    var nextNode, paused, path = [];
+
+    if (!this.rootId) return cb(null, null, null);
+    if (!this.root) return this.resolveNode(this.rootId, rootCb);
+    rootCb(null, this.root);
+  }
+
+  revInOrder(maxKey: IndexKey, cb: VisitNodeCb) {
+    var rootCb = (err: Error, root: AvlNode) => {
+      if (err) return cb(err, null, null);
+      if (maxKey) searchMinCb(null, root);
+      else nodeCb(null, root);
+    };
+    var nextNodeCb = (stop: boolean) => {
+      if (paused) throw new Error('called too many times');
+      paused = true;
+      if (stop) return cb(null, null, null);
+      yield(visitNext);
+    };
+    var visitNext = () => {
+      this.resolveLeft(nextNode, nodeCb);
+    };
+    var searchMinCb = (err: Error, node: AvlNode) => {
+      var comp;
+      if (err) return cb(err, null, null);
+      if (!node) return nodeCb(null, null);
+      comp = maxKey.compareTo(node.key);
+      if (comp > 0) {
+        path.push(node);
+        this.resolveRight(node, searchMinCb);
+      } else if (comp < 0) {
+        this.resolveLeft(node, searchMinCb);
+      } else {
+        nextNode = node;
+        cb(null, nextNodeCb, node)
+      }
+    };
+    var nodeCb = (err: Error, node: AvlNode) => {
+      if (err) return cb(err, null, null);
+      if (!node && !path.length) return cb(null, null, null);
+      if (node) {
+        path.push(node);
+        return this.resolveRight(node, nodeCb);
+      }
+      node = path.pop();
+      nextNode = node;
+      paused = false;
+      cb(null, nextNodeCb, node);
+    };
+
+    var nextNode, paused, path = [];
+
+    if (!this.rootId) return cb(null, null, null);
+    if (!this.root) return this.resolveNode(this.rootId, rootCb);
+    rootCb(null, this.root);
+  }
 
   levelOrder(cb) {
     var leftCb = (err: Error, left: AvlNode) => {
