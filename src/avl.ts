@@ -49,82 +49,13 @@ class AvlNode implements DbObject {
     return rv; 
   }
 
-  rotateLeft() {
-    var right = this.right;
-    var left = this.left;
-    var leftId = this.leftId;
-    var newLeft = new AvlNode(this.key, this.value);
+  refreshHeight() {
+    var h = 0, left = this.left, right = this.right;
 
-    if (!right) {
-      // FIXME remove debug assertion
-      throw new Error('left node not resolved!')
-    }
+    h = Math.max(h, left === null ? 0 : (left.height + 1));
+    h = Math.max(h, right === null ? 0 : (right.height + 1));
 
-    // update key/value
-    this.key = right.key;
-    this.value = right.value;
-    // set new left
-    newLeft.left = left;
-    newLeft.leftId = leftId;
-    this.left = newLeft;
-    this.leftId = newLeft.id;
-    // set new right
-    this.right = right.right;
-    this.rightId = right.rightId;
-    // transfer the old right's left to the new left's right
-    newLeft.right = right.left;
-    newLeft.rightId = right.leftId;
-    // recalculate heights;
-    this.recalculateHeights();
-  }
-
-  rotateRight() {
-    var right = this.right;
-    var rightId = this.rightId;
-    var left = this.left;
-    var newRight = new AvlNode(this.key, this.value);
-
-    if (!left) {
-      // FIXME remove debug assertion
-      throw new Error('left node not resolved!')
-    }
-
-    // update key/value
-    this.key = left.key;
-    this.value = left.value;
-    // set new right
-    newRight.right = right;
-    newRight.rightId = rightId;
-    this.right = newRight;
-    this.rightId = newRight.id;
-    // set new left
-    this.left = left.left;
-    this.leftId = left.leftId;
-    // transfer the old left's right to the new right's left
-    newRight.left = left.right;
-    newRight.leftId = left.rightId;
-    // recalculate heights;
-    this.recalculateHeights();
-  }
-
-  calculateHeight() {
-    var rv = -1, left = this.left, right = this.right;
-
-    rv = Math.max(rv, (left === null ? -1 : left.height) + 1);
-    rv = Math.max(rv, (right === null ? -1 : right.height) + 1);
-    return rv;
-  }
-
-  recalculateHeights() {
-    var left, right;
-
-    left = this.left;
-    right = this.right;
-    if (left !== null)
-      left.height = left.calculateHeight();
-    if (right !== null)
-      right.height = right.calculateHeight();
-    this.height = this.calculateHeight();
+    this.height = h;
   }
 
   balanceFactor() {
@@ -391,25 +322,24 @@ class AvlTree implements DbIndexTree {
       node.key = inOrderPredecessor.key;
       node.value = inOrderPredecessor.value;
       this.delNode(path, delCb);
-    
     };
     var nodeCb = (err: Error, child: AvlNode) => {
       if (err) return cb(err, null);
       // replace the node with its child
       if (parent) {
-        if (parent.leftId === node.id) parent.leftId = child.id; 
-        else parent.rightId = child.id;
+        if (parent.leftId === node.id) {
+          parent.leftId = child.id; 
+          parent.left = child;
+        } else {
+          parent.rightId = child.id;
+          parent.right = child;
+        }
       } else {
         this.rootId = child.id;
         this.root = child;
       }
-      node.key = child.key;
-      node.value = child.value;
-      node.id = child.id;
-      node.left = child.left;
-      node.leftId = child.leftId;
-      node.right = child.right;
-      node.rightId = child.rightId;
+      if (node !== path[path.length -1]) throw new Error('adssad')
+      path.pop();
       cb(null, oldValue);
     };
 
@@ -448,30 +378,37 @@ class AvlTree implements DbIndexTree {
   private findInOrderPredecessor(path: Array<AvlNode>,
       cb: (err: Error, node: AvlNode) => any) {
     var currentCb = (err: Error, current: AvlNode) => {
+      var currentId;
       if (err) return cb(err, null);
       if (current === null) throw new Error('invalid tree state');
+      if (!current.isNew()) {
+        currentId = current.id;
+        current = current.clone();
+        if (parent.leftId === currentId) {
+          parent.left = current;
+          parent.leftId = current.id;
+        } else {
+          parent.right = current;
+          parent.rightId = current.id;
+        }
+      }
       if (current.rightId !== null) {
-        path.push(current);
+        parent = current; 
+        path.push(parent);
         return this.getRight(current, currentCb);
       }
       path.push(current);
       cb(null, current);
     };
 
-    var node = path[path.length - 1];
+    var parent = path[path.length - 1]
 
-    this.getLeft(node, currentCb);
+    this.getLeft(parent, currentCb);
   }
 
   private ensureIsBalanced(oldValue: string, path: Array<AvlNode>,
       cb: UpdateIndexCb) {
-    var childCb = (err: Error, child: AvlNode) => {
-      if (err) return cb(err, null);
-      if (child.id === node.leftId) node.left = child;
-      else node.right = child;
-      checkBalance();
-    };
-    var nextParent = () => {
+    var nextParent = (err: Error) => {
       if (!path.length) return cb(null, oldValue);
       node = path.pop();
       // it is possible one of the node's child was not retrieved
@@ -480,28 +417,147 @@ class AvlTree implements DbIndexTree {
       else if (node.rightId && !node.right) this.getRight(node, childCb);
       else checkBalance();
     };
+    var childCb = (err: Error, child: AvlNode) => {
+      if (err) return cb(err, null);
+      if (child.id === node.leftId) node.left = child;
+      else node.right = child;
+      if ((node.leftId && !node.left) || (node.rightId && !node.right))
+        throw new Error('invalid tree state');
+      checkBalance();
+    };
     var checkBalance = () => {
       var bf;
-      node.height = node.calculateHeight();
+      node.refreshHeight();
       bf = node.balanceFactor();
-      if (bf === -2) {
-        if (node.right.balanceFactor() === 1)
-          node.right.rotateRight();
-        node.rotateLeft();
-      } else if (bf === 2) {
-        if (node.left.balanceFactor() === -1)
-          node.left.rotateLeft();
-        node.rotateRight();
-      } else if (bf > 2 || bf < -2) {
-        // FIXME remove debug assertion
-        throw new Error('Invalid tree state');
+      if (bf === -2) this.getLeft(node.right, rightLeftCb);
+      else if (bf === 2) this.getLeft(node.left, leftLeftCb);
+      else if (bf > 2 || bf < -2) throw new Error('Invalid tree state');
+      else yield(nextParent);
+    };
+    var rightLeftCb = (err: Error, rightLeft: AvlNode) => {
+      if (err) return cb(err, null);
+      this.getRight(node.right, rightRightCb);
+    };
+    var rightRightCb = (err: Error, rightRight: AvlNode) => {
+      if (err) return cb(err, null);
+      if (node.right.balanceFactor() === 1) {
+        if (!node.right.isNew()) {
+          node.right = node.right.clone();
+          node.rightId = node.right.id;
+        }
+        this.rotateRight(node.right, rotateRightCb);
+      } else {
+        yield(rotateRightCb);
       }
-      yield(nextParent);
+    };
+    var leftLeftCb = (err: Error, leftLeft: AvlNode) => {
+      if (err) return cb(err, null);
+      this.getRight(node.left, leftRightCb);
+    };
+    var leftRightCb = (err: Error, leftLeft: AvlNode) => {
+      if (err) return cb(err, null);
+      if (node.left.balanceFactor() === -1) {
+        if (!node.left.isNew()) {
+          node.left = node.left.clone();
+          node.leftId = node.left.id;
+        }
+        this.rotateLeft(node.left, rotateLeftCb);
+      } else {
+        yield(rotateLeftCb);
+      }
+    };
+    var rotateRightCb = (err: Error) => {
+      if (err) return cb(err, null);
+      this.rotateLeft(node, nextParent);
+    };
+    var rotateLeftCb = (err: Error) => {
+      if (err) return cb(err, null);
+      this.rotateRight(node, nextParent);
     };
 
     var node;
 
-    nextParent();
+    nextParent(null);
+  }
+
+  rotateLeft(node: AvlNode, cb: DoneCb) {
+    var rightRightCb = (err: Error) => {
+      if (err) return cb(err);
+      // set new right
+      node.right = right.right;
+      node.rightId = right.rightId;
+      this.getLeft(right, rightLeftCb);
+    };
+    var rightLeftCb = (err: Error) => {
+      if (err) return cb(err);
+      // transfer the old right's left to the new left's right
+      newLeft.right = right.left;
+      newLeft.rightId = right.leftId;
+      // recalculate heights;
+      newLeft.refreshHeight();
+      node.refreshHeight();
+      cb(null);
+    };
+
+    var right = node.right;
+    var left = node.left;
+    var leftId = node.leftId;
+    var newLeft = new AvlNode(node.key, node.value);
+
+    if (!right) {
+      // FIXME remove debug assertion
+      throw new Error('right node not resolved!');
+    }
+
+    // update key/value
+    node.key = right.key;
+    node.value = right.value;
+    // set new left
+    newLeft.left = left;
+    newLeft.leftId = leftId;
+    node.left = newLeft;
+    node.leftId = newLeft.id;
+    this.getRight(right, rightRightCb);
+  }
+
+  rotateRight(node: AvlNode, cb: DoneCb) {
+    var leftLeftCb = (err: Error) => {
+      if (err) return cb(err);
+      // set new left
+      node.left = left.left;
+      node.leftId = left.leftId;
+      this.getRight(left, leftRightCb);
+    };
+    var leftRightCb = (err: Error) => {
+      if (err) return cb(err);
+      // transfer the old left's right to the new right's left
+      newRight.left = left.right;
+      newRight.leftId = left.rightId;
+      // recalculate heights;
+      newRight.refreshHeight();
+      node.refreshHeight();
+      cb(null);
+    };
+
+    var right = node.right;
+    var rightId = node.rightId;
+    var left = node.left;
+    var newRight = new AvlNode(node.key, node.value);
+
+    if (!left) {
+      // FIXME remove debug assertion
+      throw new Error('left node not resolved!')
+    }
+
+    // update key/value
+    node.key = left.key;
+    node.value = left.value;
+    // set new right
+    newRight.right = right;
+    newRight.rightId = rightId;
+    node.right = newRight;
+    node.rightId = newRight.id;
+    this.getLeft(left, leftLeftCb);
   }
 
   private resolveNode(id: string, cb: DbObjectCb) {

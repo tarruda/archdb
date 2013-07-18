@@ -693,6 +693,19 @@ describe('AvlTree', function() {
           });
         });
 
+        it('1-5', function(done) {
+          del(tree, 1, 5, function(err) {
+            expect(inspect(tree)).to.deep.eql([
+                                          16, 
+                          8,                             20,
+                  6,            12,              18,            22,
+                      7,    10,     14,      17,     19,    21,     23,
+                           9, 11, 13, 15,                             24 
+            ]);
+            done();
+          });
+        });
+
         it('1-6', function(done) {
           del(tree, 1, 6, function(err) {
             expect(inspect(tree)).to.deep.eql([
@@ -701,6 +714,19 @@ describe('AvlTree', function() {
                   8,            14,              18,            22,
               7,     10,    13,     15,      17,     19,    21,     23,
                     9, 11,                                            24 
+            ]);
+            done();
+          });
+        });
+
+        it('1-7', function(done) {
+          del(tree, 1, 7, function(err) {
+            expect(inspect(tree)).to.deep.eql([
+                                          16, 
+                          12,                             20,
+                  10,           14,              18,            22,
+               8,    11,    13,     15,      17,     19,    21,     23,
+                 9,                                               24 
             ]);
             done();
           });

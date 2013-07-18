@@ -1,4 +1,4 @@
-var yield: (fn: () => any) => any;
+var yield: (fn: (...params: any[]) => any) => any;
 
 enum DbObjectType {
   IndexNode,
