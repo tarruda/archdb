@@ -1125,7 +1125,7 @@ describe('AvlTree', function() {
   };
   FakeDbStorage.prototype.save = function(obj, cb) {
     var id = (uid++).toString();
-    this.data[id] = obj;
+    this.data[id] = obj.normalize();
     cb(null, id);
   };
 
@@ -1134,17 +1134,17 @@ describe('AvlTree', function() {
   }
 
   function inspectStorage(rootId) {
-    var rv = [], q, node;
+    var rv = [], q, node, data;
 
     if (!rootId) return rv;
 
     q = [];
     q.push(rootId);
     while (q.length) {
-      node = dbStorage.data[q.shift()];
-      rv.push(node.key);
-      if (node.leftId) q.push(node.leftId);
-      if (node.rightId) q.push(node.rightId);
+      data = dbStorage.data[q.shift()];
+      rv.push(data[0]);
+      if (data[2]) q.push(data[2]);
+      if (data[3]) q.push(data[3]);
     }
   
     return rv;

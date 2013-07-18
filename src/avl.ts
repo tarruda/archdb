@@ -8,14 +8,14 @@ var avlNodeId: number = -1;
 class AvlNode implements DbObject {
   height: number;
   key: IndexKey;
-  value: string;
+  value: any;
   left: AvlNode;
   right: AvlNode;
   leftId: string;
   rightId: string;
   id: string;
 
-  constructor(key: IndexKey, value: string) {
+  constructor(key: IndexKey, value: any) {
     this.key = key;
     this.value = value;
     this.left = null;
@@ -31,8 +31,7 @@ class AvlNode implements DbObject {
   }
 
   normalize(): Object {
-    return [this.key.normalize(), normalize(this.value), this.leftId,
-    this.rightId, this.height];
+    return [this.key, this.value, this.leftId, this.rightId, this.height];
   }
 
   volatile(): boolean {
@@ -101,7 +100,7 @@ class AvlTree implements DbIndexTree {
     }
   }
 
-  set(key: IndexKey, value: string, cb: UpdateIndexCb) {
+  set(key: IndexKey, value: string, cb: ObjectCb) {
     var searchCb = (err: Error, comp: number, path: Array<AvlNode>) => {
       var node, oldValue;
       if (err) return cb(err, null);
@@ -137,7 +136,7 @@ class AvlTree implements DbIndexTree {
     }
   }
 
-  del(key: IndexKey, cb: UpdateIndexCb) {
+  del(key: IndexKey, cb: ObjectCb) {
     var searchCb = (err: Error, comp: number, p: Array<AvlNode>) => {
       if (err) return cb(err, null);
       if (comp !== 0) return cb(null, null);
@@ -284,7 +283,7 @@ class AvlTree implements DbIndexTree {
     get();
   }
 
-  private delNode(path: Array<AvlNode>, cb: UpdateIndexCb) {
+  private delNode(path: Array<AvlNode>, cb: ObjectCb) {
     var delCb = (err: Error, old: string) => {
       if (err) return cb(err, null);
       if (old !== node.value)
@@ -383,7 +382,7 @@ class AvlTree implements DbIndexTree {
   }
 
   private ensureIsBalanced(oldValue: string, path: Array<AvlNode>,
-      cb: UpdateIndexCb) {
+      cb: ObjectCb) {
     var nextParent = (err: Error) => {
       if (!path.length) return cb(null, oldValue);
       node = path.pop();
@@ -537,15 +536,21 @@ class AvlTree implements DbIndexTree {
     this.resolveLeft(left, leftLeftCb);
   }
 
-  private resolveNode(id: string, cb: DbObjectCb) {
-    var getCb = (err: Error, node: AvlNode) => {
+  private resolveNode(id: string, cb: ObjectCb) {
+    var getCb = (err: Error, array: Array) => {
+      var node;
       if (err) return cb(err, null);
+      node = new AvlNode(array[0], array[1]);
+      node.leftId = array[2];
+      node.rightId = array[3];
+      node.height = array[4];
+      node.id = id;
       cb(null, node);
     };
     this.dbStorage.get(id, getCb);
   }
 
-  private resolveLeft(from: AvlNode, cb: DbObjectCb) {
+  private resolveLeft(from: AvlNode, cb: ObjectCb) {
     var getCb = (err: Error, node: AvlNode) => {
       if (err) return cb(err, null);
       from.left = node;
@@ -557,7 +562,7 @@ class AvlTree implements DbIndexTree {
     this.resolveNode(from.leftId, getCb);
   }
 
-  private resolveRight(from: AvlNode, cb: DbObjectCb) {
+  private resolveRight(from: AvlNode, cb: ObjectCb) {
     var getCb = (err: Error, node: AvlNode) => {
       if (err) return cb(err, null);
       from.right = node;

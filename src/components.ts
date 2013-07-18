@@ -7,11 +7,9 @@ enum DbObjectType {
 
 interface DoneCb { (err: Error); }
 
-interface DbObjectCb { (err: Error, obj: DbObject); }
+interface ObjectCb { (err: Error, obj: any); }
 
 interface IdCb { (err: Error, id: string); }
-
-interface UpdateIndexCb { (err: Error, oldId: string); }
 
 interface NextNodeCb { (stop: boolean) }
 
@@ -35,15 +33,15 @@ interface IndexKey extends Normalizable {
 
 interface DbIndexTree {
   get(key: IndexKey, cb: IdCb);
-  set(key: IndexKey, id: string, cb: UpdateIndexCb);
-  del(key: IndexKey, cb: UpdateIndexCb);
+  set(key: IndexKey, id: string, cb: ObjectCb);
+  del(key: IndexKey, cb: ObjectCb);
   inOrder(minKey: IndexKey, cb: VisitNodeCb);
   revInOrder(maxKey: IndexKey, cb: VisitNodeCb);
   commit(cb: DoneCb);
 }
 
 interface DbStorage {
-  get(id: string, cb: DbObjectCb);
+  get(id: string, cb: ObjectCb);
   save(obj: DbObject, cb: IdCb);
   getRootId(cb: IdCb);
   setRootId(id: string, cb: DoneCb);

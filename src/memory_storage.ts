@@ -11,7 +11,7 @@ class MemoryStorage implements DbStorage {
     this.data = {};
   }
 
-  get(id: string, cb: DbObjectCb) {
+  get(id: string, cb: ObjectCb) {
     cb(null, this.data[id]);
   }
 
