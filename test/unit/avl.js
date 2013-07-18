@@ -966,6 +966,117 @@ describe('AvlTree', function() {
             done();
           });
         });
+
+        it('14', function(done) {
+          delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, 15, 18, 14,
+                 function(err) {
+            expect(inspect(tree)).to.deep.eql([
+                                          6, 
+                          4,                             8,
+                  2,             5,              7,             23,
+              1,      3,                                     17,    24
+            ]);
+            done();
+          });
+        });
+
+        it('23', function(done) {
+          delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, 15, 18, 14, 23,
+                 function(err) {
+            expect(inspect(tree)).to.deep.eql([
+                                          6, 
+                          4,                             8,
+                  2,             5,              7,             17,
+              1,      3,                                            24
+            ]);
+            done();
+          });
+        });
+
+        it('8', function(done) {
+          delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, 15, 18, 14, 23,
+                 8, function(err) {
+            expect(inspect(tree)).to.deep.eql([
+                                          6, 
+                          4,                             17,
+                  2,             5,               7,             24,
+              1,      3
+            ]);
+            done();
+          });
+        });
+
+        it('17', function(done) {
+          delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, 15, 18, 14, 23,
+                 8, 17, function(err) {
+            expect(inspect(tree)).to.deep.eql([
+                                          6, 
+                          4,                             7,
+                  2,             5,                              24,
+              1,      3
+            ]);
+            done();
+          });
+        });
+
+        it('7', function(done) {
+          delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, 15, 18, 14, 23,
+                 8, 17, 7, function(err) {
+            expect(inspect(tree)).to.deep.eql([
+                                          4, 
+                          2,                             6,
+                  1,             3,              5,              24
+            ]);
+            done();
+          });
+        });
+
+        it('4', function(done) {
+          delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, 15, 18, 14, 23,
+                 8, 17, 7, 4, function(err) {
+            expect(inspect(tree)).to.deep.eql([
+                                          3, 
+                          2,                             6,
+                  1,                             5,              24
+            ]);
+            done();
+          });
+        });
+
+        it('3', function(done) {
+          delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, 15, 18, 14, 23,
+                 8, 17, 7, 4, 3, function(err) {
+            expect(inspect(tree)).to.deep.eql([
+                                          2, 
+                          1,                             6,
+                                                 5,              24
+            ]);
+            done();
+          });
+        });
+
+        it('2', function(done) {
+          delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, 15, 18, 14, 23,
+                 8, 17, 7, 4, 3, 2, function(err) {
+            expect(inspect(tree)).to.deep.eql([
+                                          6, 
+                          1,                             24,
+                                    5
+            ]);
+            done();
+          });
+        });
+
+        it('6', function(done) {
+          delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, 15, 18, 14, 23,
+                 8, 17, 7, 4, 3, 2, 6, function(err) {
+            expect(inspect(tree)).to.deep.eql([
+                                          5, 
+                          1,                             24
+            ]);
+            done();
+          });
+        });
       });
 
       describe('random access', function() {
