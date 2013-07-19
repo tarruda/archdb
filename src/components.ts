@@ -44,7 +44,7 @@ interface DbIndexTree {
   del(key: IndexKey, cb: ObjectCb);
   inOrder(minKey: IndexKey, cb: VisitNodeCb);
   revInOrder(maxKey: IndexKey, cb: VisitNodeCb);
-  commit(cb: DoneCb);
+  commit(releaseCache: boolean, cb: DoneCb);
 }
 
 interface DbStorage {

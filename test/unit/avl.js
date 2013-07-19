@@ -58,7 +58,7 @@ describe('AvlTree', function() {
                   2,      6,      10,       14,
                 1,  3,  5,  7,   9, 11,   13, 15
                 ]);
-                tree.commit(function(err) {
+                tree.commit(true, function(err) {
                   expect(inspectStorage(tree.rootRef)).to.deep.eql([
                   16,
                   8, 24,
@@ -1241,7 +1241,7 @@ describe('AvlTree', function() {
     var i = from;
     var next = function(err) {
       if (from < to ? i > to : i < to) {
-        return tree.commit(cb);
+        return tree.commit(true, cb);
       }
       tree.set(i, (((from < to) ? i++ : i--) * 2).toString(), next);
     };
@@ -1251,7 +1251,7 @@ describe('AvlTree', function() {
     var i = from;
     var next = function(err) {
       if (from < to ? i > to : i < to) {
-        return tree.commit(cb);
+        return tree.commit(true, cb);
       }
       tree.del(((from < to) ? i++ : i--), next);
     };
@@ -1277,7 +1277,7 @@ describe('AvlTree', function() {
     var i = 1;
     var next = function(err) {
       if (i === args.length - 1) {
-        return tree.commit(cb);
+        return tree.commit(true, cb);
       }
       tree.del(args[i++], next);
     };

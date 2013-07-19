@@ -301,7 +301,7 @@ class AvlTree implements DbIndexTree {
     else rightCb(null, this.root);
   }
 
-  commit(cb: DoneCb) {
+  commit(releaseCache: boolean, cb: DoneCb) {
     var flushNodeCb = (err: Error, ref: string) => {
       var parent, currentRef;
       if (err) return cb(err);
@@ -311,16 +311,16 @@ class AvlTree implements DbIndexTree {
         parent = parents.pop();
         if (parent.leftRef === currentRef) {
           parent.leftRef = current.ref;
-          parent.left = null; // make things easy for gc
+          if (releaseCache) parent.left = null;
         } else {
           parent.rightRef = current.ref;
-          parent.right = null;
+          if (releaseCache) parent.right = null;
         }
         pending.push(parent);
         visit();
       } else {
         this.rootRef = ref;
-        this.root = null;
+        if (releaseCache) this.root = null;
         cb(null);
       }
     };
