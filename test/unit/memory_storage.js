@@ -21,9 +21,9 @@ describe('MemoryStorage', function() {
     });
   });
 
-  it('gets/sets root node id', function(done) {
-    mem.setRootId('10', function() {
-      mem.getRootId(function(err, id) {
+  it('gets/sets master root node id', function(done) {
+    mem.setMasterRootId('10', function() {
+      mem.getMasterRootId(function(err, id) {
         expect(id).to.eql('10');
         done();
       });

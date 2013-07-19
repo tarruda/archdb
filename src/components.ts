@@ -1,9 +1,11 @@
-var yield: (fn: (...params: any[]) => any) => any;
+var yield: (fn: (...args: any[]) => any) => any;
 
 enum DbObjectType {
   IndexNode,
   Document
 }
+
+interface AnyCb { (...args: any[]); }
 
 interface DoneCb { (err: Error); }
 
@@ -48,6 +50,6 @@ interface DbIndexTree {
 interface DbStorage {
   get(id: string, cb: ObjectCb);
   save(obj: DbObject, cb: IdCb);
-  getRootId(cb: IdCb);
-  setRootId(id: string, cb: DoneCb);
+  getMasterRootId(cb: IdCb);
+  setMasterRootId(id: string, cb: DoneCb);
 }

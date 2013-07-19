@@ -22,11 +22,11 @@ class MemoryStorage implements DbStorage {
     cb(null, id);
   }
 
-  getRootId(cb: IdCb) {
+  getMasterRootId(cb: IdCb) {
     cb(null, this.rootId);
   }
 
-  setRootId(id: string, cb: DoneCb) {
+  setMasterRootId(id: string, cb: DoneCb) {
     this.rootId = id;
     cb(null);
   }
