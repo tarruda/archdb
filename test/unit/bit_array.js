@@ -203,6 +203,14 @@ describe('BitArray', function() {
       });
     });
 
+    describe('uids', function() {
+      it('00000000000b000505050505', function() {
+        array.packUid(new Uid('00000000000b000505050505'));
+        expect(array.inspect()).to.equal('0 0 0 0   0 b 0 5   5 5 5 5');
+        expect(array.unpackUid().hex).to.eql('00000000000b000505050505');
+      });
+    });
+
     describe('strings', function() {
       it('abcde', function() {
         array.packString('abcde');

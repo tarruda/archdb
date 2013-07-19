@@ -7,5 +7,4 @@ class Database {
   constructor(private storage: DbStorage, private masterRoot: string) {
     this.queue = new JobQueue();
   } 
-
 }

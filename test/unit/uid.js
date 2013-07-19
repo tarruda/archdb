@@ -1,6 +1,6 @@
 describe('UidGenerator', function() {
   describe('generate', function() {
-    var suffix = '05', time = 11;
+    var suffix = '0505050505', time = 11;
     var generator;
 
     beforeEach(function () {
@@ -8,13 +8,17 @@ describe('UidGenerator', function() {
     });
 
     it('accepts timestamp argument', function() {
-      expect(generator.generate(time).hex).to.equal('00000000000b0005');
+      expect(generator.generate(time).hex).to.equal(
+        '00000000000b000505050505');
     });
 
     it('increment counter (byte 7) for ids generated on same ms', function() {
-      expect(generator.generate(time).hex).to.equal('00000000000b0005');
-      expect(generator.generate(time).hex).to.equal('00000000000b0105');
-      expect(generator.generate(time).hex).to.equal('00000000000b0205');
+      expect(generator.generate(time).hex).to.equal(
+        '00000000000b000505050505');
+      expect(generator.generate(time).hex).to.equal(
+        '00000000000b010505050505');
+      expect(generator.generate(time).hex).to.equal(
+        '00000000000b020505050505');
     });
 
     it('throws when more than 256 ids are generated on same ms', function() {
@@ -24,9 +28,9 @@ describe('UidGenerator', function() {
   });
 });
 
-describe('Uid getTime method', function() {
-  it('returns timestamp the instance was generated', function() {
-    expect(new Uid('00000000000f0609').getTime()).to.equal(15);
+describe('Uid', function() {
+  it('getTime returns timestamp the instance was generated', function() {
+    expect(new Uid('00000000000f060909090909').getTime()).to.equal(15);
   });
 });
 

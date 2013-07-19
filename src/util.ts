@@ -20,7 +20,7 @@
  */
 
 class Uid {
-  constructor(public hex: string) {}
+  constructor(public hex: string) { }
 
   /* Returns the date this uid was generated */
   getTime(): number {
@@ -95,7 +95,7 @@ class JobQueue {
   jobs: Array<Job>;
   running: boolean;
 
-  constructor(public frozen: boolean) {
+  constructor(public frozen: boolean = false) {
     this.jobs = [];
     this.running = false;
   }
@@ -148,6 +148,9 @@ function isNumber(obj) {
   return Object.prototype.toString.call(obj) === '[object Number]';
 }
 
+function isUid(obj) {
+  return obj instanceof Uid;
+}
 /*
    Object normalization/denormalization functions
 
@@ -169,6 +172,8 @@ function normalize(obj) {
       rv = normalizeDate(obj);
     } else if (isRegExp(obj)) {
       rv = normalizeRegExp(obj);
+    } else if (isUid(obj)) {
+      rv = normalizeUid(obj);
     } else if (isArray(obj)) {
       rv = [];
       for (var i = 0;i < obj.length;i++) {
@@ -199,7 +204,8 @@ function denormalize(obj) {
       typeof obj === 'number') {
     rv = obj;
   } else if (typeof obj === 'string') {
-    if (!(rv = denormalizeDate(obj)) && !(rv = denormalizeRegExp(obj))) {
+    if (!(rv = denormalizeDate(obj)) && !(rv = denormalizeRegExp(obj)) &&
+          !(rv = denormalizeUid(obj))) {
       rv = denormalizeString(obj);
     }
   } else if (isArray(obj)) {
@@ -227,15 +233,22 @@ function denormalizeString(obj) {
   return obj;
 }
 
+function normalizeUid(obj) {
+  return '!uid' + obj.hex;
+}
+
+function denormalizeUid(obj) {
+  var match = /^!uid(.+)$/.exec(obj);
+  if (match) return new Uid(match[1]);
+}
+
 function normalizeDate(obj) {
   return '!dt' + obj.valueOf().toString(16);
 }
 
 function denormalizeDate(obj) {
   var match = /^!dt(.+)$/.exec(obj);
-  if (match) {
-    return new Date(parseInt(match[1], 16));
-  }
+  if (match) return new Date(parseInt(match[1], 16));
 }
 
 function normalizeRegExp(obj) {
@@ -248,9 +261,7 @@ function normalizeRegExp(obj) {
 
 function denormalizeRegExp(obj) {
   var match = /^!re(.+)?,(.+)$/.exec(obj);
-  if (match) {
-    return new RegExp(match[2], match[1]);
-  }
+  if (match) return new RegExp(match[2], match[1]);
 }
 
 function hasProp(obj, name: string){

@@ -1,6 +1,16 @@
 describe('Normalization/denormalization', function() {
   var n = normalize, d = denormalize;
 
+  it('normalize shallow uid', function() {
+    expect(n(new Uid('00000000000b000505050505'))).to.eql(
+      '!uid00000000000b000505050505');
+  });
+
+  it('denormalize shallow uid', function() {
+    expect(d('!uid00000000000b000505050505')).to.eql(
+      new Uid('00000000000b000505050505'));
+  });
+
   it('normalize shallow date', function() {
     expect(n(new Date(343434))).to.eql('!dt53d8a');
   });

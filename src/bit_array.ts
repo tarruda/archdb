@@ -213,6 +213,12 @@ class BitArray {
     return rv;
   }
 
+  packUid(uid: Uid) {
+    for (var i = 0;i < 24;i++) {
+      this.write(parseInt(uid.hex[i], 16), 4);
+    }
+  }
+
   packString(str: string) {
     var encoded = encodeURIComponent(str);
     var code, c;
@@ -229,6 +235,16 @@ class BitArray {
       }
       this.write(code);
     }
+  }
+
+  unpackUid(): Uid {
+    var hex = '';
+  
+    for (var i = 0;i < 24;i++) {
+      hex += this.read(4).toString(16);
+    }
+
+    return new Uid(hex);
   }
 
   unpackString(): string {
@@ -276,6 +292,9 @@ class BitArray {
       } else if (typeof obj === 'string') {
         this.write(5, 4);
         this.packString(obj);
+      } else if (isUid(obj)) {
+        this.write(6, 4);
+        this.packUid(obj);
       } else if (isArray(obj)) {
         this.write(15, 4);
         this.packArray(obj);
@@ -300,6 +319,8 @@ class BitArray {
       return this.unpackNumber();
     } else if (type === 5) {
       return this.unpackString();
+    } else if (type === 6) {
+      return this.unpackUid();
     } else if (type === 15) {
       return this.unpackArray();
     }
