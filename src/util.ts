@@ -28,6 +28,10 @@ class Uid {
   }
 }
 
+class ObjectRef {
+  constructor(public ref: string) { }
+}
+
 class UidGenerator {
   suffix: string;
   genTime: number;
@@ -151,6 +155,10 @@ function isNumber(obj) {
 function isUid(obj) {
   return obj instanceof Uid;
 }
+
+function isObjectRef(obj) {
+  return obj instanceof ObjectRef;
+}
 /*
    Object normalization/denormalization functions
 
@@ -174,6 +182,8 @@ function normalize(obj) {
       rv = normalizeRegExp(obj);
     } else if (isUid(obj)) {
       rv = normalizeUid(obj);
+    } else if (isObjectRef(obj)) {
+      rv = normalizeObjectRef(obj);
     } else if (isArray(obj)) {
       rv = [];
       for (var i = 0;i < obj.length;i++) {
@@ -205,7 +215,7 @@ function denormalize(obj) {
     rv = obj;
   } else if (typeof obj === 'string') {
     if (!(rv = denormalizeDate(obj)) && !(rv = denormalizeRegExp(obj)) &&
-          !(rv = denormalizeUid(obj))) {
+          !(rv = denormalizeUid(obj)) && !(rv = denormalizeObjectRef(obj))) {
       rv = denormalizeString(obj);
     }
   } else if (isArray(obj)) {
@@ -233,12 +243,21 @@ function denormalizeString(obj) {
   return obj;
 }
 
+function normalizeObjectRef(obj) {
+  return '!or' + obj.ref;
+}
+
+function denormalizeObjectRef(obj) {
+  var match = /^!or(.+)$/.exec(obj);
+  if (match) return new ObjectRef(match[1]);
+}
+
 function normalizeUid(obj) {
-  return '!uid' + obj.hex;
+  return '!id' + obj.hex;
 }
 
 function denormalizeUid(obj) {
-  var match = /^!uid(.+)$/.exec(obj);
+  var match = /^!id([abcdef0123456789]{24})$/.exec(obj);
   if (match) return new Uid(match[1]);
 }
 
