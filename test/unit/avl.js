@@ -17,29 +17,29 @@ describe('AvlTree', function() {
   });
 
   it('manages committed and uncommitted data transparently', function(done) {
-    var rootId;
+    var rootRef;
     insCommit(tree, 1, 1, function() {
-      expect(inspectStorage(tree.rootId)).to.deep.eql([1]);
+      expect(inspectStorage(tree.rootRef)).to.deep.eql([1]);
       insCommit(tree, 2, 3, function() {
-        expect(inspectStorage(tree.rootId)).to.deep.eql([
+        expect(inspectStorage(tree.rootRef)).to.deep.eql([
           2,
         1,  3
         ]);
         insCommit(tree, 4, 7, function() {
-          expect(inspectStorage(tree.rootId)).to.deep.eql([
+          expect(inspectStorage(tree.rootRef)).to.deep.eql([
                 4, 
             2,      6,
           1,  3,  5,  7
           ]);
           insCommit(tree, 8, 15, function() {
-            expect(inspectStorage(tree.rootId)).to.deep.eql([
+            expect(inspectStorage(tree.rootRef)).to.deep.eql([
                            8, 
                   4,               12,
               2,      6,      10,       14,
             1,  3,  5,  7,   9, 11,   13, 15
             ]);
-            // save the persisted rootId
-            rootId = tree.rootId;
+            // save the persisted rootRef
+            rootRef = tree.rootRef;
             insTransaction(tree, 16, 31, function() {
               tree.levelOrder(function(err, items) {
                 // this state is only visible in the current transaction
@@ -52,14 +52,14 @@ describe('AvlTree', function() {
                 ]);
                 // not committed, so the persisted tree state wasn't
                 // modified
-                expect(inspectStorage(rootId)).to.deep.eql([
+                expect(inspectStorage(rootRef)).to.deep.eql([
                                8, 
                       4,               12,
                   2,      6,      10,       14,
                 1,  3,  5,  7,   9, 11,   13, 15
                 ]);
                 tree.commit(function(err) {
-                  expect(inspectStorage(tree.rootId)).to.deep.eql([
+                  expect(inspectStorage(tree.rootRef)).to.deep.eql([
                   16,
                   8, 24,
                   4, 12, 20, 28,
@@ -78,6 +78,19 @@ describe('AvlTree', function() {
 
   function generateAvlRotationSuite(title, ins, del, delSeq, inspect) {
     describe(title, function() {
+      describe('height', function() {
+        it('is logarithmic', function(done) {
+          function cb(err, node) {
+            expect(node.height).to.eql(8);
+            done();
+          }
+          ins(tree, 1, 256, function() {
+            if (tree.root) cb(null, tree.root);
+            else tree.resolveNode(tree.rootRef, cb); 
+          });
+        });
+      });
+
       describe('iterate', function() {
         var size = 80;
         beforeEach(function(done) {
@@ -1162,7 +1175,7 @@ describe('AvlTree', function() {
   }
 
   function inspectStorageTree(tree) {
-    return inspectStorage(tree.rootId);
+    return inspectStorage(tree.rootRef);
   }
 
   function inOrder(min, tree, cb) {
@@ -1191,13 +1204,13 @@ describe('AvlTree', function() {
     expect(expected).to.deep.eql(items);
   }
 
-  function inspectStorage(rootId) {
+  function inspectStorage(rootRef) {
     var rv = [], q, node, data;
 
-    if (!rootId) return rv;
+    if (!rootRef) return rv;
 
     q = [];
-    q.push(rootId);
+    q.push(rootRef);
     while (q.length) {
       data = dbStorage.data[q.shift()];
       rv.push(data[0]);

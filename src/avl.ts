@@ -81,12 +81,12 @@ interface AvlSearchCb {
 
 class AvlTree implements DbIndexTree {
   dbStorage: DbStorage;
-  rootId: string;
+  rootRef: string;
   root: AvlNode;
 
-  constructor(dbStorage: DbStorage, rootId: string) {
+  constructor(dbStorage: DbStorage, rootRef: string) {
     this.dbStorage = dbStorage;
-    this.rootId = rootId;
+    this.rootRef = rootRef;
     this.root = null;
   }
 
@@ -101,11 +101,11 @@ class AvlTree implements DbIndexTree {
       this.search(false, key, searchCb);
     }
 
-    if (!this.rootId) return cb(null, null);
+    if (!this.rootRef) return cb(null, null);
     if (this.root) {
       this.search(false, key, searchCb);
     } else {
-      this.resolveNode(this.rootId, getCb);
+      this.resolveNode(this.rootRef, getCb);
     }
   }
 
@@ -134,14 +134,14 @@ class AvlTree implements DbIndexTree {
       this.search(true, key, searchCb);
     };
 
-    if (!this.rootId) {
+    if (!this.rootRef) {
       this.root = new AvlNode(key, value);
-      this.rootId = this.root.ref;
+      this.rootRef = this.root.ref;
       return cb(null, null);
     } else if (this.root) {
       this.search(true, key, searchCb);
     } else {
-      this.resolveNode(this.rootId, getCb);
+      this.resolveNode(this.rootRef, getCb);
     }
   }
 
@@ -164,12 +164,12 @@ class AvlTree implements DbIndexTree {
 
     var path;
 
-    if (!this.rootId) {
+    if (!this.rootRef) {
       return cb(null, null);
     } else if (this.root) {
       this.search(true, key, searchCb);
     } else {
-      this.resolveNode(this.rootId, getCb);
+      this.resolveNode(this.rootRef, getCb);
     }
   }
 
@@ -218,8 +218,8 @@ class AvlTree implements DbIndexTree {
 
     var nextNode, paused, path = [];
 
-    if (!this.rootId) return cb(null, null, null);
-    if (!this.root) return this.resolveNode(this.rootId, rootCb);
+    if (!this.rootRef) return cb(null, null, null);
+    if (!this.root) return this.resolveNode(this.rootRef, rootCb);
     rootCb(null, this.root);
   }
 
@@ -268,8 +268,8 @@ class AvlTree implements DbIndexTree {
 
     var nextNode, paused, path = [];
 
-    if (!this.rootId) return cb(null, null, null);
-    if (!this.root) return this.resolveNode(this.rootId, rootCb);
+    if (!this.rootRef) return cb(null, null, null);
+    if (!this.root) return this.resolveNode(this.rootRef, rootCb);
     rootCb(null, this.root);
   }
 
@@ -293,11 +293,11 @@ class AvlTree implements DbIndexTree {
     };
     var rv = [], q, node;
 
-    if (!this.rootId) return cb(null, rv);
+    if (!this.rootRef) return cb(null, rv);
 
     q = [];
 
-    if (!this.root) this.resolveNode(this.rootId, rightCb);
+    if (!this.root) this.resolveNode(this.rootRef, rightCb);
     else rightCb(null, this.root);
   }
 
@@ -319,7 +319,7 @@ class AvlTree implements DbIndexTree {
         pending.push(parent);
         visit();
       } else {
-        this.rootId = ref;
+        this.rootRef = ref;
         this.root = null;
         cb(null);
       }
@@ -383,7 +383,7 @@ class AvlTree implements DbIndexTree {
 
     if (copyPath && !this.root.volatile()) {
       this.root = this.root.clone();
-      this.rootId = this.root.ref;
+      this.rootRef = this.root.ref;
     }
     current = this.root;
     get();
@@ -415,7 +415,7 @@ class AvlTree implements DbIndexTree {
           parent.right = child;
         }
       } else {
-        this.rootId = child.ref;
+        this.rootRef = child.ref;
         this.root = child;
       }
       path.pop();
@@ -441,7 +441,7 @@ class AvlTree implements DbIndexTree {
             parent.right = null;
           }
         } else {
-          this.rootId = null; 
+          this.rootRef = null; 
           this.root = null;
         }
         path.pop();
