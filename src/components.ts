@@ -11,7 +11,7 @@ interface DoneCb { (err: Error); }
 
 interface ObjectCb { (err: Error, obj: any); }
 
-interface IdCb { (err: Error, id: string); }
+interface RefCb { (err: Error, ref: string); }
 
 interface NextNodeCb { (stop: boolean) }
 
@@ -39,8 +39,8 @@ interface IndexKey extends Normalizable {
 }
 
 interface DbIndexTree {
-  get(key: IndexKey, cb: IdCb);
-  set(key: IndexKey, id: string, cb: ObjectCb);
+  get(key: IndexKey, cb: ObjectCb);
+  set(key: IndexKey, value: Normalizable, cb: ObjectCb);
   del(key: IndexKey, cb: ObjectCb);
   inOrder(minKey: IndexKey, cb: VisitNodeCb);
   revInOrder(maxKey: IndexKey, cb: VisitNodeCb);
@@ -48,8 +48,8 @@ interface DbIndexTree {
 }
 
 interface DbStorage {
-  get(id: string, cb: ObjectCb);
-  save(obj: DbObject, cb: IdCb);
-  getMasterRootId(cb: IdCb);
-  setMasterRootId(id: string, cb: DoneCb);
+  get(ref: string, cb: ObjectCb);
+  save(obj: DbObject, cb: RefCb);
+  getMasterRef(cb: RefCb);
+  setMasterRef(ref: string, cb: DoneCb);
 }

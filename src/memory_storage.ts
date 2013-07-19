@@ -2,32 +2,32 @@
 
 class MemoryStorage implements DbStorage {
   uid: number;
-  rootId: string;
+  masterRef: string;
   data: Object;
 
   constructor() {
     this.uid = 1;
-    this.rootId = null;
+    this.masterRef = null;
     this.data = {};
   }
 
-  get(id: string, cb: ObjectCb) {
-    cb(null, this.data[id]);
+  get(ref: string, cb: ObjectCb) {
+    cb(null, this.data[ref]);
   }
 
-  save(obj: DbObject, cb: IdCb) {
-    var id: string = (this.uid++).toString();
-    if (obj.normalize) this.data[id] = obj.normalize();
-    else this.data[id] = obj;
-    cb(null, id);
+  save(obj: DbObject, cb: RefCb) {
+    var ref: string = (this.uid++).toString();
+    if (obj.normalize) this.data[ref] = obj.normalize();
+    else this.data[ref] = obj;
+    cb(null, ref);
   }
 
-  getMasterRootId(cb: IdCb) {
-    cb(null, this.rootId);
+  getMasterRef(cb: RefCb) {
+    cb(null, this.masterRef);
   }
 
-  setMasterRootId(id: string, cb: DoneCb) {
-    this.rootId = id;
+  setMasterRef(ref: string, cb: DoneCb) {
+    this.masterRef = ref;
     cb(null);
   }
 }

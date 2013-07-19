@@ -11,10 +11,8 @@ Number.prototype.clone = function() {
 };
 
 describe('AvlTree', function() {
-  var uid = 1;
-
   beforeEach(function() {
-    dbStorage = new FakeDbStorage();
+    dbStorage = new MemoryStorage();
     tree = new AvlTree(dbStorage);
   });
 
@@ -1163,19 +1161,6 @@ describe('AvlTree', function() {
     });
   }
 
-  function FakeDbStorage() {
-    this.data = {};
-    this.rootId = null;
-  }
-  FakeDbStorage.prototype.get = function(id, cb) {
-    cb(null, this.data[id]);
-  };
-  FakeDbStorage.prototype.save = function(obj, cb) {
-    var id = (uid++).toString();
-    this.data[id] = obj.normalize();
-    cb(null, id);
-  };
-
   function inspectStorageTree(tree) {
     return inspectStorage(tree.rootId);
   }
@@ -1322,8 +1307,8 @@ describe('AvlNode', function() {
 
   beforeEach(function() {
     node = new AvlNode(5, 'value');
-    node.leftId = 'abc';
-    node.rightId = 'def';
+    node.leftRef = 'abc';
+    node.rightRef = 'def';
   });
 
   it('has IndexNode type', function() {
@@ -1337,8 +1322,8 @@ describe('AvlNode', function() {
   it('has attributes correctly set', function() {
     expect(node.key).to.eql(5);
     expect(node.value).to.eql('value');
-    expect(node.leftId).to.eql('abc');
-    expect(node.rightId).to.eql('def');
+    expect(node.leftRef).to.eql('abc');
+    expect(node.rightRef).to.eql('def');
     expect(node.height).to.eql(0);
   });
 });

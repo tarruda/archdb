@@ -6,10 +6,10 @@ describe('MemoryStorage', function() {
   });
 
   it('saves/retrieves objects with unique ids', function(done) {
-    mem.save([1, 2, 3], function(err, id) {
-      expect(id).to.eql('1');
-      mem.save([4, 5, 6], function(err, id) {
-        expect(id).to.eql('2');
+    mem.save([1, 2, 3], function(err, ref) {
+      expect(ref).to.eql('1');
+      mem.save([4, 5, 6], function(err, ref) {
+        expect(ref).to.eql('2');
         mem.get('1', function(err, obj) {
           expect(obj).to.deep.eql([1, 2, 3]);
           mem.get('2', function(err, obj) {
@@ -21,10 +21,10 @@ describe('MemoryStorage', function() {
     });
   });
 
-  it('gets/sets master root node id', function(done) {
-    mem.setMasterRootId('10', function() {
-      mem.getMasterRootId(function(err, id) {
-        expect(id).to.eql('10');
+  it('gets/sets master node ref', function(done) {
+    mem.setMasterRef('10', function() {
+      mem.getMasterRef(function(err, ref) {
+        expect(ref).to.eql('10');
         done();
       });
     });

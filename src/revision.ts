@@ -10,8 +10,8 @@ class IndexPromise implements DbIndexTree {
     var job = () => {
     };
   }
-  get(key: IndexKey, cb: IdCb) {}
-  set(key: IndexKey, id: string, cb: ObjectCb) {}
+  get(key: IndexKey, cb: ObjectCb) {}
+  set(key: IndexKey, value: Normalizable, cb: ObjectCb) {}
   del(key: IndexKey, cb: ObjectCb) {}
   inOrder(minKey: IndexKey, cb: VisitNodeCb) {}
   revInOrder(maxKey: IndexKey, cb: VisitNodeCb) {}

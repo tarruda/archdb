@@ -11,19 +11,19 @@ class AvlNode implements IndexNode {
   value: any;
   left: AvlNode;
   right: AvlNode;
-  leftId: string;
-  rightId: string;
-  id: string;
+  leftRef: string;
+  rightRef: string;
+  ref: string;
 
   constructor(key: IndexKey, value: any) {
     this.key = key;
     this.value = value;
     this.left = null;
-    this.leftId = null;
+    this.leftRef = null;
     this.right = null
-    this.rightId = null;
+    this.rightRef = null;
     this.height = 0;
-    this.id = (avlNodeId--).toString();
+    this.ref = (avlNodeId--).toString();
   }
 
   getKey(): IndexKey {
@@ -39,20 +39,20 @@ class AvlNode implements IndexNode {
   }
 
   normalize(): any {
-    return [this.key.normalize(), this.value, this.leftId, this.rightId,
+    return [this.key.normalize(), this.value, this.leftRef, this.rightRef,
            this.height];
   }
 
   volatile(): boolean {
-    return this.id[0] === '-';
+    return this.ref[0] === '-';
   }
 
   clone(): AvlNode {
     var rv = new AvlNode(this.key.clone(), this.value);
     rv.left = this.left;
-    rv.leftId = this.leftId;
+    rv.leftRef = this.leftRef;
     rv.right = this.right;
-    rv.rightId = this.rightId;
+    rv.rightRef = this.rightRef;
     rv.height = this.height;
     return rv; 
   }
@@ -90,7 +90,7 @@ class AvlTree implements DbIndexTree {
     this.root = null;
   }
 
-  get(key: IndexKey, cb: IdCb) {
+  get(key: IndexKey, cb: ObjectCb) {
     var searchCb = (err: Error, comp: number, path: Array<AvlNode>) => {
       if (err) return cb(err, null);
       if (comp === 0) return cb(null, path[path.length - 1].value);
@@ -109,7 +109,7 @@ class AvlTree implements DbIndexTree {
     }
   }
 
-  set(key: IndexKey, value: string, cb: ObjectCb) {
+  set(key: IndexKey, value: Normalizable, cb: ObjectCb) {
     var searchCb = (err: Error, comp: number, path: Array<AvlNode>) => {
       var node, oldValue;
       if (err) return cb(err, null);
@@ -121,10 +121,10 @@ class AvlTree implements DbIndexTree {
       }
       if (comp < 0) {
         node.left = new AvlNode(key, value);
-        node.leftId = node.left.id;
+        node.leftRef = node.left.ref;
       } else {
         node.right = new AvlNode(key, value);
-        node.rightId = node.right.id;
+        node.rightRef = node.right.ref;
       }
       this.ensureIsBalanced(oldValue, path, cb);
     };
@@ -136,7 +136,7 @@ class AvlTree implements DbIndexTree {
 
     if (!this.rootId) {
       this.root = new AvlNode(key, value);
-      this.rootId = this.root.id;
+      this.rootId = this.root.ref;
       return cb(null, null);
     } else if (this.root) {
       this.search(true, key, searchCb);
@@ -276,7 +276,7 @@ class AvlTree implements DbIndexTree {
   levelOrder(cb) {
     var leftCb = (err: Error, left: AvlNode) => {
       q.push(left);
-      if (node.rightId) this.resolveRight(node, rightCb);
+      if (node.rightRef) this.resolveRight(node, rightCb);
       else yield(nextNode);
     };
     var rightCb = (err: Error, right: AvlNode) => {
@@ -287,8 +287,8 @@ class AvlTree implements DbIndexTree {
       if (!q.length) return cb(null, rv);
       node = q.shift();
       rv.push(node.key.normalize());
-      if (node.leftId) this.resolveLeft(node, leftCb);
-      else if (node.rightId) this.resolveRight(node, rightCb);
+      if (node.leftRef) this.resolveLeft(node, leftCb);
+      else if (node.rightRef) this.resolveRight(node, rightCb);
       else yield(nextNode);
     };
     var rv = [], q, node;
@@ -302,24 +302,24 @@ class AvlTree implements DbIndexTree {
   }
 
   commit(cb: DoneCb) {
-    var flushNodeCb = (err: Error, id: string) => {
-      var parent, currentId;
+    var flushNodeCb = (err: Error, ref: string) => {
+      var parent, currentRef;
       if (err) return cb(err);
-      currentId = current.id;
-      current.id = id; 
+      currentRef = current.ref;
+      current.ref = ref; 
       if (parents.length) {
         parent = parents.pop();
-        if (parent.leftId === currentId) {
-          parent.leftId = current.id;
+        if (parent.leftRef === currentRef) {
+          parent.leftRef = current.ref;
           parent.left = null; // make things easy for gc
         } else {
-          parent.rightId = current.id;
+          parent.rightRef = current.ref;
           parent.right = null;
         }
         pending.push(parent);
         visit();
       } else {
-        this.rootId = id;
+        this.rootId = ref;
         this.root = null;
         cb(null);
       }
@@ -354,13 +354,13 @@ class AvlTree implements DbIndexTree {
       if (err) return cb(err, null, null);
       if (!node) return cb(null, comp, path);
       if (copyPath && !node.volatile()) {
-        nodeId = node.id;
+        nodeId = node.ref;
         node = node.clone();
-        if (nodeId === current.leftId) {
-          current.leftId = node.id;
+        if (nodeId === current.leftRef) {
+          current.leftRef = node.ref;
           current.left = node;
         } else {
-          current.rightId = node.id;
+          current.rightRef = node.ref;
           current.right = node;
         }
       }
@@ -383,7 +383,7 @@ class AvlTree implements DbIndexTree {
 
     if (copyPath && !this.root.volatile()) {
       this.root = this.root.clone();
-      this.rootId = this.root.id;
+      this.rootId = this.root.ref;
     }
     current = this.root;
     get();
@@ -407,15 +407,15 @@ class AvlTree implements DbIndexTree {
       if (err) return cb(err, null);
       // replace the node with its child
       if (parent) {
-        if (parent.leftId === node.id) {
-          parent.leftId = child.id; 
+        if (parent.leftRef === node.ref) {
+          parent.leftRef = child.ref; 
           parent.left = child;
         } else {
-          parent.rightId = child.id;
+          parent.rightRef = child.ref;
           parent.right = child;
         }
       } else {
-        this.rootId = child.id;
+        this.rootId = child.ref;
         this.root = child;
       }
       path.pop();
@@ -428,16 +428,16 @@ class AvlTree implements DbIndexTree {
 
     oldValue = node.value;
 
-    if (node.leftId && node.rightId) {
+    if (node.leftRef && node.rightRef) {
       this.findInOrderPredecessor(path, inOrderCb);
     } else {
-      if (!node.leftId && !node.rightId) {
+      if (!node.leftRef && !node.rightRef) {
         if (parent) {
-          if (parent.leftId === node.id) {
-            parent.leftId = null;
+          if (parent.leftRef === node.ref) {
+            parent.leftRef = null;
             parent.left = null;
           } else {
-            parent.rightId = null; 
+            parent.rightRef = null; 
             parent.right = null;
           }
         } else {
@@ -446,9 +446,9 @@ class AvlTree implements DbIndexTree {
         }
         path.pop();
         cb(null, oldValue);
-      } else if (!node.leftId) {
+      } else if (!node.leftRef) {
         this.resolveRight(node, nodeCb);
-      } else if (!node.rightId) {
+      } else if (!node.rightRef) {
         this.resolveLeft(node, nodeCb);
       }
     }
@@ -463,17 +463,17 @@ class AvlTree implements DbIndexTree {
         // TODO remove debug assert
         throw new Error('invalid tree state');
       if (!current.volatile()) {
-        currentId = current.id;
+        currentId = current.ref;
         current = current.clone();
-        if (parent.leftId === currentId) {
+        if (parent.leftRef === currentId) {
           parent.left = current;
-          parent.leftId = current.id;
+          parent.leftRef = current.ref;
         } else {
           parent.right = current;
-          parent.rightId = current.id;
+          parent.rightRef = current.ref;
         }
       }
-      if (current.rightId !== null) {
+      if (current.rightRef !== null) {
         parent = current; 
         path.push(parent);
         return this.resolveRight(current, currentCb);
@@ -494,15 +494,15 @@ class AvlTree implements DbIndexTree {
       node = path.pop();
       // it is possible one of the node's child was not retrieved
       // from db storage yet
-      if (node.leftId && !node.left) this.resolveLeft(node, childCb);
-      else if (node.rightId && !node.right) this.resolveRight(node, childCb);
+      if (node.leftRef && !node.left) this.resolveLeft(node, childCb);
+      else if (node.rightRef && !node.right) this.resolveRight(node, childCb);
       else checkBalance();
     };
     var childCb = (err: Error, child: AvlNode) => {
       if (err) return cb(err, null);
-      if (child.id === node.leftId) node.left = child;
+      if (child.ref === node.leftRef) node.left = child;
       else node.right = child;
-      if ((node.leftId && !node.left) || (node.rightId && !node.right))
+      if ((node.leftRef && !node.left) || (node.rightRef && !node.right))
         // TODO remove debug assert
         throw new Error('invalid tree state');
       checkBalance();
@@ -527,7 +527,7 @@ class AvlTree implements DbIndexTree {
       if (node.right.balanceFactor() === 1) {
         if (!node.right.volatile()) {
           node.right = node.right.clone();
-          node.rightId = node.right.id;
+          node.rightRef = node.right.ref;
         }
         this.rotateRight(node.right, rotateRightCb);
       } else {
@@ -543,7 +543,7 @@ class AvlTree implements DbIndexTree {
       if (node.left.balanceFactor() === -1) {
         if (!node.left.volatile()) {
           node.left = node.left.clone();
-          node.leftId = node.left.id;
+          node.leftRef = node.left.ref;
         }
         this.rotateLeft(node.left, rotateLeftCb);
       } else {
@@ -569,14 +569,14 @@ class AvlTree implements DbIndexTree {
       if (err) return cb(err);
       // set new right
       node.right = right.right;
-      node.rightId = right.rightId;
+      node.rightRef = right.rightRef;
       this.resolveLeft(right, rightLeftCb);
     };
     var rightLeftCb = (err: Error) => {
       if (err) return cb(err);
       // transfer the old right's left to the new left's right
       newLeft.right = right.left;
-      newLeft.rightId = right.leftId;
+      newLeft.rightRef = right.leftRef;
       // recalculate heights;
       newLeft.refreshHeight();
       node.refreshHeight();
@@ -585,7 +585,7 @@ class AvlTree implements DbIndexTree {
 
     var right = node.right;
     var left = node.left;
-    var leftId = node.leftId;
+    var leftRef = node.leftRef;
     var newLeft = new AvlNode(node.key, node.value);
 
     if (!right)
@@ -597,9 +597,9 @@ class AvlTree implements DbIndexTree {
     node.value = right.value;
     // set new left
     newLeft.left = left;
-    newLeft.leftId = leftId;
+    newLeft.leftRef = leftRef;
     node.left = newLeft;
-    node.leftId = newLeft.id;
+    node.leftRef = newLeft.ref;
     this.resolveRight(right, rightRightCb);
   }
 
@@ -608,14 +608,14 @@ class AvlTree implements DbIndexTree {
       if (err) return cb(err);
       // set new left
       node.left = left.left;
-      node.leftId = left.leftId;
+      node.leftRef = left.leftRef;
       this.resolveRight(left, leftRightCb);
     };
     var leftRightCb = (err: Error) => {
       if (err) return cb(err);
       // transfer the old left's right to the new right's left
       newRight.left = left.right;
-      newRight.leftId = left.rightId;
+      newRight.leftRef = left.rightRef;
       // recalculate heights;
       newRight.refreshHeight();
       node.refreshHeight();
@@ -623,7 +623,7 @@ class AvlTree implements DbIndexTree {
     };
 
     var right = node.right;
-    var rightId = node.rightId;
+    var rightRef = node.rightRef;
     var left = node.left;
     var newRight = new AvlNode(node.key, node.value);
 
@@ -636,24 +636,24 @@ class AvlTree implements DbIndexTree {
     node.value = left.value;
     // set new right
     newRight.right = right;
-    newRight.rightId = rightId;
+    newRight.rightRef = rightRef;
     node.right = newRight;
-    node.rightId = newRight.id;
+    node.rightRef = newRight.ref;
     this.resolveLeft(left, leftLeftCb);
   }
 
-  private resolveNode(id: string, cb: ObjectCb) {
+  private resolveNode(ref: string, cb: ObjectCb) {
     var getCb = (err: Error, array: Array) => {
       var node;
       if (err) return cb(err, null);
       node = new AvlNode(array[0], array[1]);
-      node.leftId = array[2];
-      node.rightId = array[3];
+      node.leftRef = array[2];
+      node.rightRef = array[3];
       node.height = array[4];
-      node.id = id;
+      node.ref = ref;
       cb(null, node);
     };
-    this.dbStorage.get(id, getCb);
+    this.dbStorage.get(ref, getCb);
   }
 
   private resolveLeft(from: AvlNode, cb: ObjectCb) {
@@ -664,8 +664,8 @@ class AvlTree implements DbIndexTree {
     }
 
     if (from.left) return cb(null, from.left);
-    if (!from.leftId) return cb(null, null);
-    this.resolveNode(from.leftId, getCb);
+    if (!from.leftRef) return cb(null, null);
+    this.resolveNode(from.leftRef, getCb);
   }
 
   private resolveRight(from: AvlNode, cb: ObjectCb) {
@@ -676,7 +676,7 @@ class AvlTree implements DbIndexTree {
     }
 
     if (from.right) return cb(null, from.right);
-    if (!from.rightId) return cb(null, null);
-    this.resolveNode(from.rightId, getCb);
+    if (!from.rightRef) return cb(null, null);
+    this.resolveNode(from.rightRef, getCb);
   }
 }
