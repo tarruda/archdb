@@ -1,7 +1,7 @@
 /// <reference path="./components.ts"/>
 /// <reference path="./util.ts"/>
 
-class Revision {
+class LocalRevision {
   queue: JobQueue;
 }
 

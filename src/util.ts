@@ -37,7 +37,7 @@ class UidGenerator {
   genTime: number;
   genTimeCount: number;
 
-  constructor(suffix: string) {
+  constructor(suffix?: string) {
     if (!suffix) this.generateSuffix();
     else this.suffix = suffix;
     this.genTime = 0;

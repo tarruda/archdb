@@ -25,7 +25,7 @@ module.exports = (grunt) ->
 
     connect:
       options:
-        hostname: '192.168.56.50'
+        hostname: '0.0.0.0'
         middleware: (connect, options) -> [
           connect.static(options.base)
           connect.directory(options.base)
