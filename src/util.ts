@@ -11,7 +11,7 @@
  *            running out of ids for a while).
  * byte 7   : id count generated in the current millisecond, that means
  *            each generator can only generate 256 ids per millisecond.
- * remaining: random number that is assigned to the UidGenerator instance
+ * remaining: arbitrary number that is assigned to the UidGenerator instance
  *            at creation. This allows multiple instances to safely generate
  *            ids at the same time, as long as this number is unique
  *            for each instance.
@@ -25,6 +25,10 @@ class Uid {
   /* Returns the date this uid was generated */
   getTime(): number {
     return parseInt(this.hex.substr(0, 12), 16);
+  }
+
+  byteLength(): number {
+    return this.hex.length / 2;
   }
 }
 
@@ -44,7 +48,7 @@ class UidGenerator {
     this.genTimeCount = 0;
   }
 
-  generate(time): Uid {
+  generate(time?: number): Uid {
     var pad, count, tc, timeStr;
 
     if (!time) time = new Date().getTime();
@@ -68,9 +72,9 @@ class UidGenerator {
 
   private generateSuffix() {
     this.suffix = '';
-    // generated suffixes are random 5-byte numbers so the resulting
-    // uids have 12 bytes
-    for (var i = 1;i <= 10;i++) this.suffix += this.random('0123456789abcdef');
+    // generated suffixes are random 7-byte numbers so the resulting
+    // uids have 14 bytes
+    for (var i = 1;i <= 14;i++) this.suffix += this.random('0123456789abcdef');
   }
 
   private toTime16(time) {
@@ -91,6 +95,77 @@ class UidGenerator {
   }
 }
 
+class LinkedListNode {
+  next: LinkedListNode;
+
+  constructor(public data: any) { }
+}
+
+class LinkedList {
+  head: LinkedListNode;
+  tail: LinkedListNode;
+
+  push(data: any) {
+    var node = new LinkedListNode(data);
+
+    if (this.tail) this.tail = this.tail.next = node;
+    else this.tail = this.head = node;
+  }
+
+  shift() {
+    var rv = this.head.data;
+    if (this.head.next) this.head = this.head.next;
+    else this.head = this.tail = null;
+  }
+
+  each(cb: AnyCb) {
+    var current = this.head;
+
+    while (current) {
+      cb(current);
+      current = current.next;
+    }
+  }
+
+  remove(cb: PredicateCb) {
+    var current = this.head;
+    var previous = null;
+
+    while (current) {
+      if (cb(current.data)) {
+        if (previous) previous.next = current.next;
+        else this.head = current.next;
+        break;
+      }
+      previous = current;
+      current = current.next;
+    }
+  }
+}
+
+class EventEmitter {
+  handlers: Object;
+
+  on(event: string, cb: AnyCb) {
+    this.handlers = this.handlers || {};
+    this.handlers[event] = this.handlers[event] || new LinkedList();
+    this.handlers[event].push(cb);
+  }
+
+  off(event: string, cb: AnyCb) {
+    var predicateCb = (node: AnyCb) => cb === node;
+
+    if (!this.handlers || !this.handlers[event]) return;
+    this.handlers[event].remove(predicateCb);
+  }
+
+  private emit(event: string, ...args: any[]) {
+    var invokeCb = (node: AnyCb) => node.apply(null, args);
+
+    if (!this.handlers || !this.handlers[event]) return;
+    this.handlers[event].each(invokeCb);
+  }
+}
 class Job {
   constructor(public cb: AnyCb, public fn: (cb: AnyCb) => void) {}
 }

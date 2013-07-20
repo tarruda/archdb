@@ -204,10 +204,18 @@ describe('BitArray', function() {
     });
 
     describe('uids', function() {
-      it('00000000000b000505050505', function() {
-        array.packUid(new Uid('00000000000b000505050505'));
-        expect(array.inspect()).to.equal('0 0 0 0   0 b 0 5   5 5 5 5');
-        expect(array.unpackUid().hex).to.eql('00000000000b000505050505');
+      it('8-byte: 00000000000b0005', function() {
+        array.pack(new Uid('00000000000b0005'));
+        expect(array.inspect()).to.equal(
+          '60 0 0 0   0 0 b0 0   50');
+        expect(array.unpack().hex).to.eql('00000000000b0005');
+      });
+
+      it('14-byte: 00000000000b0005050505050505', function() {
+        array.pack(new Uid('00000000000b0005050505050505'));
+        expect(array.inspect()).to.equal(
+          '70 0 0 0   0 0 b0 0   50 50 50 50   50 50 50');
+        expect(array.unpack().hex).to.eql('00000000000b0005050505050505');
       });
     });
 

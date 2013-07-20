@@ -213,8 +213,10 @@ class BitArray {
     return rv;
   }
 
-  packUid(uid: Uid) {
-    for (var i = 0;i < 24;i++) {
+  packUid(uid: Uid, length: number) {
+    var len = length * 2;
+
+    for (var i = 0;i < len;i++) {
       this.write(parseInt(uid.hex[i], 16), 4);
     }
   }
@@ -237,10 +239,10 @@ class BitArray {
     }
   }
 
-  unpackUid(): Uid {
-    var hex = '';
+  unpackUid(length: number): Uid {
+    var hex = '', len = length * 2;
   
-    for (var i = 0;i < 24;i++) {
+    for (var i = 0;i < len;i++) {
       hex += this.read(4).toString(16);
     }
 
@@ -293,8 +295,13 @@ class BitArray {
         this.write(5, 4);
         this.packString(obj);
       } else if (isUid(obj)) {
-        this.write(6, 4);
-        this.packUid(obj);
+        if (obj.byteLength() === 8) {
+          this.write(6, 4);
+          this.packUid(obj, 8);
+        } else if (obj.byteLength() === 14) {
+          this.write(7, 4);
+          this.packUid(obj, 14);
+        }
       } else if (isArray(obj)) {
         this.write(15, 4);
         this.packArray(obj);
@@ -320,7 +327,9 @@ class BitArray {
     } else if (type === 5) {
       return this.unpackString();
     } else if (type === 6) {
-      return this.unpackUid();
+      return this.unpackUid(8);
+    } else if (type === 7) {
+      return this.unpackUid(14);
     } else if (type === 15) {
       return this.unpackArray();
     }

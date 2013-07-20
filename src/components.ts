@@ -5,7 +5,11 @@ enum DbObjectType {
   Document
 }
 
+interface EmptyCb { (): void; }
+
 interface AnyCb { (...args: any[]); }
+
+interface PredicateCb { (obj: any): boolean; }
 
 interface DoneCb { (err: Error); }
 
@@ -16,6 +20,8 @@ interface RefCb { (err: Error, ref: string); }
 interface NextNodeCb { (stop: boolean) }
 
 interface RevisionCb { (err: Error, rev: Revision); }
+
+interface KVCb { (key: any, value: any); }
 
 interface VisitNodeCb {
   (err: Error, next: NextNodeCb, node: IndexNode)
