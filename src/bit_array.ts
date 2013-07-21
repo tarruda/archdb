@@ -3,7 +3,7 @@
 var ONE = 0xffffffff, P32 = Math.pow(2, 32), MIN_NORM = Math.pow(2, -1022);
 var PMANT = Math.pow(2, 52), PSUBN = Math.pow(2, -1074);
 
-class BitArray {
+class BitArray implements IndexKey {
   words: Array<number>;
   idx: number;
   offset: number;
@@ -22,6 +22,13 @@ class BitArray {
   resetPos() {
     this.readOffset = 0;
     this.readIdx = 0;
+  }
+
+  normalize() {
+    var rv = this.unpack();
+  
+    this.resetPos();
+    return rv;
   }
 
   rewind(len: number) {

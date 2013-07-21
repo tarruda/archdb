@@ -32,10 +32,6 @@ class Uid {
   }
 }
 
-class ObjectRef {
-  constructor(public ref: string) { }
-}
-
 class UidGenerator {
   suffix: string;
   genTime: number;

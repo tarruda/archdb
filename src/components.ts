@@ -1,3 +1,5 @@
+/// <reference path="./public_components.ts"/>
+
 var yield: (fn: (...args: any[]) => any) => any;
 
 enum DbObjectType {
@@ -11,16 +13,16 @@ interface AnyCb { (...args: any[]); }
 
 interface PredicateCb { (obj: any): boolean; }
 
-interface DoneCb { (err: Error); }
-
-interface ObjectCb { (err: Error, obj: any); }
-
 interface RefCb { (err: Error, ref: string); }
 
 interface NextNodeCb { (stop?: boolean) }
 
 interface VisitNodeCb {
   (err: Error, next: NextNodeCb, node: IndexNode)
+}
+
+interface VisitKvCb {
+  (err: Error, next: NextNodeCb, key: any, value: any);
 }
 
 interface Normalizable {
