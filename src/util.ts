@@ -159,7 +159,7 @@ class EventEmitter {
     this.handlers[event].remove(predicateCb);
   }
 
-  private emit(event: string, ...args: any[]) {
+  emit(event: string, ...args: any[]) {
     var invokeCb = (node: AnyCb) => node.apply(null, args);
 
     if (!this.handlers || !this.handlers[event]) return;

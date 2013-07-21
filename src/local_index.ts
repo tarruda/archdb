@@ -17,35 +17,36 @@ class LocalIndex {
     this.queue.add(cb, job);
   }
 
-  find(query: Object) {
-    return new Cursor(this.dbStorage, this.queue, this.tree, query);
+  setJob(key: any, value: any, cb: ObjectCb) { }
+
+  delJob(key: any, cb: ObjectCb) { }
+
+  find(query: any) {
+    return new LocalCursor(this.dbStorage, this.queue, this.tree, query);
   }
 }
 
-class LocalCursor {
+class LocalCursor extends EventEmitter {
   dbStorage: DbStorage;
   queue: JobQueue;
   tree: DbIndexTree;
-  query: Object;
+  query: any;
   closed: boolean;
   paused: boolean;
-  nextJobCb: AnyCb;
-  doneCb: DoneCb;
-  runCb: EmptyCb; 
   err: Error;
+  nextJobCb: AnyCb;
 
   constructor(dbStorage: DbStorage, queue: JobQueue, tree: DbIndexTree,
-      query: Object) {
+      query: any) {
+    super();
     this.dbStorage = dbStorage; 
     this.queue = queue;
     this.tree = tree;
     this.query = query;
     this.closed = false;
     this.paused = false;
-    this.nextJobCb = null;
-    this.doneCb = null;
-    this.runCb = null;
     this.err = null;
+    this.nextJobCb = null;
   }
 
   each(cb: KVCb) {
@@ -57,19 +58,27 @@ class LocalCursor {
       if (err) {
         this.err = err;
         this.close();
-        this.done
-      
       }
-    
     };
   
   }
 
-  private find(visitCb: VisitNodeCb) {
+  close() {
+    this.closed = true;
+    this.emit('close', this.err);
+  }
+
+  private find(cb: VisitNodeCb) {
     if (this.query) {
       if (this.query.$eq) return this.findEq(cb);
       if (this.query.$like) return this.findLike(cb);
     }
-    findRange(cb);
+    this.findRange(cb);
   }
+
+  private findEq(cb: VisitNodeCb) { }
+
+  private findLike(cb: VisitNodeCb) { }
+
+  private findRange(cb: VisitNodeCb) { }
 }

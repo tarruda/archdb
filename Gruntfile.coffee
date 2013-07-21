@@ -60,14 +60,43 @@ module.exports = (grunt) ->
   grunt.registerMultiTask 'mapcat', ->
     # concatenate compiled javascript while generating a resulting
     # source map for the original typescript files
+    # this is needed as the typescript compiler breaks when generating
+    # source maps from multiple files:
+    # https://typescript.codeplex.com/workitem/1032
     dest = @data.dest
     sourceMappingURL = "#{path.basename(dest)}.map"
     buffer = []
     lineOffset = 0
-    cwd = @data.cwd
+    cwd = path.resolve(@data.cwd)
     gen = new SourceMapGenerator { file: dest }
-    @filesSrc.forEach (file) ->
-      filepath = path.join cwd, file
+    visited = {}
+    concatenated = {}
+    files = @filesSrc.map (f) -> path.join(cwd, f)
+    while files.length
+      filepath = files.pop()
+      if filepath of concatenated
+        continue
+      deps = []
+      filename = path.relative(cwd, filepath)
+      # ensure the files dependencies are concatenated first
+      origname = filename.replace(/\.js$/, '.ts')
+      origpath = path.join('src', origname)
+      origdata = grunt.file.read origpath
+      while match = /\/\/\/\s*\<reference\s*path="(.+)\.ts"\/\>/.exec(origdata)
+        origdata = origdata.replace(match[0], '')
+        dep = path.join(path.dirname(filepath), "#{match[1]}.js")
+        if !(dep of concatenated)
+          deps.push(dep)
+      if deps.length
+        if !(filepath of visited)
+          # avoid infinite loops due to circular deps
+          visited[filepath] = null
+          files.push(filepath)
+          files = files.concat(deps)
+          continue
+        else
+          files = files.concat(deps)
+      concatenated[filepath] = null
       sourceMapPath = filepath + ".map"
       src = grunt.file.read filepath
       src = src.replace(/\/\/@\ssourceMappingURL[^\r\n]*/g, '//')
