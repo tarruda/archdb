@@ -46,7 +46,7 @@ interface IndexKey extends Normalizable {
 
 interface DbIndexTree {
   get(key: IndexKey, cb: ObjectCb);
-  set(key: IndexKey, value: Normalizable, cb: ObjectCb);
+  set(key: IndexKey, value: any, cb: ObjectCb);
   del(key: IndexKey, cb: ObjectCb);
   inOrder(minKey: IndexKey, cb: VisitNodeCb);
   revInOrder(maxKey: IndexKey, cb: VisitNodeCb);
