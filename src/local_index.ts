@@ -1,7 +1,8 @@
 /// <reference path="./components.ts"/>
+/// <reference path="./public_components.ts"/>
 /// <reference path="./util.ts"/>
 
-class LocalIndex {
+class LocalIndex implements Index {
   constructor(private dbStorage: DbStorage, private queue: JobQueue,
       private tree: DbIndexTree, private history: DbIndexTree) { }
 
@@ -21,12 +22,12 @@ class LocalIndex {
 
   delJob(key: any, cb: ObjectCb) { }
 
-  find(query: any) {
+  find(query: any): Cursor {
     return new LocalCursor(this.dbStorage, this.queue, this.tree, query);
   }
 }
 
-class LocalCursor extends EventEmitter {
+class LocalCursor extends EventEmitter implements Cursor {
   dbStorage: DbStorage;
   queue: JobQueue;
   tree: DbIndexTree;
@@ -34,7 +35,6 @@ class LocalCursor extends EventEmitter {
   closed: boolean;
   paused: boolean;
   err: Error;
-  nextJobCb: AnyCb;
 
   constructor(dbStorage: DbStorage, queue: JobQueue, tree: DbIndexTree,
       query: any) {
@@ -46,19 +46,22 @@ class LocalCursor extends EventEmitter {
     this.closed = false;
     this.paused = false;
     this.err = null;
-    this.nextJobCb = null;
   }
 
-  each(cb: KVCb) {
+  each(eachCb: KvCb, cb: DoneCb) {
     var job = (cb) => {
-      this.nextJobCb = cb;
+      this.on('close', cb)
       this.find(visitCb);
     };
     var visitCb = (err: Error, next: NextNodeCb, node: IndexNode) => {
-      if (err) {
+      if (err || !next) {
         this.err = err;
-        this.close();
+        return this.close();
       }
+      eachCb(node.getKey(), node.getValue());
+      if (this.closed) return next(true);
+      if (this.paused) return this.once('resume', next);
+      next();
     };
   
   }

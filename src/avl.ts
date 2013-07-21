@@ -179,7 +179,7 @@ class AvlTree implements DbIndexTree {
       if (minKey) searchMinCb(null, root);
       else nodeCb(null, root);
     };
-    var nextNodeCb = (stop: boolean) => {
+    var nextNodeCb = (stop?: boolean) => {
       if (paused) throw new Error('called too many times');
       paused = true;
       if (stop) return cb(null, null, null);
@@ -229,7 +229,7 @@ class AvlTree implements DbIndexTree {
       if (maxKey) searchMinCb(null, root);
       else nodeCb(null, root);
     };
-    var nextNodeCb = (stop: boolean) => {
+    var nextNodeCb = (stop?: boolean) => {
       if (paused) throw new Error('called too many times');
       paused = true;
       if (stop) return cb(null, null, null);

@@ -116,23 +116,24 @@ class LinkedList {
     var rv = this.head.data;
     if (this.head.next) this.head = this.head.next;
     else this.head = this.tail = null;
+    return rv;
   }
 
   each(cb: AnyCb) {
     var current = this.head;
 
     while (current) {
-      cb(current);
+      cb(current.data);
       current = current.next;
     }
   }
 
-  remove(cb: PredicateCb) {
+  remove(item: any) {
     var current = this.head;
     var previous = null;
 
     while (current) {
-      if (cb(current.data)) {
+      if (item === current.data) {
         if (previous) previous.next = current.next;
         else this.head = current.next;
         break;
@@ -152,11 +153,18 @@ class EventEmitter {
     this.handlers[event].push(cb);
   }
 
-  off(event: string, cb: AnyCb) {
-    var predicateCb = (node: AnyCb) => cb === node;
+  once(event: string, cb: AnyCb) {
+    var onceCb = () => {
+      cb.apply(null, arguments);
+      this.handlers[event].remove(onceCb);
+    };
 
+    this.on(event, onceCb);
+  }
+
+  off(event: string, cb: AnyCb) {
     if (!this.handlers || !this.handlers[event]) return;
-    this.handlers[event].remove(predicateCb);
+    this.handlers[event].remove(cb);
   }
 
   emit(event: string, ...args: any[]) {

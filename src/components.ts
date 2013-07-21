@@ -17,11 +17,7 @@ interface ObjectCb { (err: Error, obj: any); }
 
 interface RefCb { (err: Error, ref: string); }
 
-interface NextNodeCb { (stop: boolean) }
-
-interface RevisionCb { (err: Error, rev: Revision); }
-
-interface KVCb { (key: any, value: any); }
+interface NextNodeCb { (stop?: boolean) }
 
 interface VisitNodeCb {
   (err: Error, next: NextNodeCb, node: IndexNode)
@@ -60,11 +56,4 @@ interface DbStorage {
   save(obj: DbObject, cb: RefCb);
   getMasterRef(cb: RefCb);
   setMasterRef(ref: string, cb: DoneCb);
-}
-
-interface Database {
-  checkout(cb: RevisionCb);
-}
-
-interface Revision {
 }

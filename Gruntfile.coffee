@@ -87,15 +87,13 @@ module.exports = (grunt) ->
         dep = path.join(path.dirname(filepath), "#{match[1]}.js")
         if !(dep of concatenated)
           deps.push(dep)
-      if deps.length
-        if !(filepath of visited)
-          # avoid infinite loops due to circular deps
-          visited[filepath] = null
-          files.push(filepath)
-          files = files.concat(deps)
-          continue
-        else
-          files = files.concat(deps)
+      if deps.length && !(filepath of visited)
+        # to avoid infinite loops due to circular deps, we mark this file
+        # so its dependencies won't be resolved again
+        visited[filepath] = null
+        files.push(filepath)
+        files = files.concat(deps)
+        continue
       concatenated[filepath] = null
       sourceMapPath = filepath + ".map"
       src = grunt.file.read filepath
