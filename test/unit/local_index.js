@@ -87,11 +87,12 @@ describe('LocalIndex', function() {
 
     history.inOrder(null, function(err, next, node) {
       if (!next) {
-        console.log(items);
         expect(items).to.deep.eql(expected);
         return cb();
       }
       dbStorage.get(node.value.ref, function(err, value) {
+        value =
+          {type: value[0], key: value[1], index: value[3], value: value[2]};
         items.push(value);
         if (value.value instanceof ObjectRef) {
           dbStorage.get(value.value.ref, function(err, val) {

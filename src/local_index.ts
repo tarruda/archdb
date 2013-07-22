@@ -35,10 +35,10 @@ class LocalIndex implements Index {
       var histDel;
       if (err) return cb(err, null);
       if (this.history) {
-        histIns = {type: 'ins', value: newRef, key: key, index: this.name};
+        histIns = ['ins', key, newRef, this.name];
         if (old) {
           oldValue = old;
-          histDel = {type: 'del', value: old, key: key, index: this.name};
+          histDel = ['del', key, old, this.name];
           this.saveHistory(histDel, histDelCb);
         } else {
           this.saveHistory(histIns, histInsCb);
@@ -69,7 +69,7 @@ class LocalIndex implements Index {
       if (this.history) {
         if (old) {
           oldValue = old;
-          histDel = {type: 'del', value: old, key: key, index: this.name};
+          histDel = ['del', key, old, this.name];
           this.saveHistory(histDel, histDelCb);
         }
       } else {
