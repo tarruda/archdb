@@ -7,7 +7,8 @@ describe('LocalIndex', function() {
     tree = new AvlTree(dbStorage);
     history = new AvlTree(dbStorage);
     generator = new UidGenerator();
-    index = new LocalIndex('test', dbStorage, queue, tree, history, generator);
+    index = new LocalIndex(1,
+                           'test', dbStorage, queue, tree, history, generator);
 
     index.set(1, {name: 'doc1'});
     index.set(2, {name: 'doc2'});
@@ -42,42 +43,40 @@ describe('LocalIndex', function() {
     });
   });
 
-  it('appends an insert history entry on each insert', function(done) {
+  it('appends insert history entries on each insert', function(done) {
     historyShouldEql([
-      {type: 'ins', key: 1, index: 'test', value: {name: 'doc1'}},
-      {type: 'ins', key: 2, index: 'test', value: {name: 'doc2'}},
-      {type: 'ins', key: '3', index: 'test', value: {name: 'doc3'}},
-      {type: 'ins', key: [4, 3], index: 'test', value: {name: 'doc4'}},
-      {type: 'ins', key: true, index: 'test', value: {name: 'doc5'}},
+      {type: 'ins', key: 1, index: 1, value: {name: 'doc1'}},
+      {type: 'ins', key: 2, index: 1, value: {name: 'doc2'}},
+      {type: 'ins', key: '3', index: 1, value: {name: 'doc3'}},
+      {type: 'ins', key: [4, 3], index: 1, value: {name: 'doc4'}},
+      {type: 'ins', key: true, index: 1, value: {name: 'doc5'}},
     ], done);
   });
 
   it('appends delete history entries on each update', function(done) {
     index.del('3', function() {
       historyShouldEql([
-        {type: 'ins', key: 1, index: 'test', value: {name: 'doc1'}},
-        {type: 'ins', key: 2, index: 'test', value: {name: 'doc2'}},
-        {type: 'ins', key: '3', index: 'test', value: {name: 'doc3'}},
-        {type: 'ins', key: [4, 3], index: 'test', value: {name: 'doc4'}},
-        {type: 'ins', key: true, index: 'test', value: {name: 'doc5'}},
-        {type: 'del', key: '3', index: 'test', value: {name: 'doc3'}},
+        {type: 'ins', key: 1, index: 1, value: {name: 'doc1'}},
+        {type: 'ins', key: 2, index: 1, value: {name: 'doc2'}},
+        {type: 'ins', key: '3', index: 1, value: {name: 'doc3'}},
+        {type: 'ins', key: [4, 3], index: 1, value: {name: 'doc4'}},
+        {type: 'ins', key: true, index: 1, value: {name: 'doc5'}},
+        {type: 'del', key: '3', index: 1, oldValue: {name: 'doc3'}},
       ], done);
     });
   });
 
-  it('appends insert/delete history entries on each update', function(done) {
+  it('appends update history entries on each update', function(done) {
     index.set(2, 4);
     index.set([4, 3], 5, function() {
       historyShouldEql([
-        {type: 'ins', key: 1, index: 'test', value: {name: 'doc1'}},
-        {type: 'ins', key: 2, index: 'test', value: {name: 'doc2'}},
-        {type: 'ins', key: '3', index: 'test', value: {name: 'doc3'}},
-        {type: 'ins', key: [4, 3], index: 'test', value: {name: 'doc4'}},
-        {type: 'ins', key: true, index: 'test', value: {name: 'doc5'}},
-        {type: 'del', key: 2, index: 'test', value: {name: 'doc2'}},
-        {type: 'ins', key: 2, index: 'test', value: 4},
-        {type: 'del', key: [4, 3], index: 'test', value: {name: 'doc4'}},
-        {type: 'ins', key: [4, 3], index: 'test', value: 5},
+        {type: 'ins', key: 1, index: 1, value: {name: 'doc1'}},
+        {type: 'ins', key: 2, index: 1, value: {name: 'doc2'}},
+        {type: 'ins', key: '3', index: 1, value: {name: 'doc3'}},
+        {type: 'ins', key: [4, 3], index: 1, value: {name: 'doc4'}},
+        {type: 'ins', key: true, index: 1, value: {name: 'doc5'}},
+        {type: 'upd', key: 2, index: 1, value: 4, oldValue: {name: 'doc2'}},
+        {type: 'upd', key: [4, 3], index: 1, value: 5, oldValue: {name: 'doc4'}},
       ], done);
     });
   });
@@ -91,12 +90,36 @@ describe('LocalIndex', function() {
         return cb();
       }
       dbStorage.get(node.value.ref, function(err, value) {
-        value =
-          {type: value[0], key: value[1], index: value[3], value: value[2]};
-        items.push(value);
-        if (value.value instanceof ObjectRef) {
-          dbStorage.get(value.value.ref, function(err, val) {
-            value.value = val;
+        var val =
+          {type: value[0], key: value[2], index: value[1], value: value[3]};
+        if (val.type === HistoryEntryType.Insert) {
+          val.type = 'ins';
+        } else if (val.type === HistoryEntryType.Delete) {
+          val.type = 'del';
+          val.oldValue = val.value;
+          delete val.value;
+        } else {
+          val.type = 'upd';
+          val.oldValue = value[4];
+        }
+
+        items.push(val);
+
+        if (val.value instanceof ObjectRef) {
+          dbStorage.get(val.value.ref, function(err, v) {
+            val.value = v;
+            if (val.oldValue instanceof ObjectRef) {
+              dbStorage.get(val.oldValue.ref, function(err, v) {
+                val.oldValue = v;
+                next();
+              });
+            } else {
+              next();
+            }
+          });
+        } else if (val.oldValue instanceof ObjectRef){
+          dbStorage.get(val.oldValue.ref, function(err, v) {
+            val.oldValue = v;
             next();
           });
         } else {

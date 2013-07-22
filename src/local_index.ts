@@ -2,10 +2,15 @@
 /// <reference path="./public_components.ts"/>
 /// <reference path="./util.ts"/>
 
+enum HistoryEntryType {
+  Insert = 1, Delete = 2, Update = 3
+}
+
 class LocalIndex implements Index {
-  constructor(private name: string, private dbStorage: DbStorage,
-      private queue: JobQueue, private tree: DbIndexTree,
-      private history: DbIndexTree, private uidGenerator: UidGenerator) { }
+  constructor(private id: Uid, private name: string,
+      private dbStorage: DbStorage, private queue: JobQueue,
+      private tree: DbIndexTree, private history: DbIndexTree,
+      private uidGenerator: UidGenerator) { }
 
   set(key: any, value: any, cb: ObjectCb) {
     var job = (cb: ObjectCb) => this.setJob(key, value, cb);
@@ -31,57 +36,52 @@ class LocalIndex implements Index {
       newRef = ref;
       this.tree.set(new BitArray(key), ref, setCb);
     };
-    var setCb = (err: Error, old: any) => {
-      var histDel;
+    var setCb = (err: Error, oldRef: any) => {
+      var he;
       if (err) return cb(err, null);
       if (this.history) {
-        histIns = ['ins', key, newRef, this.name];
-        if (old) {
-          oldValue = old;
-          histDel = ['del', key, old, this.name];
-          this.saveHistory(histDel, histDelCb);
+        if (oldRef) {
+          old = oldRef;
+          he = [HistoryEntryType.Update, this.id, key, newRef, oldRef];
         } else {
-          this.saveHistory(histIns, histInsCb);
+          he = [HistoryEntryType.Insert, this.id, key, newRef];
         }
+        this.saveHistory(he, histCb);
       } else {
         cb(null, old);
       }
     };
-    var histDelCb = (err: Error) => {
+    var histCb = (err: Error) => {
       if (err) return cb(err, null);
-      this.saveHistory(histIns, histInsCb);
-    };
-    var histInsCb = (err: Error) => {
-      if (err) return cb(err, null);
-      cb(null, oldValue);
+      cb(null, old);
     };
 
-    var histIns, oldValue, newRef;
+    var old, newRef;
 
     if (value instanceof ObjectRef) set(value);
     else this.dbStorage.save(value, refCb);
   }
 
   private delJob(key: any, cb: ObjectCb) {
-    var delCb = (err: Error, old: any) => {
-      var histDel;
+    var delCb = (err: Error, oldRef: any) => {
+      var he;
       if (err) return cb(err, null);
       if (this.history) {
-        if (old) {
-          oldValue = old;
-          histDel = ['del', key, old, this.name];
-          this.saveHistory(histDel, histDelCb);
+        if (oldRef) {
+          old = oldRef;
+          he = [HistoryEntryType.Delete, this.id, key, oldRef];
+          this.saveHistory(he, histCb);
         }
       } else {
-        cb(null, old);
+        cb(null, null);
       }
     };
-    var histDelCb = (err: Error) => {
+    var histCb = (err: Error) => {
       if (err) return cb(err, null);
-      cb(null, oldValue);
+      cb(null, old);
     };
 
-    var oldValue;
+    var old;
 
     this.tree.del(new BitArray(key), delCb);
   }
