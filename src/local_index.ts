@@ -28,13 +28,14 @@ class LocalIndex implements Index {
       set(new ObjectRef(ref));
     };
     var set = (ref: ObjectRef) => {
+      newRef = ref;
       this.tree.set(new BitArray(key), ref, setCb);
     };
     var setCb = (err: Error, old: any) => {
       var histDel;
       if (err) return cb(err, null);
       if (this.history) {
-        histIns = {type: 'ins', value: value, key: key, index: this.name};
+        histIns = {type: 'ins', value: newRef, key: key, index: this.name};
         if (old) {
           oldValue = old;
           histDel = {type: 'del', value: old, key: key, index: this.name};
@@ -55,7 +56,7 @@ class LocalIndex implements Index {
       cb(null, oldValue);
     };
 
-    var histIns, oldValue;
+    var histIns, oldValue, newRef;
 
     if (value instanceof ObjectRef) set(value);
     else this.dbStorage.save(value, refCb);

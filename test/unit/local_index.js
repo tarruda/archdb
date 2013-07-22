@@ -1,16 +1,124 @@
+describe('LocalIndex', function() {
+  var dbStorage, tree, index, queue, generator;
+
+  beforeEach(function(done) {
+    queue = new JobQueue();
+    dbStorage = new MemoryStorage();
+    tree = new AvlTree(dbStorage);
+    history = new AvlTree(dbStorage);
+    generator = new UidGenerator();
+    index = new LocalIndex('test', dbStorage, queue, tree, history, generator);
+
+    index.set(1, {name: 'doc1'});
+    index.set(2, {name: 'doc2'});
+    index.set('3', {name: 'doc3'});
+    index.set([4, 3], {name: 'doc4'});
+    index.set(true, {name: 'doc5'}, done);
+  });
+
+  it('sets keys/values', function(done) {
+    index.find().all(function(err, items) {
+      expect(rows(items)).to.deep.eql([
+        row(true, {name: 'doc5'}),
+        row(1, {name: 'doc1'}),
+        row(2, {name: 'doc2'}),
+        row('3', {name: 'doc3'}),
+        row([4, 3], {name: 'doc4'})
+      ]);
+      done();
+    });
+  });
+
+  it('deletes keys/values', function(done) {
+    index.del('3');
+    index.del(2);
+    index.find().all(function(err, items) {
+      expect(rows(items)).to.deep.eql([
+        row(true, {name: 'doc5'}),
+        row(1, {name: 'doc1'}),
+        row([4, 3], {name: 'doc4'})
+      ]);
+      done();
+    });
+  });
+
+  it('appends an insert history entry on each insert', function(done) {
+    historyShouldEql([
+      {type: 'ins', key: 1, index: 'test', value: {name: 'doc1'}},
+      {type: 'ins', key: 2, index: 'test', value: {name: 'doc2'}},
+      {type: 'ins', key: '3', index: 'test', value: {name: 'doc3'}},
+      {type: 'ins', key: [4, 3], index: 'test', value: {name: 'doc4'}},
+      {type: 'ins', key: true, index: 'test', value: {name: 'doc5'}},
+    ], done);
+  });
+
+  it('appends delete history entries on each update', function(done) {
+    index.del('3', function() {
+      historyShouldEql([
+        {type: 'ins', key: 1, index: 'test', value: {name: 'doc1'}},
+        {type: 'ins', key: 2, index: 'test', value: {name: 'doc2'}},
+        {type: 'ins', key: '3', index: 'test', value: {name: 'doc3'}},
+        {type: 'ins', key: [4, 3], index: 'test', value: {name: 'doc4'}},
+        {type: 'ins', key: true, index: 'test', value: {name: 'doc5'}},
+        {type: 'del', key: '3', index: 'test', value: {name: 'doc3'}},
+      ], done);
+    });
+  });
+
+  it('appends insert/delete history entries on each update', function(done) {
+    index.set(2, 4);
+    index.set([4, 3], 5, function() {
+      historyShouldEql([
+        {type: 'ins', key: 1, index: 'test', value: {name: 'doc1'}},
+        {type: 'ins', key: 2, index: 'test', value: {name: 'doc2'}},
+        {type: 'ins', key: '3', index: 'test', value: {name: 'doc3'}},
+        {type: 'ins', key: [4, 3], index: 'test', value: {name: 'doc4'}},
+        {type: 'ins', key: true, index: 'test', value: {name: 'doc5'}},
+        {type: 'del', key: 2, index: 'test', value: {name: 'doc2'}},
+        {type: 'ins', key: 2, index: 'test', value: 4},
+        {type: 'del', key: [4, 3], index: 'test', value: {name: 'doc4'}},
+        {type: 'ins', key: [4, 3], index: 'test', value: 5},
+      ], done);
+    });
+  });
+
+  function historyShouldEql(expected, cb) {
+    var items = [], q, node;
+
+    history.inOrder(null, function(err, next, node) {
+      if (!next) {
+        console.log(items);
+        expect(items).to.deep.eql(expected);
+        return cb();
+      }
+      dbStorage.get(node.value.ref, function(err, value) {
+        items.push(value);
+        if (value.value instanceof ObjectRef) {
+          dbStorage.get(value.value.ref, function(err, val) {
+            value.value = val;
+            next();
+          });
+        } else {
+          next();
+        }
+      })
+    });
+  }
+});
+
 describe('LocalCursor', function() {
   var dbStorage, tree, cursor, queue;
   var expected = [
-    row(1, {name: 'doc1'}, '1'),
-    row(2, {name: 'doc2'}, '2'),
-    row(3, 'doc3', null),
-    row(4, {name: 'doc4'}, '3'),
-    row(5, 'doc5', null),
-    row('ab', 'doc6', null),
-    row('abc', 'doc7', null),
-    row([1, 2], {name: 'doc9'}, '4'),
-    row([1, 2, 3], 'doc10', null),
-    row([1, 2, 3, 4], 'doc11', null)
+    row(1, {name: 'doc1'}),
+    row(2, {name: 'doc2'}),
+    row(3, 'doc3'),
+    row(4, {name: 'doc4'}),
+    row(5, 'doc5'),
+    row('ab', 'doc6'),
+    row('abc', 'doc7'),
+    row([1, 2], {name: 'doc9'}),
+    row([1, 2, 3], 'doc10'),
+    row([1, 2, 3, 4], 'doc11')
   ];
 
   function testWithQuery(query, expected, desc) {
@@ -30,19 +138,21 @@ describe('LocalCursor', function() {
       it('query each', function(done) {
         var i = 0;
         cursor.each(function(row) {
+          row.ref = null;
           expect(row).to.deep.eql(expected[i++]);
         }, function() { expect(i).to.eql(expected.length); done(); });
       });
 
       it('query all', function(done) {
         cursor.all(function(err, items) {
-          expect(items).to.deep.eql(expected);
+          expect(rows(items)).to.deep.eql(expected);
           done();
         });
       });
 
       it('query one', function(done) {
         cursor.one(function(err, row) {
+          row.ref = null;
           expect(row).to.deep.eql(expected[0]);
           done();
         });
@@ -74,8 +184,7 @@ describe('LocalCursor', function() {
                 'with query: $like: [1, 2, 3, 4]');
   testWithQuery({$eq: [1, 2, 3, 4]}, expected.slice(9),
                 'with query: $eq: [1, 2, 3, 4]');
-  testWithQuery({$eq: 'ab'}, expected.slice(5, 6),
-                'with query: $eq: ab');
+  testWithQuery({$eq: 'ab'}, expected.slice(5, 6), 'with query: $eq: ab');
 
   function insertKv() {
     var args = arguments;
@@ -102,25 +211,11 @@ describe('LocalCursor', function() {
   }
 });
 
-describe('LocalIndex', function() {
-  var dbStorage, tree, index, queue, generator;
+function row(key, value) { 
+  return new Row(key, value, null);
+}
 
-  beforeEach(function(done) {
-    queue = new JobQueue();
-    dbStorage = new MemoryStorage();
-    tree = new AvlTree(dbStorage);
-    history = new AvlTree(dbStorage);
-    generator = new UidGenerator();
-    index = new LocalIndex('test', dbStorage, queue, tree, history, generator);
-
-    index.set(1, {name: 'doc1'});
-    index.set(2, {name: 'doc2'});
-    index.set('3', {name: 'doc3'});
-    index.set([4, 3], {name: 'doc4'});
-    index.set(true, {name: 'doc5'}, done);
-  });
-});
-
-function row(key, value, ref) { 
-  return new Row(key, value, ref ? new ObjectRef(ref) : null);
+function rows(array) {
+  array.forEach(function(r) { r.ref = null; });
+  return array;
 }
