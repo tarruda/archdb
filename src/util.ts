@@ -131,12 +131,14 @@ class LinkedList {
     while (current) {
       if (item === current.data) {
         if (previous) previous.next = current.next;
-        else this.head = current.next;
+        else this.head = current.next || null;
         break;
       }
       previous = current;
       current = current.next;
     }
+
+    if (!this.head) this.tail = this.head;
   }
 }
 

@@ -1,5 +1,5 @@
 describe('LocalCursor', function() {
-  var dbStorage, tree, cursor, queue, refs;
+  var dbStorage, tree, cursor, queue;
   var expected = [
     row(1, {name: 'doc1'}, '1'),
     row(2, {name: 'doc2'}, '2'),
@@ -13,22 +13,19 @@ describe('LocalCursor', function() {
     row([1, 2, 3, 4], 'doc11', null)
   ];
 
-  beforeEach(function(done) {
-    refs = {};
-    queue = new JobQueue();
-    dbStorage = new MemoryStorage();
-    tree = new AvlTree(dbStorage);
-    cursor = new LocalCursor(dbStorage, queue, tree);
-
-    insertKv(1, {name: 'doc1'}, 2, {name: 'doc2'}, 3, 'doc3', 4,
-           {name: 'doc4'}, 5, 'doc5', 'ab', 'doc6', 'abc', 'doc7',
-           [1, 2], {name: 'doc9'}, [1, 2, 3], 'doc10', 
-           [1, 2, 3, 4], 'doc11', done);
-  });
-
   function testWithQuery(query, expected, desc) {
     describe(desc, function() {
-      if (query) beforeEach(function() { cursor.query = query; });
+      beforeEach(function(done) {
+        queue = new JobQueue();
+        dbStorage = new MemoryStorage();
+        tree = new AvlTree(dbStorage);
+        cursor = new LocalCursor(dbStorage, queue, tree, query);
+
+        insertKv(1, {name: 'doc1'}, 2, {name: 'doc2'}, 3, 'doc3', 4,
+                 {name: 'doc4'}, 5, 'doc5', 'ab', 'doc6', 'abc', 'doc7',
+                 [1, 2], {name: 'doc9'}, [1, 2, 3], 'doc10', 
+                 [1, 2, 3, 4], 'doc11', done);
+      });
 
       it('query each', function(done) {
         var i = 0;

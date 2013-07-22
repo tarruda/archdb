@@ -144,6 +144,8 @@ class LocalCursor extends EventEmitter implements Cursor {
 
     var key, value, nextCb;
 
+    if (this.closed) throw new Error('Cursor is closed');
+
     this.queue.add(cb, jobCb);
   }
 

@@ -58,6 +58,16 @@ describe('EventEmitter', function() {
     e.emit('ev', 1, 2, 3);
     expect(args).to.deep.eql([1, 2, 3, 4, 5, 6, 1, 2, 3]);
   });
+
+  it('subscribe once multiple times on empty emitter', function() {
+    var e = new EventEmitter();
+    e.once('ev', function() { args = args.concat([4, 5, 6]); });
+    e.once('ev', function() { args = args.concat([2, 3, 4]); });
+    e.emit('ev');
+    expect(args).to.deep.eql([4, 5, 6, 2, 3, 4]);
+    e.emit('ev');
+    expect(args).to.deep.eql([4, 5, 6, 2, 3, 4]);
+  });
 });
 
 describe('LinkedList', function() {
@@ -79,6 +89,8 @@ describe('LinkedList', function() {
     var shifted = [l.shift(), l.shift(), l.shift(), l.shift()];
     expect(shifted).to.deep.eql([1, 2, 3, 4]);
     expect(items()).to.deep.eql([]);
+    expect(l.head).to.be.null;
+    expect(l.tail).to.be.null;
   });
 
   it('remove', function() {
@@ -88,6 +100,10 @@ describe('LinkedList', function() {
     expect(items()).to.deep.eql([3, 4]);
     l.remove(4);
     expect(items()).to.deep.eql([3]);
+    l.remove(3);
+    expect(items()).to.deep.eql([]);
+    expect(l.head).to.be.null;
+    expect(l.tail).to.be.null;
   });
 
   function items() {
