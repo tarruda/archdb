@@ -11,6 +11,8 @@ Number.prototype.clone = function() {
 };
 
 describe('AvlTree', function() {
+  var dbStorage, tree;
+
   beforeEach(function() {
     dbStorage = new MemoryStorage();
     tree = new AvlTree(dbStorage);

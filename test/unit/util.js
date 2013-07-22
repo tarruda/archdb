@@ -1,3 +1,28 @@
+describe('JobQueue', function() {
+  var queue;
+
+  beforeEach(function () {
+    queue = new JobQueue();
+  });
+
+  it('runs async jobs serially', function(done) {
+    var i = 0;
+    function cb1(arg) { expect(arg).to.eql('one'); i++; }
+    function job1(cb) { expect(i).to.eql(0);
+      setImmediate(function() {
+        i++;
+        cb('one');
+      });
+    }
+    function job2(cb) { expect(i).to.eql(2); setImmediate(cb); i++; }
+    function job3(cb) { expect(i).to.eql(3); cb(); }
+
+    queue.add(cb1, job1);
+    queue.add(null, job2);
+    queue.add(done, job3);
+  });
+});
+
 describe('EventEmitter', function() {
   var e, args;
 

@@ -5,16 +5,16 @@
 class LocalIndex implements Index {
   constructor(private name: string, private dbStorage: DbStorage,
       private queue: JobQueue, private tree: DbIndexTree,
-      private history: DbIndexTree) { }
+      private history: DbIndexTree, private uidGenerator: UidGenerator) { }
 
   set(key: any, value: any, cb: ObjectCb) {
-    var job = (cb: ObjectCb) => { this.setJob(key, value, cb); }
+    var job = (cb: ObjectCb) => this.setJob(key, value, cb);
 
     this.queue.add(cb, job);
   }
 
   del(key: any, cb: ObjectCb) {
-    var job = (cb: ObjectCb) => { this.delJob(key, cb); }
+    var job = (cb: ObjectCb) => this.delJob(key, cb);
 
     this.queue.add(cb, job);
   }
@@ -29,7 +29,7 @@ class LocalIndex implements Index {
     };
     var set = (ref: ObjectRef) => {
       this.tree.set(new BitArray(key), ref, setCb);
-    }
+    };
     var setCb = (err: Error, old: any) => {
       var histDel;
       if (err) return cb(err, null);
@@ -86,7 +86,12 @@ class LocalIndex implements Index {
   }
 
   private saveHistory(historyEntry, cb: ObjectCb) {
-
+    var refCb = (err: Error, ref: string) => {
+      var key = this.uidGenerator.generate();
+      this.history.set(new BitArray(key), new ObjectRef(ref), cb);
+    };
+    
+    this.dbStorage.save(historyEntry, refCb);
   }
 }
 
@@ -95,7 +100,6 @@ class LocalCursor extends EventEmitter implements Cursor {
   queue: JobQueue;
   tree: DbIndexTree;
   query: any;
-  queryEq: any;
   closed: boolean;
   paused: boolean;
   err: Error;
@@ -110,7 +114,6 @@ class LocalCursor extends EventEmitter implements Cursor {
     this.closed = false;
     this.paused = false;
     this.err = null;
-    this.queryEq = null;
   }
 
   each(rowCb: RowCb, cb: DoneCb) {
@@ -130,7 +133,10 @@ class LocalCursor extends EventEmitter implements Cursor {
       else refCb(null, value);
     };
     var refCb = (err: Error, obj: any) => {
-      rowCb(new Row(key, obj, value));
+      var row;
+      if (value instanceof ObjectRef) row = new Row(key, obj, value)
+      else row = new Row(key, value, null);
+      rowCb(row);
       if (this.closed) return nextCb(true);
       if (this.paused) return this.once('resume', nextCb);
       nextCb();
@@ -198,7 +204,6 @@ class LocalCursor extends EventEmitter implements Cursor {
     };
     var nextCb = () => cb(null, null, null, null);
 
-    this.queryEq = this.query.$eq;
     this.tree.get(new BitArray(this.query.$eq), getCb);
   }
 
@@ -241,19 +246,24 @@ class LocalCursor extends EventEmitter implements Cursor {
       lt: BitArray, cb: VisitKvCb) {
     var nodeCb = (err: Error, next: NextNodeCb, node: IndexNode) => {
       var key;
+      if (err || !next) return cb(err, null, null, null);
       i++;
       key = node.getKey();
-      if (err || !next) return cb(err, null, null, null);
       if (gt && gt.compareTo(key) >= 0) return next();
       if (lt && lt.compareTo(key) <= 0) return next(true);
       if (lte && lte.compareTo(key) < 0) return next(true);
       if (limit && (i > limit + skip)) return next(true);
-      if (skip < i) return cb(null, next, key, node.getValue());
+      if (skip < i) return cb(null, next, key.normalize(), node.getValue());
       next();
     };
 
     var i = 0;
-    var limit = this.query.$limit, skip = this.query.$skip || 0;
+    var limit, skip = 0;
+    
+    if (this.query) {
+      limit = this.query.$limit;
+      skip = this.query.$skip || skip;
+    }
 
     this.tree.inOrder(gte || gt, nodeCb);
   }
@@ -269,12 +279,17 @@ class LocalCursor extends EventEmitter implements Cursor {
       if (gt && gt.compareTo(key) >= 0) return next(true);
       if (gte && gte.compareTo(key) > 0) return next(true);
       if (limit && (i > limit + skip)) return next(true);
-      if (skip < i) return cb(null, next, key, node.getValue());
+      if (skip < i) return cb(null, next, key.normalize(), node.getValue());
       next();
     };
 
     var i = 0;
-    var limit = this.query.$limit, skip = this.query.$skip || 0;
+    var limit, skip = 0;
+    
+    if (this.query) {
+      limit = this.query.$limit;
+      skip = this.query.$skip || skip;
+    }
 
     this.tree.revInOrder(lte || lt, nodeCb);
   }
