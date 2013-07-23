@@ -56,10 +56,19 @@ class LocalIndex implements Index {
       cb(null, old);
     };
 
-    var old, newRef;
+    var old, newRef, type = typeOf(value);
 
-    if (value instanceof ObjectRef) set(value);
-    else this.dbStorage.save(value, refCb);
+    switch (type) {
+      case ObjectType.ObjectRef:
+      case ObjectType.Boolean:
+      case ObjectType.Number:
+      case ObjectType.String:
+        set(value);
+        break;
+      default:
+        this.dbStorage.save(value, refCb);
+        break;
+    }
   }
 
   private delJob(key: any, cb: ObjectCb) {

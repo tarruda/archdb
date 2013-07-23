@@ -270,7 +270,9 @@ class BitArray implements IndexKey {
   packArray(array: Array) {
     array.forEach(el => {
       this.pack(el);
-      if (isString(el)) this.write(0); // terminate strings with 0
+      if (typeOf(el) === ObjectType.String) { 
+        this.write(0); // terminate strings with 0
+      }
     });
 
     this.write(0, 4); // special type code(undefined) to mark end of array
@@ -287,6 +289,8 @@ class BitArray implements IndexKey {
   }
 
   pack(obj) {
+    var type;
+
     if (obj === null) {
       this.write(1, 4);
     } else  {
@@ -295,13 +299,13 @@ class BitArray implements IndexKey {
         this.write(2, 4);
       } else if (obj === false) {
         this.write(3, 4);
-      } else if (typeof obj === 'number') {
+      } else if ((type = typeOf(obj)) === ObjectType.Number) {
         this.write(4, 4);
         this.packNumber(obj);
-      } else if (typeof obj === 'string') {
+      } else if (type === ObjectType.String) {
         this.write(5, 4);
         this.packString(obj);
-      } else if (isUid(obj)) {
+      } else if (type === ObjectType.Uid) {
         if (obj.byteLength() === 8) {
           this.write(6, 4);
           this.packUid(obj, 8);
@@ -309,9 +313,11 @@ class BitArray implements IndexKey {
           this.write(7, 4);
           this.packUid(obj, 14);
         }
-      } else if (isArray(obj)) {
+      } else if (type === ObjectType.Array) {
         this.write(15, 4);
         this.packArray(obj);
+      } else {
+        throw new Error('Invalid object type for key');
       }
     }
   }

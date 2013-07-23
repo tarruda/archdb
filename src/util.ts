@@ -213,33 +213,30 @@ class JobQueue {
   }
 }
 
-function isArray(obj: any) {
-  return Object.prototype.toString.call(obj) === '[object Array]';
+enum ObjectType {
+  Object = 1,
+  Array = 2,
+  Date = 3,
+  RegExp = 4,
+  String = 5,
+  Number = 6,
+  Boolean = 7,
+  Uid = 8,
+  ObjectRef = 9,
+  Null = 10,
+  Undefined = 11
 }
 
-function isDate(obj: any) {
-  return Object.prototype.toString.call(obj) === '[object Date]';
+function typeOf(obj: any) {
+  var type;
+  if (obj === null) return ObjectType.Null;
+  if (obj === undefined) return ObjectType.Undefined;
+  if (obj instanceof Uid) return ObjectType.Uid;
+  if (obj instanceof ObjectRef) return ObjectType.ObjectRef;
+  type = /\[object\s(\w+)]/.exec(Object.prototype.toString.call(obj))[1];
+  return ObjectType[type];
 }
 
-function isRegExp(obj) {
-  return Object.prototype.toString.call(obj) === '[object RegExp]';
-}
-
-function isString(obj) {
-  return Object.prototype.toString.call(obj) === '[object String]';
-}
-
-function isNumber(obj) {
-  return Object.prototype.toString.call(obj) === '[object Number]';
-}
-
-function isUid(obj) {
-  return obj instanceof Uid;
-}
-
-function isObjectRef(obj) {
-  return obj instanceof ObjectRef;
-}
 /*
    Object normalization/denormalization functions
 
@@ -252,63 +249,54 @@ function isObjectRef(obj) {
    such as json or message pack
  */
 function normalize(obj) {
-  var rv;
+  var rv, type;
 
-  if (obj === null) {
-    rv = null;
-  } else {
-    if (isDate(obj)) {
-      rv = normalizeDate(obj);
-    } else if (isRegExp(obj)) {
-      rv = normalizeRegExp(obj);
-    } else if (isUid(obj)) {
-      rv = normalizeUid(obj);
-    } else if (isObjectRef(obj)) {
-      rv = normalizeObjectRef(obj);
-    } else if (isArray(obj)) {
+  type = typeOf(obj);
+  switch (type) {
+    case ObjectType.Date: rv = normalizeDate(obj); break;
+    case ObjectType.RegExp: rv = normalizeRegExp(obj); break;
+    case ObjectType.Uid: rv = normalizeUid(obj); break;
+    case ObjectType.ObjectRef: rv = normalizeObjectRef(obj); break;
+    case ObjectType.Number:
+    case ObjectType.Boolean: rv = obj.valueOf(); break;
+    case ObjectType.Undefined:
+    case ObjectType.Null: rv = null; break;
+    case ObjectType.String: rv = normalizeString(obj); break;
+    case ObjectType.Array:
       rv = [];
-      for (var i = 0;i < obj.length;i++) {
-        rv.push(normalize(obj[i]));
-      }
-    } else if (obj !== undefined) {
-      obj = obj.valueOf();
-      if (obj === true || obj === false || typeof obj === 'number') {
-        rv = obj;
-      } else if (typeof obj === 'string') {
-        rv = normalizeString(obj);
-      } else  {
-        rv = {};
-        for (var k in obj) {
-          if (hasProp(obj, k)) rv[k] = normalize(obj[k]);
-        }
-      }
-    }
+      for (var i = 0;i < obj.length;i++) rv.push(normalize(obj[i]));
+      break;
+    case ObjectType.Object:
+      rv = {};
+      for (var k in obj) if (hasProp(obj, k)) rv[k] = normalize(obj[k]);
+      break;
   }
 
   return rv;
 }
 
 function denormalize(obj) {
-  var rv;
+  var rv, type;
 
-  if (obj === null || typeof obj === 'boolean' ||
-      typeof obj === 'number') {
-    rv = obj;
-  } else if (typeof obj === 'string') {
-    if (!(rv = denormalizeDate(obj)) && !(rv = denormalizeRegExp(obj)) &&
-          !(rv = denormalizeUid(obj)) && !(rv = denormalizeObjectRef(obj))) {
-      rv = denormalizeString(obj);
-    }
-  } else if (isArray(obj)) {
-    rv = [];
-    for (var i = 0;i < obj.length;i++) {
-      rv.push(denormalize(obj[i]));
-    }
-  } else {
-    rv = {};
-    for (var k in obj) {
-      if (hasProp(obj, k)) rv[k] = denormalize(obj[k]);
-    }
+  type = typeOf(obj);
+  switch (type) {
+    case ObjectType.Number:
+    case ObjectType.Boolean: rv = obj; break;
+    case ObjectType.Null: rv = null; break;
+    case ObjectType.String:
+      if (!(rv = denormalizeDate(obj)) && !(rv = denormalizeRegExp(obj)) &&
+            !(rv = denormalizeUid(obj)) && !(rv = denormalizeObjectRef(obj))) {
+        rv = denormalizeString(obj);
+      }
+      break;
+    case ObjectType.Array:
+      rv = [];
+      for (var i = 0;i < obj.length;i++) rv.push(denormalize(obj[i]));
+      break;
+    case ObjectType.Object:
+      rv = {};
+      for (var k in obj) if (hasProp(obj, k)) rv[k] = denormalize(obj[k]);
+      break;
   }
 
   return rv;

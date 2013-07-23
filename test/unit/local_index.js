@@ -43,6 +43,53 @@ describe('LocalIndex', function() {
     });
   });
 
+  it('returns old values when deleting keys', function(done) {
+    index.del('3', function(err, oldRef) {
+      expect(oldRef).to.be.instanceOf(ObjectRef);
+      dbStorage.get(oldRef.ref, function(err, oldVal) {
+        expect(oldVal).to.deep.eql({name: 'doc3'});
+        done();
+      });
+    });
+  });
+
+  it('returns old values when updating keys', function(done) {
+    index.set(2, [1, 2], function(err, oldRef) {
+      expect(oldRef).to.be.instanceOf(ObjectRef);
+      dbStorage.get(oldRef.ref, function(err, oldVal) {
+        expect(oldVal).to.deep.eql({name: 'doc2'});
+        done();
+      });
+    });
+  });
+
+  it('numbers are stored inline', function(done) {
+    index.set(10, 11, function(err) {
+      index.set(10, 12, function(err, oldVal) {
+        expect(oldVal).to.eql(11);
+        done();
+      });
+    });
+  });
+
+  it('booleans are stored inline', function(done) {
+    index.set(10, true, function(err) {
+      index.set(10, false, function(err, oldVal) {
+        expect(oldVal).to.be.true;
+        done();
+      });
+    });
+  });
+
+  it('strings are stored inline', function(done) {
+    index.set(10, 'ab', function(err) {
+      index.set(10, 'abc', function(err, oldVal) {
+        expect(oldVal).to.eql('ab');
+        done();
+      });
+    });
+  });
+
   it('appends insert history entries on each insert', function(done) {
     historyShouldEql([
       {type: 'ins', key: 1, index: 1, value: {name: 'doc1'}},
