@@ -1214,7 +1214,7 @@ describe('AvlTree', function() {
     q = [];
     q.push(rootRef);
     while (q.length) {
-      data = dbStorage.data[q.shift()];
+      data = dbStorage.data[DbObjectType.IndexNode][q.shift()];
       rv.push(data[0]);
       if (data[2]) q.push(data[2]);
       if (data[3]) q.push(data[3]);
@@ -1327,7 +1327,7 @@ describe('AvlNode', function() {
   });
 
   it('has IndexNode type', function() {
-    expect(node.getType()).to.eql(DbObjectType.IndexNode);
+    expect(node.type).to.eql(DbObjectType.IndexNode);
   });
 
   it('normalizes to a simple array', function() {

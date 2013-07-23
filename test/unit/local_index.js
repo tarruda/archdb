@@ -7,8 +7,8 @@ describe('LocalIndex', function() {
     tree = new AvlTree(dbStorage);
     history = new AvlTree(dbStorage);
     generator = new UidGenerator();
-    index = new LocalIndex(1,
-                           'test', dbStorage, queue, tree, history, generator);
+    index = new LocalIndex('test', dbStorage, queue, tree, history, generator);
+    index.id = 1;
 
     index.set(1, {name: 'doc1'});
     index.set(2, {name: 'doc2'});
@@ -46,7 +46,7 @@ describe('LocalIndex', function() {
   it('returns old values when deleting keys', function(done) {
     index.del('3', function(err, oldRef) {
       expect(oldRef).to.be.instanceOf(ObjectRef);
-      dbStorage.get(oldRef.ref, function(err, oldVal) {
+      dbStorage.get(DbObjectType.IndexData, oldRef.ref, function(err, oldVal) {
         expect(oldVal).to.deep.eql({name: 'doc3'});
         done();
       });
@@ -56,7 +56,7 @@ describe('LocalIndex', function() {
   it('returns old values when updating keys', function(done) {
     index.set(2, [1, 2], function(err, oldRef) {
       expect(oldRef).to.be.instanceOf(ObjectRef);
-      dbStorage.get(oldRef.ref, function(err, oldVal) {
+      dbStorage.get(DbObjectType.IndexData, oldRef.ref, function(err, oldVal) {
         expect(oldVal).to.deep.eql({name: 'doc2'});
         done();
       });
@@ -136,7 +136,8 @@ describe('LocalIndex', function() {
         expect(items).to.deep.eql(expected);
         return cb();
       }
-      dbStorage.get(node.value.ref, function(err, value) {
+      dbStorage.get(DbObjectType.IndexData, node.value.ref,
+                    function(err, value) {
         var val =
           {type: value[0], key: value[2], index: value[1], value: value[3]};
         if (val.type === HistoryEntryType.Insert) {
@@ -153,10 +154,12 @@ describe('LocalIndex', function() {
         items.push(val);
 
         if (val.value instanceof ObjectRef) {
-          dbStorage.get(val.value.ref, function(err, v) {
+          dbStorage.get(DbObjectType.IndexData, val.value.ref,
+                        function(err, v) {
             val.value = v;
             if (val.oldValue instanceof ObjectRef) {
-              dbStorage.get(val.oldValue.ref, function(err, v) {
+              dbStorage.get(DbObjectType.IndexData, val.oldValue.ref,
+                            function(err, v) {
                 val.oldValue = v;
                 next();
               });
@@ -165,7 +168,8 @@ describe('LocalIndex', function() {
             }
           });
         } else if (val.oldValue instanceof ObjectRef){
-          dbStorage.get(val.oldValue.ref, function(err, v) {
+          dbStorage.get(DbObjectType.IndexData, val.oldValue.ref,
+                        function(err, v) {
             val.oldValue = v;
             next();
           });
@@ -273,7 +277,7 @@ describe('LocalCursor', function() {
         // store string values inline
         tree.set(key, value, next);
       } else {
-        dbStorage.save(value, function(err, ref) {
+        dbStorage.save(DbObjectType.IndexData, value, function(err, ref) {
           tree.set(key, new ObjectRef(ref), next);
         });
       }

@@ -14,6 +14,7 @@ class AvlNode implements IndexNode {
   leftRef: string;
   rightRef: string;
   ref: string;
+  type: DbObjectType;
 
   constructor(key: IndexKey, value: any) {
     this.key = key;
@@ -24,6 +25,7 @@ class AvlNode implements IndexNode {
     this.rightRef = null;
     this.height = 0;
     this.ref = (avlNodeId--).toString();
+    this.type = DbObjectType.IndexNode;
   }
 
   getKey(): IndexKey {
@@ -32,10 +34,6 @@ class AvlNode implements IndexNode {
 
   getValue(): any {
     return this.value;
-  }
-
-  getType(): DbObjectType {
-    return DbObjectType.IndexNode;
   }
 
   normalize(): any {
@@ -79,14 +77,16 @@ interface AvlSearchCb {
   (err: Error, lastComparison: number, path: Array<AvlNode>);
 }
 
-class AvlTree implements DbIndexTree {
+class AvlTree implements IndexTree {
   dbStorage: DbStorage;
   rootRef: string;
+  originalRootRef: string;
   root: AvlNode;
 
   constructor(dbStorage: DbStorage, rootRef: string) {
     this.dbStorage = dbStorage;
     this.rootRef = rootRef;
+    this.originalRootRef = rootRef;
     this.root = null;
   }
 
@@ -109,7 +109,7 @@ class AvlTree implements DbIndexTree {
     }
   }
 
-  set(key: IndexKey, value: Normalizable, cb: ObjectCb) {
+  set(key: IndexKey, value: any, cb: ObjectCb) {
     var searchCb = (err: Error, comp: number, path: Array<AvlNode>) => {
       var node, oldValue;
       if (err) return cb(err, null);
@@ -335,7 +335,8 @@ class AvlTree implements DbIndexTree {
         pending.push(current.right);
         return yield(visit);
       } else {
-        this.dbStorage.save(current, flushNodeCb);
+        this.dbStorage.save(DbObjectType.IndexNode, current.normalize(),
+            flushNodeCb);
       }
     };
 
@@ -347,6 +348,10 @@ class AvlTree implements DbIndexTree {
     parents = [];
     visit();
   }
+
+  getRootRef(): string { return this.rootRef; }
+  getOriginalRootRef(): string { return this.originalRootRef; }
+  setOriginalRootRef(ref: string) { this.originalRootRef = ref; }
 
   private search(copyPath: boolean, key: IndexKey, cb: AvlSearchCb) {
     var nodeCb = (err: Error, node: AvlNode) => {
@@ -653,7 +658,7 @@ class AvlTree implements DbIndexTree {
       node.ref = ref;
       cb(null, node);
     };
-    this.dbStorage.get(ref, getCb);
+    this.dbStorage.get(DbObjectType.IndexNode, ref, getCb);
   }
 
   private resolveLeft(from: AvlNode, cb: ObjectCb) {

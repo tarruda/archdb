@@ -8,16 +8,18 @@ interface RowArrayCb { (err: Error, array: Array<Row>); }
 
 interface ObjectCb { (err: Error, obj: any); }
 
-interface RevisionCb { (err: Error, rev: Revision); }
+interface TransactionCb { (err: Error, tc: Transaction); }
 
 interface Database {
-  checkout(cb: RevisionCb);
+  begin(cb: TransactionCb);
 }
 
-interface Revision {
+interface Transaction {
+  domain(name: string): Domain;
+  commit(cb: DoneCb);
 }
 
-interface Index {
+interface Domain {
   set(key: any, value: any, cb: ObjectCb);
   del(key: any, cb: ObjectCb);
   find(query: any): Cursor;

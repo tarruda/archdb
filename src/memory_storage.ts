@@ -1,4 +1,5 @@
 /// <reference path="./components.ts"/>
+/// <reference path="./util.ts"/>
 
 class MemoryStorage implements DbStorage {
   uid: number;
@@ -9,25 +10,31 @@ class MemoryStorage implements DbStorage {
     this.uid = 1;
     this.masterRef = null;
     this.data = {};
+    this.data[DbObjectType.Other] = {};
+    this.data[DbObjectType.IndexNode] = {};
+    this.data[DbObjectType.IndexData] = {};
   }
 
-  get(ref: string, cb: ObjectCb) {
-    cb(null, this.data[ref]);
+  get(type: DbObjectType, ref: string, cb: ObjectCb) {
+    cb(null, denormalize(this.data[type][ref]));
   }
 
-  save(obj: DbObject, cb: RefCb) {
-    var ref: string = (this.uid++).toString();
-    if (obj.normalize) this.data[ref] = obj.normalize();
-    else this.data[ref] = obj;
-    cb(null, ref);
-  }
-
-  getMasterRef(cb: RefCb) {
-    cb(null, this.masterRef);
-  }
-
-  setMasterRef(ref: string, cb: DoneCb) {
-    this.masterRef = ref;
+  set(type: DbObjectType, ref: string, obj: any, cb: DoneCb) {
+    this.data[type][ref] = normalize(obj);
     cb(null);
+  }
+
+  del(type: DbObjectType, ref: string, cb: ObjectCb) {
+    var rv = this.data[type][ref];
+
+    delete this.data[type][ref];
+    cb(null, rv);
+  }
+
+  save(type: DbObjectType, obj: any, cb: RefCb) {
+    var setCb = () => cb(null, ref);
+    var ref = (this.uid++).toString();
+
+    this.set(type, ref, obj, setCb);
   }
 }

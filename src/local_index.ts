@@ -6,10 +6,12 @@ enum HistoryEntryType {
   Insert = 1, Delete = 2, Update = 3
 }
 
-class LocalIndex implements Index {
-  constructor(private id: Uid, private name: string,
+class LocalIndex implements Domain {
+  id: number;
+
+  constructor(private name: string,
       private dbStorage: DbStorage, private queue: JobQueue,
-      private tree: DbIndexTree, private history: DbIndexTree,
+      private tree: IndexTree, private history: IndexTree,
       private uidGenerator: UidGenerator) { }
 
   set(key: any, value: any, cb: ObjectCb) {
@@ -66,7 +68,7 @@ class LocalIndex implements Index {
         set(value);
         break;
       default:
-        this.dbStorage.save(value, refCb);
+        this.dbStorage.save(DbObjectType.IndexData, value, refCb);
         break;
     }
   }
@@ -101,20 +103,20 @@ class LocalIndex implements Index {
       this.history.set(new BitArray(key), new ObjectRef(ref), cb);
     };
     
-    this.dbStorage.save(historyEntry, refCb);
+    this.dbStorage.save(DbObjectType.IndexData, historyEntry, refCb);
   }
 }
 
 class LocalCursor extends EventEmitter implements Cursor {
   dbStorage: DbStorage;
   queue: JobQueue;
-  tree: DbIndexTree;
+  tree: IndexTree;
   query: any;
   closed: boolean;
   paused: boolean;
   err: Error;
 
-  constructor(dbStorage: DbStorage, queue: JobQueue, tree: DbIndexTree,
+  constructor(dbStorage: DbStorage, queue: JobQueue, tree: IndexTree,
       query: any) {
     super();
     this.dbStorage = dbStorage; 
@@ -139,7 +141,8 @@ class LocalCursor extends EventEmitter implements Cursor {
       nextCb = next;
       key = k;
       value = v;
-      if (value instanceof ObjectRef) this.dbStorage.get(value.ref, refCb);
+      if (value instanceof ObjectRef) this.dbStorage.get(
+          DbObjectType.IndexData, value.ref, refCb);
       else refCb(null, value);
     };
     var refCb = (err: Error, obj: any) => {
@@ -221,19 +224,24 @@ class LocalCursor extends EventEmitter implements Cursor {
 
   private findLike(cb: VisitKvCb) {
     // 'like' queries are nothing but range queries where we derive
-    // the upper key from the '$like' parameter, that is, we find an upper
+    // the upper key from the '$like' parameter. That is, we find an upper
     // key so that all keys within the resulting range 'start' with the
-    // '$like' parameter
+    // '$like' parameter. It only makes sense for strings and arrays, eg:
+    // [1, 2, 3] is starts with [1, 2]
+    // 'ab' starts with 'abc'
+    var type;
     var gte = new BitArray(this.query.$like), lte = gte.clone();
 
-    if (Array.isArray(this.query.$like)) {
+    if ((type = typeOf(this.query.$like)) === ObjectType.Array) {
       // to properly create the 'upper bound key' for array, we must
       // insert the '1' before its terminator
       lte.rewind(4);
       lte.write(1, 1);
       lte.write(0, 4);
-    } else {
+    } else if (type === ObjectType.String) {
       lte.write(1, 1);
+    } else {
+      throw new Error('invalid object type for $like parameter');
     }
 
     if (this.query.$rev) return this.findRangeDesc(gte, null, lte, null, cb);
