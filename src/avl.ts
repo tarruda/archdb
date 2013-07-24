@@ -352,6 +352,7 @@ class AvlTree implements IndexTree {
   getRootRef(): string { return this.rootRef; }
   getOriginalRootRef(): string { return this.originalRootRef; }
   setOriginalRootRef(ref: string) { this.originalRootRef = ref; }
+  modified(): boolean { return this.rootRef !== this.originalRootRef; }
 
   private search(copyPath: boolean, key: IndexKey, cb: AvlSearchCb) {
     var nodeCb = (err: Error, node: AvlNode) => {

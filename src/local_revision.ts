@@ -6,18 +6,18 @@
 var HISTORY = '$history';
 
 class LocalRevision implements Transaction {
+  id: Uid;
   db: LocalDatabase;
   dbStorage: DbStorage;
-  parentMasterRef: string;
+  originalMasterRef: string;
   queue: JobQueue;
   uidGenerator: UidGenerator;
   master: IndexTree;
   history: IndexTree;
   treeCache: any;
-  parentRevision: any;
 
   constructor(db: LocalDatabase, dbStorage: DbStorage, masterRef: string,
-      uidSuffix: string) {
+      suffix: string) {
     var historyCb = (err: Error, tree: IndexTree) => {
       if (err) throw err; // fatal error?
       this.history = tree
@@ -25,37 +25,64 @@ class LocalRevision implements Transaction {
 
     this.db = db;
     this.dbStorage = dbStorage;
-    this.parentMasterRef = masterRef;
-    this.uidGenerator = new UidGenerator(uidSuffix);
+    this.originalMasterRef = masterRef;
+    this.uidGenerator = new UidGenerator(suffix);
+    this.id = this.uidGenerator.generate();
     this.queue = new JobQueue();
     this.treeCache = {};
-    this.parentRevision = {};
     this.master = new AvlTree(dbStorage, masterRef);
-    this.history = new IndexPromise(HISTORY, this.master, dbStorage,
+    this.history = new IndexProxy(HISTORY, this.master, dbStorage,
         this.queue, historyCb);
   }
 
   domain(name: string): Domain {
-    var idCb = (err: Error, id: number) => {
-    
+    var getIdJob = (cb: AnyCb) => {
+      indexIdKey = new BitArray(['ids', name]);
+      this.master.get(indexIdKey, cb);
+    };
+    var getIdCb = (err: Error, id: number) => {
+      if (err) throw err;
+      if (!id) {
+        id = this.db.next(0);
+        this.queue.add(null, setIdJob);
+      }
+      cacheEntry.id = id;
+      rv.id = id;
+    };
+    var setIdJob = (cb: AnyCb) => {
+      this.master.set(indexIdKey, cacheEntry.id, cb);
     };
     var treeCb = (err: Error, tree: IndexTree) => {
       if (err) throw err;
-      this.treeCache[name] = tree;
+      cacheEntry.tree = tree;
     };
-
-    var tree = this.treeCache[name] || this.treeCache[name] = new IndexPromise(
-          name, this.master, this.dbStorage, this.queue, treeCb);
-
-    return new LocalIndex(name, this.dbStorage, this.queue, tree,
+    var rv, indexIdKey;
+    var cacheEntry =
+      this.treeCache[name] || this.treeCache[name] =
+      { tree: new IndexProxy(name, this.master, this.dbStorage,
+          this.queue, treeCb), id: null, name: name };
+    var tree = cacheEntry.tree;
+    
+    if (!cacheEntry.id) this.queue.add(getIdCb, getIdJob);
+    rv = new LocalIndex(name, this.dbStorage, this.queue, tree,
         this.history, this.uidGenerator);
+    rv.id = cacheEntry.id;
+    return rv;
   }
 
   commit(cb: DoneCb) {
+    var mergeCb = (err: Error, refMap: any) => {
+      var index;
+      if (err) return cb(err);
+      for (var k in refMap) this.treeCache[k] = refMap[k];
+      cb(null);
+    };
+
+    this.db.merge(this, mergeCb);
   }
 }
 
-class IndexPromise implements IndexTree {
+class IndexProxy implements IndexTree {
   tree: IndexTree; 
   pending: JobQueue;
 
@@ -113,6 +140,7 @@ class IndexPromise implements IndexTree {
   getRootRef(): string { return this.tree.getRootRef(); }
   getOriginalRootRef(): string { return this.tree.getOriginalRootRef(); }
   setOriginalRootRef(ref: string) { this.tree.setOriginalRootRef(ref); }
+  modified(): boolean { return this.tree.modified(); }
 
   private delegate(cb: AnyCb, fn: AnyCb) {
     var jobCb = (cb) => fn(this.tree, cb);

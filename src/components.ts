@@ -47,6 +47,7 @@ interface IndexTree {
   getRootRef(): string;
   getOriginalRootRef(): string;
   setOriginalRootRef(ref: string);
+  modified(): boolean;
 }
 
 interface DbStorage {

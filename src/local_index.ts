@@ -44,7 +44,7 @@ class LocalIndex implements Domain {
       if (this.history) {
         if (oldRef) {
           old = oldRef;
-          he = [HistoryEntryType.Update, this.id, key, newRef, oldRef];
+          he = [HistoryEntryType.Update, this.id, key, oldRef, newRef];
         } else {
           he = [HistoryEntryType.Insert, this.id, key, newRef];
         }
@@ -61,10 +61,10 @@ class LocalIndex implements Domain {
     var old, newRef, type = typeOf(value);
 
     switch (type) {
+      // small fixed-length values are stored inline
       case ObjectType.ObjectRef:
       case ObjectType.Boolean:
       case ObjectType.Number:
-      case ObjectType.String:
         set(value);
         break;
       default:
@@ -98,12 +98,8 @@ class LocalIndex implements Domain {
   }
 
   private saveHistory(historyEntry, cb: ObjectCb) {
-    var refCb = (err: Error, ref: string) => {
-      var key = this.uidGenerator.generate();
-      this.history.set(new BitArray(key), new ObjectRef(ref), cb);
-    };
-    
-    this.dbStorage.save(DbObjectType.IndexData, historyEntry, refCb);
+    var key = this.uidGenerator.generate();
+    this.history.set(new BitArray(key), historyEntry, cb);
   }
 }
 

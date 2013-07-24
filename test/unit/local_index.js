@@ -81,15 +81,6 @@ describe('LocalIndex', function() {
     });
   });
 
-  it('strings are stored inline', function(done) {
-    index.set(10, 'ab', function(err) {
-      index.set(10, 'abc', function(err, oldVal) {
-        expect(oldVal).to.eql('ab');
-        done();
-      });
-    });
-  });
-
   it('appends insert history entries on each insert', function(done) {
     historyShouldEql([
       {type: 'ins', key: 1, index: 1, value: {name: 'doc1'}},
@@ -100,7 +91,7 @@ describe('LocalIndex', function() {
     ], done);
   });
 
-  it('appends delete history entries on each update', function(done) {
+  it('appends delete history entries on each delete', function(done) {
     index.del('3', function() {
       historyShouldEql([
         {type: 'ins', key: 1, index: 1, value: {name: 'doc1'}},
@@ -136,48 +127,47 @@ describe('LocalIndex', function() {
         expect(items).to.deep.eql(expected);
         return cb();
       }
-      dbStorage.get(DbObjectType.IndexData, node.value.ref,
-                    function(err, value) {
-        var val =
-          {type: value[0], key: value[2], index: value[1], value: value[3]};
-        if (val.type === HistoryEntryType.Insert) {
-          val.type = 'ins';
-        } else if (val.type === HistoryEntryType.Delete) {
-          val.type = 'del';
-          val.oldValue = val.value;
-          delete val.value;
-        } else {
-          val.type = 'upd';
-          val.oldValue = value[4];
-        }
+      var value = node.getValue();
+      var val =
+        {type: value[0], key: value[2], index: value[1], value: value[3]};
+      if (val.type === HistoryEntryType.Insert) {
+        val.type = 'ins';
+      } else if (val.type === HistoryEntryType.Delete) {
+        val.type = 'del';
+        val.oldValue = val.value;
+        delete val.value;
+      } else {
+        val.type = 'upd';
+        val.oldValue = value[3];
+        val.value = value[4];
+      }
 
-        items.push(val);
+      items.push(val);
 
-        if (val.value instanceof ObjectRef) {
-          dbStorage.get(DbObjectType.IndexData, val.value.ref,
-                        function(err, v) {
-            val.value = v;
-            if (val.oldValue instanceof ObjectRef) {
-              dbStorage.get(DbObjectType.IndexData, val.oldValue.ref,
-                            function(err, v) {
-                val.oldValue = v;
-                next();
-              });
-            } else {
+      if (val.value instanceof ObjectRef) {
+        dbStorage.get(DbObjectType.IndexData, val.value.ref,
+                      function(err, v) {
+          val.value = v;
+          if (val.oldValue instanceof ObjectRef) {
+            dbStorage.get(DbObjectType.IndexData, val.oldValue.ref,
+                          function(err, v) {
+              val.oldValue = v;
               next();
-            }
-          });
-        } else if (val.oldValue instanceof ObjectRef){
-          dbStorage.get(DbObjectType.IndexData, val.oldValue.ref,
-                        function(err, v) {
-            val.oldValue = v;
+            });
+          } else {
             next();
-          });
-        } else {
+          }
+        });
+      } else if (val.oldValue instanceof ObjectRef){
+        dbStorage.get(DbObjectType.IndexData, val.oldValue.ref,
+                      function(err, v) {
+          val.oldValue = v;
           next();
-        }
-      })
-    });
+        });
+      } else {
+        next();
+      }
+    })
   }
 });
 
