@@ -58,9 +58,9 @@ class LocalRevision implements Transaction {
     };
     var rv, indexIdKey;
     var cacheEntry =
-      this.treeCache[name] || this.treeCache[name] =
+      this.treeCache[name] || (this.treeCache[name] =
       { tree: new IndexProxy(name, this.master, this.dbStorage,
-          this.queue, treeCb), id: null, name: name };
+          this.queue, treeCb), id: null, name: name });
     var tree = cacheEntry.tree;
     
     if (!cacheEntry.id) this.queue.add(getIdCb, getIdJob);
@@ -71,10 +71,13 @@ class LocalRevision implements Transaction {
   }
 
   commit(cb: DoneCb) {
-    var mergeCb = (err: Error, refMap: any) => {
+    var mergeCb = (err: Error, refMap: any, history: IndexTree,
+        master: IndexTree) => {
       var index;
       if (err) return cb(err);
       for (var k in refMap) this.treeCache[k] = refMap[k];
+      this.history = history;
+      this.master = master;
       cb(null);
     };
 

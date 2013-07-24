@@ -10,7 +10,7 @@ interface ObjectCb { (err: Error, obj: any); }
 
 interface TransactionCb { (err: Error, tc: Transaction); }
 
-interface Database {
+interface Connection {
   begin(cb: TransactionCb);
 }
 

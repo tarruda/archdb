@@ -3,7 +3,7 @@
 /// <reference path="./local_revision.ts"/>
 /// <reference path="./local_index.ts"/>
 
-class LocalDatabase implements Database {
+class LocalDatabase implements Connection {
   dbStorage: DbStorage;
   masterRef: string;
   queue: JobQueue;
@@ -70,12 +70,12 @@ class LocalDatabase implements Database {
    *                    out). Return an error containing the current value
    *                    so the conflict can be handled in another layer.
    */
-  merge(rev: LocalRevision, doneCb: ObjectCb) {
-    var mergeJob = (nextJob: AnyCb) => {
+  merge(rev: LocalRevision, mergeCb: MergeCb) {
+    var mergeJob = (nextJob: MergeCb) => {
       /*
        * Sets the merge job completion callback and select modified indexes
        */
-      doneCb = nextJob;
+      mergeCb = nextJob;
       if (rev.originalMasterRef === this.masterRef) return commitTrees();
       forwarded = {};
       replay = {};
@@ -182,50 +182,63 @@ class LocalDatabase implements Database {
       nextHistoryEntry();
     };
     var commitTrees = () => {
-      rv = {};
+      refMap = {};
       commit = [];
       for (var k in forwarded) commit.push(forwarded[k]);
       for (var k in replay) commit.push(replay[k]);
-      commit.push({tree: currentHistory, name: HISTORY, id: null});
+      if (!commit.length) {
+        // the entire revision was fast-forwarded, so populate the commit
+        // list with the revision treeCache
+        for (var k in rev.treeCache) {
+          if (rev.treeCache[k].tree.modified()) commit.push(rev.treeCache[k]);
+        }
+        currentHistory = rev.history;
+        currentMaster = rev.master;
+      }
+      commitNextTree(null);
     };
     var commitNextTree = (err: Error) => {
       if (err) return cb(err);
-      if (!commit.length) {
-        return this.dbStorage.set(DbObjectType.Other, 'sequences',
-            this.sequences, commitSequencesCb);
-      }
+      if (!commit.length) return currentHistory.commit(false, commitHistoryCb);
       currentCommit = commit.shift();
-      currentCommit.tree.commit(true, commitTreeCb);
+      currentCommit.tree.commit(false, commitTreeCb);
     };
     var commitTreeCb = (err: Error) => {
-      rv[currentCommit.name] = currentCommit;
+      if (err) return cb(err);
+      refMap[currentCommit.name] = currentCommit;
       currentMaster.set(new BitArray(['refs', currentCommit.name]),
           currentCommit.tree.getRootRef(), commitNextTree);
     };
-    var commitSequencesCb = (err: Error) => {
+    var commitHistoryCb = (err: Error) => {
       if (err) return cb(err);
-      currentMaster.commit(true, commitMasterCb);
+      currentMaster.commit(false, commitMasterCb);
     };
     var commitMasterCb = (err: Error) => {
       if (err) return cb(err);
-        return this.dbStorage.set(DbObjectType.Other, 'masterRef',
-            currentMaster.getRootRef(), cb);
+      this.dbStorage.set(DbObjectType.Other, 'sequences', this.sequences,
+          commitSequencesCb);
+    }
+    var commitSequencesCb = (err: Error) => {
+      if (err) return cb(err);
+      return this.dbStorage.set(DbObjectType.Other, 'masterRef',
+          currentMaster.getRootRef(), cb);
     };
     var cb = (err: Error) => {
       if (err) {
         commitTrees = null;
         // free the history iteration job if in-progress
         if (nextHistoryEntry) nextHistoryEntry(true);
-        return doneCb(err, null);
+        return mergeCb(err, null, null, null);
       }
-      doneCb(null, rv);
+      this.masterRef = currentMaster.getRootRef();
+      mergeCb(null, refMap, currentHistory, currentMaster);
     }
     var forwarded, replay, commit, currentHistory, currentCommit;
     var modified, currentIndex, currentMaster, revHistoryEntryNode;
-    var currentIndexKey, historyEntryType, rv;
+    var currentIndexKey, historyEntryType, refMap;
     var revHistoryEntryKey, revHistoryEntry, nextHistoryEntry, replayTree;
 
-    this.queue.add(doneCb, mergeJob);
+    this.queue.add(mergeCb, mergeJob);
   }
 
   next(id: number) {

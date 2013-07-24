@@ -15,13 +15,17 @@ class LocalIndex implements Domain {
       private uidGenerator: UidGenerator) { }
 
   set(key: any, value: any, cb: ObjectCb) {
-    var job = (cb: ObjectCb) => this.setJob(key, value, cb);
+    var job = (next: ObjectCb) => {
+      this.setJob(key, value, next);
+    }
 
     this.queue.add(cb, job);
   }
 
   del(key: any, cb: ObjectCb) {
-    var job = (cb: ObjectCb) => this.delJob(key, cb);
+    var job = (next: ObjectCb) => {
+      this.delJob(key, next);
+    };
 
     this.queue.add(cb, job);
   }
@@ -35,30 +39,29 @@ class LocalIndex implements Domain {
       set(new ObjectRef(ref));
     };
     var set = (ref: ObjectRef) => {
-      newRef = ref;
+      newValue = ref;
       this.tree.set(new BitArray(key), ref, setCb);
     };
-    var setCb = (err: Error, oldRef: any) => {
+    var setCb = (err: Error, oldValue: any) => {
       var he;
       if (err) return cb(err, null);
       if (this.history) {
-        if (oldRef) {
-          old = oldRef;
-          he = [HistoryEntryType.Update, this.id, key, oldRef, newRef];
+        if (oldValue) {
+          old = oldValue;
+          he = [HistoryEntryType.Update, this.id, key, oldValue, newValue];
         } else {
-          he = [HistoryEntryType.Insert, this.id, key, newRef];
+          he = [HistoryEntryType.Insert, this.id, key, newValue];
         }
-        this.saveHistory(he, histCb);
-      } else {
-        cb(null, old);
+        return this.saveHistory(he, histCb);
       }
+      cb(null, old);
     };
     var histCb = (err: Error) => {
       if (err) return cb(err, null);
       cb(null, old);
     };
 
-    var old, newRef, type = typeOf(value);
+    var old, newValue, type = typeOf(value);
 
     switch (type) {
       // small fixed-length values are stored inline
@@ -74,18 +77,17 @@ class LocalIndex implements Domain {
   }
 
   private delJob(key: any, cb: ObjectCb) {
-    var delCb = (err: Error, oldRef: any) => {
+    var delCb = (err: Error, oldValue: any) => {
       var he;
       if (err) return cb(err, null);
       if (this.history) {
-        if (oldRef) {
-          old = oldRef;
-          he = [HistoryEntryType.Delete, this.id, key, oldRef];
-          this.saveHistory(he, histCb);
+        if (oldValue) {
+          old = oldValue;
+          he = [HistoryEntryType.Delete, this.id, key, oldValue];
+          return this.saveHistory(he, histCb);
         }
-      } else {
-        cb(null, null);
       }
+      cb(null, null);
     };
     var histCb = (err: Error) => {
       if (err) return cb(err, null);

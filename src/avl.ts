@@ -652,7 +652,8 @@ class AvlTree implements IndexTree {
     var getCb = (err: Error, array: Array) => {
       var node;
       if (err) return cb(err, null);
-      node = new AvlNode(array[0], array[1]);
+      // FIXME remove BitArray reference from this file
+      node = new AvlNode(new BitArray(array[0]), array[1]);
       node.leftRef = array[2];
       node.rightRef = array[3];
       node.height = array[4];

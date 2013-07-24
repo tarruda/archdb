@@ -26,6 +26,10 @@ interface VisitKvCb {
   (err: Error, next: NextNodeCb, key: any, value: any);
 }
 
+interface MergeCb {
+  (err: Error, refMap: any, history: IndexTree, master: IndexTree);
+}
+
 interface IndexNode {
   getKey(): IndexKey;
   getValue(): any;
