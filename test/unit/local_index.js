@@ -259,7 +259,7 @@ describe('LocalCursor', function() {
       if (i === args.length - 1) {
         return cb();
       }
-      var key = new BitArray(args[i++]);
+      var key = args[i++];
       var value = args[i++];
       // mix inline values and object refs to test how the cursor
       // will transparently resolve references

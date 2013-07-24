@@ -40,7 +40,7 @@ class LocalIndex implements Domain {
     };
     var set = (ref: ObjectRef) => {
       newValue = ref;
-      this.tree.set(new BitArray(key), ref, setCb);
+      this.tree.set(key, ref, setCb);
     };
     var setCb = (err: Error, oldValue: any) => {
       var he;
@@ -96,12 +96,12 @@ class LocalIndex implements Domain {
 
     var old;
 
-    this.tree.del(new BitArray(key), delCb);
+    this.tree.del(key, delCb);
   }
 
   private saveHistory(historyEntry, cb: ObjectCb) {
     var key = this.uidGenerator.generate();
-    this.history.set(new BitArray(key), historyEntry, cb);
+    this.history.set(key, historyEntry, cb);
   }
 }
 
@@ -217,7 +217,7 @@ class LocalCursor extends EventEmitter implements Cursor {
     };
     var nextCb = () => cb(null, null, null, null);
 
-    this.tree.get(new BitArray(this.query.$eq), getCb);
+    this.tree.get(this.query.$eq, getCb);
   }
 
   private findLike(cb: VisitKvCb) {

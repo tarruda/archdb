@@ -1,15 +1,3 @@
-// all the tests here will use numbers as key, so we have to implement
-// the 'IndexKey' interface on the number prototype;
-Number.prototype.compareTo = function(other) {
-  return this - other;
-};
-Number.prototype.normalize = function() {
-  return this.valueOf();
-};
-Number.prototype.clone = function() {
-  return this.valueOf();
-};
-
 describe('AvlTree', function() {
   var dbStorage, tree;
 
@@ -109,7 +97,7 @@ describe('AvlTree', function() {
         it('in order with filter', function(done) {
           var i = 1;
           function testFilter() {
-            inOrder(i, tree, function(items) {
+            inOrder(new BitArray(i), tree, function(items) {
               expectFromTo(items, i, size);
               i++;
               if (i <= size) setImmediate(testFilter());
@@ -129,7 +117,7 @@ describe('AvlTree', function() {
         it('reverse in order with filter', function(done) {
           var i = size;
           function testFilter() {
-            revOrder(i, tree, function(items) {
+            revOrder(new BitArray(i), tree, function(items) {
               expectFromTo(items, i, 1);
               i--;
               if (i >= 1) setImmediate(testFilter());
@@ -1184,7 +1172,7 @@ describe('AvlTree', function() {
     var rv = [];
     tree.inOrder(min, function(err, next, node) {
       if (!next) return cb(rv);
-      rv.push(node.key);
+      rv.push(node.key.normalize());
       next();
     });
   };
@@ -1193,7 +1181,7 @@ describe('AvlTree', function() {
     var rv = [];
     tree.revInOrder(max, function(err, next, node) {
       if (!next) return cb(rv);
-      rv.push(node.key);
+      rv.push(node.key.normalize());
       next();
     });
   };
@@ -1232,7 +1220,7 @@ describe('AvlTree', function() {
     q.push(tree.root);
     while (q.length) {
       node = q.shift();
-      rv.push(node.key);
+      rv.push(node.key.normalize());
       if (node.left) q.push(node.left);
       if (node.right) q.push(node.right);
     }
@@ -1335,7 +1323,7 @@ describe('AvlNode', function() {
   });
 
   it('has attributes correctly set', function() {
-    expect(node.key).to.eql(5);
+    expect(node.key.normalize()).to.eql(5);
     expect(node.value).to.eql('value');
     expect(node.leftRef).to.eql('abc');
     expect(node.rightRef).to.eql('def');

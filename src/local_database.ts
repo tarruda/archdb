@@ -93,11 +93,10 @@ class LocalDatabase implements Connection {
        * Called for each modified index to retrieve the current index rootRef
        */
       if (!modified.length) {
-        return currentMaster.get(new BitArray(['refs', HISTORY]),
-            currentHistoryCb);
+        return currentMaster.get(['refs', HISTORY], currentHistoryCb);
       }
       currentIndex = modified.shift();
-      currentIndexKey = new BitArray(['refs', currentIndex.name]);
+      currentIndexKey = ['refs', currentIndex.name];
       currentMaster.get(currentIndexKey, currentIndexCb);
     };
     var currentIndexCb = (err: Error, ref: string) => {
@@ -138,7 +137,7 @@ class LocalDatabase implements Connection {
       nextHistoryEntry = next;
       revHistoryEntryNode = node;
       revHistoryEntry = node.getValue();
-      revHistoryEntryKey = new BitArray(revHistoryEntry[2]);
+      revHistoryEntryKey = revHistoryEntry[2];
       replayTree = replay[revHistoryEntry[1]].tree;
       historyEntryType = revHistoryEntry[0];
       if (!replayTree) return nextHistoryEntry();
@@ -173,7 +172,7 @@ class LocalDatabase implements Connection {
        * Replays the history entry in the current history
        */
       if (err) return cb(err);
-      currentHistory.set(new BitArray(revHistoryEntryNode.getKey()),
+      currentHistory.set(revHistoryEntryNode.getKey(),
           revHistoryEntry, replayHistoryCb);
     };
     var replayHistoryCb = (err: Error, old: any) => {
@@ -206,7 +205,7 @@ class LocalDatabase implements Connection {
     var commitTreeCb = (err: Error) => {
       if (err) return cb(err);
       refMap[currentCommit.name] = currentCommit;
-      currentMaster.set(new BitArray(['refs', currentCommit.name]),
+      currentMaster.set(['refs', currentCommit.name],
           currentCommit.tree.getRootRef(), commitNextTree);
     };
     var commitHistoryCb = (err: Error) => {

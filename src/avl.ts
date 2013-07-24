@@ -17,7 +17,7 @@ class AvlNode implements IndexNode {
   type: DbObjectType;
 
   constructor(key: IndexKey, value: any) {
-    this.key = key;
+    this.key = key instanceof BitArray ? key: new BitArray(key);
     this.value = value;
     this.left = null;
     this.leftRef = null;
@@ -90,7 +90,7 @@ class AvlTree implements IndexTree {
     this.root = null;
   }
 
-  get(key: IndexKey, cb: ObjectCb) {
+  get(key: any, cb: ObjectCb) {
     var searchCb = (err: Error, comp: number, path: Array<AvlNode>) => {
       if (err) return cb(err, null);
       if (comp === 0) return cb(null, path[path.length - 1].value);
@@ -99,9 +99,11 @@ class AvlTree implements IndexTree {
     var getCb = (err: Error, node: AvlNode) => {
       this.root = node;
       this.search(false, key, searchCb);
-    }
+    };
 
+    key = new BitArray(key);
     if (!this.rootRef) return cb(null, null);
+
     if (this.root) {
       this.search(false, key, searchCb);
     } else {
@@ -109,7 +111,7 @@ class AvlTree implements IndexTree {
     }
   }
 
-  set(key: IndexKey, value: any, cb: ObjectCb) {
+  set(key: any, value: any, cb: ObjectCb) {
     var searchCb = (err: Error, comp: number, path: Array<AvlNode>) => {
       var node, oldValue;
       if (err) return cb(err, null);
@@ -133,6 +135,8 @@ class AvlTree implements IndexTree {
       this.root = node;
       this.search(true, key, searchCb);
     };
+
+    key = new BitArray(key);
 
     if (!this.rootRef) {
       this.root = new AvlNode(key, value);
@@ -161,8 +165,9 @@ class AvlTree implements IndexTree {
       if (err) return cb(err, null);
       this.ensureIsBalanced(oldValue, path, cb);
     };
-
     var path;
+
+    key = new BitArray(key);
 
     if (!this.rootRef) {
       return cb(null, null);
@@ -652,8 +657,7 @@ class AvlTree implements IndexTree {
     var getCb = (err: Error, array: Array) => {
       var node;
       if (err) return cb(err, null);
-      // FIXME remove BitArray reference from this file
-      node = new AvlNode(new BitArray(array[0]), array[1]);
+      node = new AvlNode(array[0], array[1]);
       node.leftRef = array[2];
       node.rightRef = array[3];
       node.height = array[4];

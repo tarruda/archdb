@@ -37,7 +37,7 @@ class LocalRevision implements Transaction {
 
   domain(name: string): Domain {
     var getIdJob = (cb: AnyCb) => {
-      indexIdKey = new BitArray(['ids', name]);
+      indexIdKey = ['ids', name];
       this.master.get(indexIdKey, cb);
     };
     var getIdCb = (err: Error, id: number) => {
@@ -93,7 +93,7 @@ class IndexProxy implements IndexTree {
       queue: JobQueue, cb: AnyCb) {
     var jobCb = (nextJob: AnyCb) => {
       cb = nextJob;
-      master.get(new BitArray(['refs', name]), getCb);
+      master.get(['refs', name], getCb);
     };
     var getCb = (err: Error, ref: string) => {
       if (err) return cb(err);
@@ -110,17 +110,17 @@ class IndexProxy implements IndexTree {
     queue.add(cb, jobCb);
   }
 
-  get(key: IndexKey, cb: ObjectCb) {
+  get(key: any, cb: ObjectCb) {
     var dcb = (tree: IndexTree, cb: AnyCb) => tree.get(key, cb);
     this.delegate(cb, dcb);
   }
 
-  set(key: IndexKey, value: any, cb: ObjectCb) {
+  set(key: any, value: any, cb: ObjectCb) {
     var dcb = (tree: IndexTree, cb: AnyCb) => tree.set(key, value, cb);
     this.delegate(cb, dcb);
   }
 
-  del(key: IndexKey, cb: ObjectCb) {
+  del(key: any, cb: ObjectCb) {
     var dcb = (tree: IndexTree, cb: AnyCb) => tree.del(key, cb);
     this.delegate(cb, dcb);
   }
