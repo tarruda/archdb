@@ -808,3 +808,4 @@ function testDatabase(options) {
   });
 }
 
+testDatabase({type: 'local', storage: 'memory'});

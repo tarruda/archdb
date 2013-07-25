@@ -28,16 +28,42 @@ module.exports = (grunt) ->
           src: 'node_modules/setimmediate/setImmediate.js'
           dest: 'tmp/platform/browser/include/setImmediate.js'
         }]
+      nodejs_include:
+        files: [{
+          expand: true
+          cwd: 'src/'
+          src: 'platform/nodejs/include/*.js'
+          dest: 'tmp/'
+        }]
 
     mapcat:
-      browser_dev:
+      browser_test:
         cwd: 'tmp'
         src: [
           'platform/browser/include/*.js'
           'platform/browser/*.js'
           '*.js'
         ]
-        dest: 'build/browser_dev.js'
+        dest: 'build/browser_test.js'
+      nodejs_test:
+        cwd: 'tmp'
+        src: [
+          'platform/nodejs/include/*.js'
+          'platform/nodejs/*.js'
+          '*.js'
+        ]
+        dest: 'build/nodejs_test.js'
+
+    simplemocha:
+      options:
+        ignoreLeaks: true
+        ui: 'bdd'
+      all:
+        src: [
+          'test/init_node.js'
+          'test/unit/*.js'
+          'test/functional/*.js'
+        ]
 
     connect:
       options:
@@ -64,6 +90,7 @@ module.exports = (grunt) ->
           'typescript:changed'
           'copy'
           'mapcat'
+          'simplemocha'
           'livereload'
         ]
 
@@ -75,6 +102,7 @@ module.exports = (grunt) ->
   grunt.loadNpmTasks 'grunt-contrib-livereload'
   grunt.loadNpmTasks 'grunt-contrib-copy'
   grunt.loadNpmTasks 'grunt-typescript'
+  grunt.loadNpmTasks 'grunt-simple-mocha'
 
   grunt.registerMultiTask 'mapcat', ->
     # concatenate compiled javascript while generating a resulting
@@ -142,6 +170,7 @@ module.exports = (grunt) ->
     'typescript'
     'copy'
     'mapcat'
+    'simplemocha'
     'connect'
     'livereload-start'
     'watch'

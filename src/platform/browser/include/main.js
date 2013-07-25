@@ -1,4 +1,5 @@
 var injectStackTrace;
+var ErrorClass = Error;
 
 if (Error.captureStackTrace) {
   injectStackTrace = function(err) {
@@ -13,3 +14,8 @@ if (Error.captureStackTrace) {
     }
   }
 }
+
+function yield(fn) {
+  window.setImmediate(fn);
+}
+
