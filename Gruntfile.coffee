@@ -100,7 +100,7 @@ module.exports = (grunt) ->
         ]
         tasks: [
           'typescript:changed'
-          'copy'
+          'copy:changed'
           'mapcat'
           'nodejs_test'
           'livereload'
@@ -201,8 +201,15 @@ module.exports = (grunt) ->
   grunt.event.on 'watch', (action, filepath) ->
     typescript = grunt.config.getRaw('typescript')
     typescript.changed = {}
+    copy = grunt.config.getRaw('copy')
+    copy.changed = {}
     if /\.ts$/.test filepath
       tsFile = path.relative(typescript.options.base_path, filepath)
       typescript.changed.src = path.join('src', tsFile)
       typescript.changed.dest = 'tmp'
-    grunt.regarde = changed: ['browser.js']
+    else if /include\/.+\.js$/.test filepath
+      copy.changed.expand = true
+      copy.changed.cwd = 'src/'
+      copy.changed.src = path.relative(copy.changed.cwd, filepath)
+      copy.changed.dest = 'tmp/'
+    grunt.regarde = changed: ['browser_test.js']
