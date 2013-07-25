@@ -10,9 +10,9 @@ class LocalIndex implements Domain {
   id: number;
 
   constructor(private name: string,
-      private dbStorage: DbStorage, private queue: JobQueue,
-      private tree: IndexTree, private history: IndexTree,
-      private uidGenerator: UidGenerator) { }
+      public dbStorage: DbStorage, public queue: JobQueue,
+      public tree: IndexTree, public history: IndexTree,
+      public uidGenerator: UidGenerator) { }
 
   set(key: any, value: any, cb: ObjectCb) {
     var job = (next: ObjectCb) => {

@@ -5,7 +5,7 @@
 
 var HISTORY = '$history';
 
-class LocalRevision implements Transaction {
+class LocalRevision extends EventEmitter implements Transaction {
   id: Uid;
   db: LocalDatabase;
   dbStorage: DbStorage;
@@ -18,6 +18,7 @@ class LocalRevision implements Transaction {
 
   constructor(db: LocalDatabase, dbStorage: DbStorage, masterRef: string,
       suffix: string) {
+    super();
     var historyCb = (err: Error, tree: IndexTree) => {
       if (err) throw err; // fatal error?
       this.history = tree
@@ -56,16 +57,20 @@ class LocalRevision implements Transaction {
       if (err) throw err;
       cacheEntry.tree = tree;
     };
-    var rv, indexIdKey;
+    var committedCb = () => {
+      rv.tree = this.treeCache[name].tree;
+    };
+    var indexIdKey;
     var cacheEntry =
       this.treeCache[name] || (this.treeCache[name] =
       { tree: new IndexProxy(name, this.master, this.dbStorage,
           this.queue, treeCb), id: null, name: name });
     var tree = cacheEntry.tree;
-    
-    if (!cacheEntry.id) this.queue.add(getIdCb, getIdJob);
-    rv = new LocalIndex(name, this.dbStorage, this.queue, tree,
+    var rv = new LocalIndex(name, this.dbStorage, this.queue, tree,
         this.history, this.uidGenerator);
+    
+    this.once('committed', committedCb);
+    if (!cacheEntry.id) this.queue.add(getIdCb, getIdJob);
     rv.id = cacheEntry.id;
     return rv;
   }
@@ -83,6 +88,7 @@ class LocalRevision implements Transaction {
       this.master = master;
       this.originalMasterRef = master.getRootRef();
       this.id = this.uidGenerator.generate();
+      this.emit('committed');
       cb(null);
     };
 
@@ -104,9 +110,15 @@ class IndexProxy implements IndexTree {
       if (err) return cb(err);
       this.tree = new AvlTree(dbStorage, ref);
       if (this.pending) {
+        this.pending.add(cb, proxyJob);
         this.pending.frozen = false;
-        this.pending.run();
+        return this.pending.run();
       }
+      cb(null, this.tree);
+    };
+    var proxyJob = (cb: AnyCb) => {
+      // only after all pending proxy invocations are handled we let
+      // the transaction queue continue processing
       cb(null, this.tree);
     };
 

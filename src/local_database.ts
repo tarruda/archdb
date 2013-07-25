@@ -46,16 +46,15 @@ class LocalDatabase implements Connection {
   }
 
   /*
-   *  Merge(commit) algorithm high level description:
+   *  High level description of the merge(commit) algorithm:
    * 
    *  1 - If the revision's original masterRef equals the current masterRef,
    *      then fast-forward(the revision masterRef becomes the current
    *      masterRef) and return.
-   *  2 - For each modified index in the revision cache:
+   *  2 - For each index in the revision cache:
    *      2.1 - If the index is new or the original rootRef equals the current
-   *            rootRef of the same index, or history tracking is disabled
-   *            for the index, then fast-foward it and continue to the next
-   *            index.
+   *            rootRef of the same index, or the index wasn't modified,
+   *            fast-foward it and continue to the next index.
    *      2.2 - Store the index for later.
    *  3 - If no indexes were stored in the step 2 then the merge is complete
    *      and we can return.
@@ -73,47 +72,52 @@ class LocalDatabase implements Connection {
   merge(rev: LocalRevision, mergeCb: MergeCb) {
     var mergeJob = (nextJob: MergeCb) => {
       /*
-       * Sets the merge job completion callback and select modified indexes
+       * Sets the merge job completion callback and copy cached indexes
        */
       mergeCb = nextJob;
+      refMap = {};
       if (rev.originalMasterRef === this.masterRef) return commitTrees();
       forwarded = {};
       replay = {};
-      modified = [];
-      for (var k in rev.treeCache) {
-        if (rev.treeCache[k].tree.modified()) {
-          modified.push(rev.treeCache[k]);
-        }
-      }
+      cached = [];
+      for (var k in rev.treeCache) cached.push(rev.treeCache[k]);
       currentMaster = new AvlTree(this.dbStorage, this.masterRef);
       nextIndex();
     };
     var nextIndex = () => {
       /*
-       * Called for each modified index to retrieve the current index rootRef
+       * Called for each cached index to retrieve the current index rootRef
        */
-      if (!modified.length) {
+      if (!cached.length) {
         return currentMaster.get(['refs', HISTORY], currentHistoryCb);
       }
-      currentIndex = modified.shift();
+      currentIndex = cached.shift();
       currentIndexKey = ['refs', currentIndex.name];
       currentMaster.get(currentIndexKey, currentIndexCb);
     };
     var currentIndexCb = (err: Error, ref: string) => {
       /*
-       * If the current index wasn't modified since the revision
-       * was checked out, mark the index for fast-forward, else
-       * mark the index for conflict check/replay
+       * If the current index it wasn't modified in the master branch,
+       * mark it for fast-forward.
+       * If the current index wasn't modified in the revision but was
+       * modified in the master branch, add the master version to the
+       * refMap so it will be updated in the revision after commit.
+       * Else mark it for conflict check/replay
        */
-      var orig;
+      var orig, currentMasterIndex;
       if (err) return cb(err);
       orig = currentIndex.tree.getOriginalRootRef();
       if (!ref || orig === ref) {
         forwarded[currentIndex.name] = currentIndex;
         return yield(nextIndex);
       }
-      replay[currentIndex.id] = { tree: new AvlTree(this.dbStorage, ref),
+      currentMasterIndex = { tree: new AvlTree(this.dbStorage, ref),
         name: currentIndex.name, id: currentIndex.id };
+      if (!currentIndex.tree.modified() && orig !== ref) {
+        refMap[currentIndex.name] = currentMasterIndex;
+      } else {
+        replay[currentIndex.id] = currentMasterIndex;
+      }
       yield(nextIndex);
     };
     var currentHistoryCb = (err: Error, ref: string) => {
@@ -182,7 +186,6 @@ class LocalDatabase implements Connection {
       nextHistoryEntry();
     };
     var commitTrees = () => {
-      refMap = {};
       commit = [];
       for (var k in forwarded) commit.push(forwarded[k]);
       for (var k in replay) commit.push(replay[k]);
@@ -239,7 +242,7 @@ class LocalDatabase implements Connection {
       mergeCb(null, refMap, currentHistory, currentMaster);
     }
     var forwarded, replay, commit, currentHistory, currentCommit;
-    var modified, currentIndex, currentMaster, revHistoryEntryNode;
+    var cached, currentIndex, currentMaster, revHistoryEntryNode;
     var currentIndexKey, historyEntryType, refMap;
     var revHistoryEntryKey, revHistoryEntry, nextHistoryEntry, replayTree;
 
