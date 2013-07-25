@@ -36,7 +36,7 @@ class LocalDatabase implements Connection {
 
   begin(cb: TransactionCb) {
     var job = (cb) => {
-      var suffix = this.uidGenerator.generate().hex.slice(0, 7);
+      var suffix = this.uidGenerator.generate().hex.slice(0, 14);
       cb(null, new LocalRevision(this, this.dbStorage, this.masterRef,
             suffix));
     };
@@ -80,12 +80,12 @@ class LocalDatabase implements Connection {
       forwarded = {};
       replay = {};
       modified = [];
-      currentMaster = new AvlTree(this.dbStorage, this.masterRef);
       for (var k in rev.treeCache) {
         if (rev.treeCache[k].tree.modified()) {
           modified.push(rev.treeCache[k]);
         }
       }
+      currentMaster = new AvlTree(this.dbStorage, this.masterRef);
       nextIndex();
     };
     var nextIndex = () => {
@@ -137,10 +137,10 @@ class LocalDatabase implements Connection {
       nextHistoryEntry = next;
       revHistoryEntryNode = node;
       revHistoryEntry = node.getValue();
-      revHistoryEntryKey = revHistoryEntry[2];
-      replayTree = replay[revHistoryEntry[1]].tree;
       historyEntryType = revHistoryEntry[0];
-      if (!replayTree) return nextHistoryEntry();
+      if (!replay[revHistoryEntry[1]]) return nextHistoryEntry();
+      replayTree = replay[revHistoryEntry[1]].tree;
+      revHistoryEntryKey = revHistoryEntry[2];
       if (historyEntryType !== HistoryEntryType.Insert) {
         return replayTree.get(revHistoryEntryKey, checkIndexCb);
       }
@@ -151,7 +151,7 @@ class LocalDatabase implements Connection {
        * Throws the conflict error if the history entry indicates
        * that the value was modified since the revision checkout.
        */
-      if (ref && ref !== revHistoryEntry[3].ref) {
+      if (ref && ref !== revHistoryEntry[3]) {
         return cb(new Error('key conflict'));
       }
       replayOperation();
@@ -162,7 +162,8 @@ class LocalDatabase implements Connection {
        */
       if (historyEntryType === HistoryEntryType.Insert ||
           historyEntryType === HistoryEntryType.Update) {
-        replayTree.set(revHistoryEntryKey, replayOperationCb);
+        replayTree.set(revHistoryEntryKey, revHistoryEntry[4] ||
+            revHistoryEntry[3], replayOperationCb);
       } else {
         replayTree.del(revHistoryEntryKey, replayOperationCb);
       }
@@ -198,9 +199,9 @@ class LocalDatabase implements Connection {
     };
     var commitNextTree = (err: Error) => {
       if (err) return cb(err);
-      if (!commit.length) return currentHistory.commit(false, commitHistoryCb);
+      if (!commit.length) return currentHistory.commit(true, commitHistoryCb);
       currentCommit = commit.shift();
-      currentCommit.tree.commit(false, commitTreeCb);
+      currentCommit.tree.commit(true, commitTreeCb);
     };
     var commitTreeCb = (err: Error) => {
       if (err) return cb(err);
@@ -210,7 +211,12 @@ class LocalDatabase implements Connection {
     };
     var commitHistoryCb = (err: Error) => {
       if (err) return cb(err);
-      currentMaster.commit(false, commitMasterCb);
+      currentMaster.set(['refs', HISTORY],
+          currentHistory.getRootRef(), setHistoryRefCb);
+    };
+    var setHistoryRefCb = (err: Error) => {
+      if (err) return cb(err);
+      currentMaster.commit(true, commitMasterCb);
     };
     var commitMasterCb = (err: Error) => {
       if (err) return cb(err);

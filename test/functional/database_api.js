@@ -417,7 +417,7 @@ function testDatabase(options) {
       });
     });
 
-    describe('isolation', function() {
+    describe('transaction isolation', function() {
       beforeEach(function(done) {
         openDatabase(options, function(err, database) {
           if (err) return done(err);
@@ -445,11 +445,10 @@ function testDatabase(options) {
                   // make some changes
                   dom1.set(5, 15);
                   dom1.set(6, 16);
-                  dom1.del(2, function() {
-                    dom1.del(7);
-                    dom2.set(8, 18);
-                    dom2.set(15, 155, done);
-                  });
+                  dom1.del(2);
+                  dom1.del(7);
+                  dom2.set(8, 18);
+                  dom2.set(15, 155, done);
                 })
               })
             });
@@ -459,7 +458,7 @@ function testDatabase(options) {
 
       it('committed state', function(done) {
         db.begin(function(err, tx) {
-          // begin a new transaction so only committed data will appear
+          // begin a new transaction so only committed data will show
           query(tx.domain(domain1), null, function(err, items) {
             expect(items).to.deep.eql([
               1, 1,
@@ -509,39 +508,39 @@ function testDatabase(options) {
           // distinct keys so it will force/validate conflict check
           tx2.domain(domain1).set(3, 30);
           tx2.domain(domain1).del(1);
-          query(tx2.domain(domain1), null, function(err, items) {
-            if (err) return done(err);
-            // incorporate changes from both transactions
-            expect(items).to.deep.eql([
-              2, 2,
-              3, 30,
-              4, 4,
-              5, 5,
-              6, 6,
-              7, 7,
-            ]);
-            query(tx2.domain(domain2), null, function(err, items) {
+          tx2.commit(function(err) {
+            query(tx2.domain(domain1), null, function(err, items) {
               if (err) return done(err);
               // incorporate changes from both transactions
               expect(items).to.deep.eql([
-                8, 8,
-                9, 9,
+                2, 2,
+                3, 30,
+                4, 4,
+                5, 5,
+                6, 6,
+                7, 7,
               ]);
-              query(tx.domain(domain1), null, function(err, items) {
+              query(tx2.domain(domain2), null, function(err, items) {
+                if (err) return done(err);
+                // incorporate changes from both transactions
                 expect(items).to.deep.eql([
-                  1, 1,
-                  3, 3,
-                  4, 4,
-                  5, 15,
-                  6, 16,
+                  8, 8,
+                  9, 9,
                 ]);
-                query(tx.domain(domain2), null, function(err, items) {
+                query(tx.domain(domain1), null, function(err, items) {
                   expect(items).to.deep.eql([
-                    8, 18,
-                    9, 9,
-                    15, 155,
+                    1, 1,
+                    3, 3,
+                    4, 4,
+                    5, 15,
+                    6, 16,
                   ]);
-                  tx2.commit(function(err) {
+                  query(tx.domain(domain2), null, function(err, items) {
+                    expect(items).to.deep.eql([
+                      8, 18,
+                      9, 9,
+                      15, 155,
+                    ]);
                     tx.commit(function(err) {
                       if (err) return done(err);
                       // domain1 merge complete, domain2 was fast-forwarded

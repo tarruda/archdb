@@ -209,7 +209,7 @@ class JobQueue {
 
     if (this.frozen || this.running || !this.jobs.length) return;
     this.running = true;
-    nextJob();
+    yield(nextJob);
   }
 }
 

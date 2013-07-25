@@ -101,7 +101,7 @@ class AvlTree implements IndexTree {
       this.search(false, key, searchCb);
     };
 
-    key = new BitArray(key);
+    key = key instanceof BitArray ? key.clone() : new BitArray(key);
     if (!this.rootRef) return cb(null, null);
 
     if (this.root) {
@@ -136,7 +136,7 @@ class AvlTree implements IndexTree {
       this.search(true, key, searchCb);
     };
 
-    key = new BitArray(key);
+    key = key instanceof BitArray ? key.clone() : new BitArray(key);
 
     if (!this.rootRef) {
       this.root = new AvlNode(key, value);
@@ -167,7 +167,7 @@ class AvlTree implements IndexTree {
     };
     var path;
 
-    key = new BitArray(key);
+    key = key instanceof BitArray ? key.clone() : new BitArray(key);
 
     if (!this.rootRef) {
       return cb(null, null);
@@ -324,7 +324,7 @@ class AvlTree implements IndexTree {
         pending.push(parent);
         visit();
       } else {
-        this.rootRef = ref;
+        this.rootRef = this.originalRootRef = ref;
         if (releaseCache) this.root = null;
         cb(null);
       }

@@ -71,6 +71,9 @@ class LocalRevision implements Transaction {
   }
 
   commit(cb: DoneCb) {
+    var job = (mergeCb: AnyCb) => {
+      this.db.merge(this, mergeCb);
+    };
     var mergeCb = (err: Error, refMap: any, history: IndexTree,
         master: IndexTree) => {
       var index;
@@ -78,10 +81,12 @@ class LocalRevision implements Transaction {
       for (var k in refMap) this.treeCache[k] = refMap[k];
       this.history = history;
       this.master = master;
+      this.originalMasterRef = master.getRootRef();
+      this.id = this.uidGenerator.generate();
       cb(null);
     };
 
-    this.db.merge(this, mergeCb);
+    this.queue.add(mergeCb, job);
   }
 }
 

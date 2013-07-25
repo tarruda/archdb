@@ -294,12 +294,10 @@ class BitArray implements IndexKey {
     if (obj === null) {
       this.write(1, 4);
     } else  {
-      obj = obj.valueOf();
-      if (obj === true) {
-        this.write(2, 4);
-      } else if (obj === false) {
-        this.write(3, 4);
-      } else if ((type = typeOf(obj)) === ObjectType.Number) {
+      if ((type = typeOf(obj)) === ObjectType.Boolean) {
+        if (obj.valueOf()) this.write(2, 4);
+        else this.write(3, 4);
+      } else if (type === ObjectType.Number) {
         this.write(4, 4);
         this.packNumber(obj);
       } else if (type === ObjectType.String) {
