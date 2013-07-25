@@ -62,8 +62,23 @@ module.exports = (grunt) ->
         src: [
           'test/init_node.js'
           'test/unit/*.js'
-          'test/functional/*.js'
+          'test/functional/database_api.js'
+          'test/functional/node.js'
         ]
+
+    karma:
+      options:
+        colors: true
+        runnerPort: 9999
+        port: 9876
+        configFile: 'karma.conf.js'
+        captureTimeout: 15000
+      dev:
+        reporters: ['dots']
+        browsers: ['Chrome', 'Firefox']
+      ci:
+        browsers: ['PhantomJS']
+        singleRun: true
 
     connect:
       options:
@@ -103,6 +118,7 @@ module.exports = (grunt) ->
   grunt.loadNpmTasks 'grunt-contrib-copy'
   grunt.loadNpmTasks 'grunt-typescript'
   grunt.loadNpmTasks 'grunt-simple-mocha'
+  grunt.loadNpmTasks 'grunt-karma'
 
   grunt.registerMultiTask 'mapcat', ->
     # concatenate compiled javascript while generating a resulting

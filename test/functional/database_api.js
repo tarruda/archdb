@@ -1,4 +1,4 @@
-function testDatabase(options) {
+testDatabase = function(options) {
   var suiteName = options.type + ' database with ' + options.storage +
     ' storage';
 
@@ -807,5 +807,3 @@ function testDatabase(options) {
     }
   });
 }
-
-testDatabase({type: 'local', storage: 'memory'});
