@@ -1,5 +1,6 @@
 /// <reference path="./private_api.ts"/>
 /// <reference path="./util.ts"/>
+/// <reference path="./open.ts"/>
 
 class MemoryStorage implements DbStorage {
   uid: number;
@@ -38,3 +39,5 @@ class MemoryStorage implements DbStorage {
     this.set(type, ref, obj, setCb);
   }
 }
+
+registerBackend('memory', MemoryStorage);

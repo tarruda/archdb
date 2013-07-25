@@ -39,6 +39,7 @@ module.exports = (grunt) ->
 
     mapcat:
       browser_test:
+        source_map_ref_type: 'chrome'
         cwd: 'tmp'
         src: [
           'platform/browser/include/*.js'
@@ -47,6 +48,7 @@ module.exports = (grunt) ->
         ]
         dest: 'build/browser_test.js'
       nodejs_test:
+        source_map_ref_type: 'nodejs'
         cwd: 'tmp'
         src: [
           'platform/nodejs/include/*.js'
@@ -102,8 +104,8 @@ module.exports = (grunt) ->
           'typescript:changed'
           'copy:changed'
           'mapcat'
-          'nodejs_test'
           'livereload'
+          'nodejs_test'
         ]
 
     clean: ['tmp', 'build', 'dist']
@@ -184,7 +186,10 @@ module.exports = (grunt) ->
               column: m.originalColumn
           source: m.source
       lineOffset += src.split('\n').length
-    buffer.push "//@ sourceMappingURL=#{sourceMappingURL}"
+    if @data.source_map_ref_type == 'chrome'
+      buffer.push "//@ sourceMappingURL=#{sourceMappingURL}"
+    else if @data.source_map_ref_type == 'nodejs'
+      buffer.unshift "//# sourceMappingURL=#{sourceMappingURL}"
     grunt.file.write dest, buffer.join('\n')
     grunt.file.write "#{dest}.map", gen.toString()
 

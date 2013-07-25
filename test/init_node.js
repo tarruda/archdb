@@ -1,3 +1,4 @@
+require('source-map-support').install();
 fs = require('fs');
 vm = require('vm');
 expect = require('chai').expect;

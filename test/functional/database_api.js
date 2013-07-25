@@ -10,23 +10,20 @@ testDatabase = function(options) {
     describe('query', function() {
       describe('ranges', function() {
         beforeEach(function(done) {
-          openDatabase(options, function(err, database) {
-            if (err) return done(err);
-            db = database;
-            db.begin(function(err, transaction) {
-              tx = transaction;
-              dom1 = tx.domain(domain1);
-              dom1.set(1, {name: 'test1'});
-              dom1.set(2, {name: 'test2'});
-              dom1.set(3, {name: 'test3'});
-              dom1.set(4, {name: 'test4'});
-              dom1.set(5, {name: 'test5'});
-              dom1.set(6, {name: 'test6'});
-              dom1.set(7, {name: 'test7'});
-              tx.commit(function(err){
-                if (err) return done(err);
-                done();
-              });
+          db = openDb(options);
+          db.begin(function(err, transaction) {
+            tx = transaction;
+            dom1 = tx.domain(domain1);
+            dom1.set(1, {name: 'test1'});
+            dom1.set(2, {name: 'test2'});
+            dom1.set(3, {name: 'test3'});
+            dom1.set(4, {name: 'test4'});
+            dom1.set(5, {name: 'test5'});
+            dom1.set(6, {name: 'test6'});
+            dom1.set(7, {name: 'test7'});
+            tx.commit(function(err){
+              if (err) return done(err);
+              done();
             });
           });
         });
@@ -283,22 +280,19 @@ testDatabase = function(options) {
 
       describe('pattern', function() {
         beforeEach(function(done) {
-          openDatabase(options, function(err, database) {
-            if (err) return done(err);
-            db = database;
-            db.begin(function(err, transaction) {
-              tx = transaction;
-              dom1 = tx.domain(domain1);
-              dom1.set('abc', 0);
-              dom1.set('abcd', 0);
-              dom1.set('abcde', 0);
-              dom1.set(['abc', 1], 0);
-              dom1.set(['abc', 'def', 2], 0);
-              dom1.set(['abcdef', 3], 0);
-              tx.commit(function(err){
-                if (err) return done(err);
-                done();
-              });
+          db = openDb(options);
+          db.begin(function(err, transaction) {
+            tx = transaction;
+            dom1 = tx.domain(domain1);
+            dom1.set('abc', 0);
+            dom1.set('abcd', 0);
+            dom1.set('abcde', 0);
+            dom1.set(['abc', 1], 0);
+            dom1.set(['abc', 'def', 2], 0);
+            dom1.set(['abcdef', 3], 0);
+            tx.commit(function(err){
+              if (err) return done(err);
+              done();
             });
           });
         });
@@ -426,51 +420,49 @@ testDatabase = function(options) {
         var i = 0;
         function d() { if (++i === 4) done(); }
 
-        openDatabase(options, function(err, database) {
-          db = database;
-          db.begin(function(err, transaction) {
-            dom1 = transaction.domain(domain1);
-            dom2 = transaction.domain(domain2);
-            // commit initial data in 2 steps
-            dom1.set(1, 1);
-            dom1.set(2, {name: 'two'});
-            dom1.set(3, 3);
+        db = openDb(options);
+        db.begin(function(err, transaction) {
+          dom1 = transaction.domain(domain1);
+          dom2 = transaction.domain(domain2);
+          // commit initial data in 2 steps
+          dom1.set(1, 1);
+          dom1.set(2, {name: 'two'});
+          dom1.set(3, 3);
+          transaction.commit(function() {
+            dom2.set(4, 4);
+            dom2.set(5, 5);
+            dom2.set(6, 6);
             transaction.commit(function() {
-              dom2.set(4, 4);
-              dom2.set(5, 5);
-              dom2.set(6, 6);
-              transaction.commit(function() {
-                // begin 4 concurrent transactions
-                db.begin(function(err, transaction) {
-                  tx1 = transaction;
-                  tx1dom1 = tx1.domain(domain1);
-                  tx1dom2 = tx1.domain(domain2);
-                  tx1dom1.set(1, {name: 'one'});
-                  tx1dom1.set(2, 22, d);
-                });
-                db.begin(function(err, transaction) {
-                  tx2 = transaction;
-                  tx2dom1 = tx2.domain(domain1);
-                  tx2dom2 = tx2.domain(domain2);
-                  tx2dom2.set(5, 55);
-                  tx2dom2.del(6, d);
-                });
-                db.begin(function(err, transaction) {
-                  tx3 = transaction;
-                  tx3dom1 = tx3.domain(domain1);
-                  tx3dom2 = tx3.domain(domain2);
-                  tx3dom1.set(1, 111);
-                  tx3dom1.del(2);
-                  tx3dom2.set(5, 555, d);
-                });
-                db.begin(function(err, transaction) {
-                  tx4 = transaction;
-                  tx4dom1 = tx4.domain(domain1);
-                  tx4dom2 = tx4.domain(domain2);
-                  tx4dom1.del(3);
-                  tx4dom1.set(7, 7);
-                  tx4dom2.set(8, 8, d);
-                });
+              // begin 4 concurrent transactions
+              db.begin(function(err, transaction) {
+                tx1 = transaction;
+                tx1dom1 = tx1.domain(domain1);
+                tx1dom2 = tx1.domain(domain2);
+                tx1dom1.set(1, {name: 'one'});
+                tx1dom1.set(2, 22, d);
+              });
+              db.begin(function(err, transaction) {
+                tx2 = transaction;
+                tx2dom1 = tx2.domain(domain1);
+                tx2dom2 = tx2.domain(domain2);
+                tx2dom2.set(5, 55);
+                tx2dom2.del(6, d);
+              });
+              db.begin(function(err, transaction) {
+                tx3 = transaction;
+                tx3dom1 = tx3.domain(domain1);
+                tx3dom2 = tx3.domain(domain2);
+                tx3dom1.set(1, 111);
+                tx3dom1.del(2);
+                tx3dom2.set(5, 555, d);
+              });
+              db.begin(function(err, transaction) {
+                tx4 = transaction;
+                tx4dom1 = tx4.domain(domain1);
+                tx4dom2 = tx4.domain(domain2);
+                tx4dom1.del(3);
+                tx4dom1.set(7, 7);
+                tx4dom2.set(8, 8, d);
               });
             });
           });

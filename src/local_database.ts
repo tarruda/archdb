@@ -3,6 +3,7 @@
 /// <reference path="./local_revision.ts"/>
 /// <reference path="./local_index.ts"/>
 /// <reference path="./custom_errors.ts"/>
+/// <reference path="./open.ts"/>
 
 class LocalDatabase implements Connection {
   dbStorage: DbStorage;
@@ -295,3 +296,4 @@ class LocalDatabase implements Connection {
   }
 }
 
+registerFrontend('local', LocalDatabase);
