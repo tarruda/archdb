@@ -136,6 +136,8 @@ class LocalDatabase implements Connection {
        */
       if (err) return cb(err);
       if (!next) {
+        nextHistoryEntry = null;
+        if (conflicts) return this.handleUpdateConflicts(conflicts, cb);
         if (commitTrees) commitTrees();
         return;
       }
@@ -153,11 +155,17 @@ class LocalDatabase implements Connection {
     };
     var checkIndexCb = (err: Error, ref: string) => {
       /*
-       * Throws the conflict error if the history entry indicates
-       * that the value was modified since the revision checkout.
+       * Collects all conflicts due to concurrent value updates.
        */
       if (ref && ref !== revHistoryEntry[3]) {
-        return cb(new ConflictError(ref));
+        conflicts = conflicts || [];
+        conflicts.push({
+          index: replay[revHistoryEntry[1]].name,
+          key: revHistoryEntryKey,
+          originalValue: revHistoryEntry[3],
+          actualValue: ref 
+        });
+        return nextHistoryEntry();
       }
       replayOperation();
     };
@@ -244,10 +252,40 @@ class LocalDatabase implements Connection {
     }
     var forwarded, replay, commit, currentHistory, currentCommit;
     var cached, currentIndex, currentMaster, revHistoryEntryNode;
-    var currentIndexKey, historyEntryType, refMap;
+    var currentIndexKey, historyEntryType, refMap, conflicts;
     var revHistoryEntryKey, revHistoryEntry, nextHistoryEntry, replayTree;
 
     this.queue.add(mergeCb, mergeJob);
+  }
+
+  private handleUpdateConflicts(conflicts: Array, cb: AnyCb) {
+    var nextConflict = () => {
+      if (i === conflicts.length) return cb(new ConflictError(conflicts));
+      conflict = conflicts[i++];
+      if (typeOf(conflict.actualValue) === ObjectType.ObjectRef) {
+        return this.dbStorage.get(DbObjectType.IndexData,
+            conflict.actualValue.ref, actualValueCb);
+      }
+      actualValueCb(null, conflict.actualValue);
+    };
+    var actualValueCb = (err: Error, value: any) => {
+      if (err) return cb(err);
+      conflict.actualValue = value;
+      if (typeOf(conflict.originalValue) === ObjectType.ObjectRef) {
+        return this.dbStorage.get(DbObjectType.IndexData,
+            conflict.originalValue.ref, originalValueCb);
+      }
+      originalValueCb(null, conflict.originalValue);
+    };
+    var originalValueCb = (err: Error, value: any) => {
+      if (err) return cb(err);
+      conflict.originalValue = value;
+      yield(nextConflict);
+    };
+
+    var conflict, i = 0;
+
+    nextConflict();
   }
 
   next(id: number) {

@@ -18,7 +18,7 @@ class DbError extends ErrorClass {
 class ConflictError extends DbError {
   name = 'ConflictError'
 
-  constructor(public conflictMap: any) {
+  constructor(public conflicts: any) {
     super('One or more values were updated after read in the transaction');
   }
 }

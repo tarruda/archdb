@@ -433,7 +433,7 @@ function testDatabase(options) {
             dom2 = transaction.domain(domain2);
             // commit initial data in 2 steps
             dom1.set(1, 1);
-            dom1.set(2, 2);
+            dom1.set(2, {name: 'two'});
             dom1.set(3, 3);
             transaction.commit(function() {
               dom2.set(4, 4);
@@ -445,7 +445,7 @@ function testDatabase(options) {
                   tx1 = transaction;
                   tx1dom1 = tx1.domain(domain1);
                   tx1dom2 = tx1.domain(domain2);
-                  tx1dom1.set(1, 11);
+                  tx1dom1.set(1, {name: 'one'});
                   tx1dom1.set(2, 22, d);
                 });
                 db.begin(function(err, transaction) {
@@ -481,7 +481,7 @@ function testDatabase(options) {
         it('tx1', function(done) {
           query(tx1dom1, null, function(err, items) {
             expect(items).to.deep.eql([
-            1, 11,
+            1, {name: 'one'},
             2, 22,
             3, 3,
             ]);
@@ -500,7 +500,7 @@ function testDatabase(options) {
           query(tx2dom1, null, function(err, items) {
             expect(items).to.deep.eql([
             1, 1,
-            2, 2,
+            2, {name: 'two'},
             3, 3,
             ]);
             query(tx2dom2, null, function(err, items) {
@@ -534,7 +534,7 @@ function testDatabase(options) {
           query(tx4dom1, null, function(err, items) {
             expect(items).to.deep.eql([
             1, 1,
-            2, 2,
+            2, {name: 'two'},
             7, 7,
             ]);
             query(tx4dom2, null, function(err, items) {
@@ -557,7 +557,7 @@ function testDatabase(options) {
           tx1.commit(function() {
             query(tx1dom1, null, function(err, items) {
               expect(items).to.deep.eql([
-              1, 11,
+              1, {name: 'one'},
               2, 22,
               3, 3,
               ]);
@@ -578,7 +578,7 @@ function testDatabase(options) {
             query(tx2dom1, null, function(err, items) {
               expect(items).to.deep.eql([
               1, 1,
-              2, 2,
+              2, {name: 'two'},
               3, 3,
               ]);
               query(tx2dom2, null, function(err, items) {
@@ -616,7 +616,7 @@ function testDatabase(options) {
             query(tx4dom1, null, function(err, items) {
               expect(items).to.deep.eql([
               1, 1,
-              2, 2,
+              2, {name: 'two'},
               7, 7,
               ]);
               query(tx4dom2, null, function(err, items) {
@@ -642,7 +642,7 @@ function testDatabase(options) {
             query(tx2dom1, null, function(err, items) {
               expect(items).to.deep.eql([
               1, 1,
-              2, 2,
+              2, {name: 'two'},
               3, 3,
               ]);
               query(tx2dom2, null, function(err, items) {
@@ -655,7 +655,7 @@ function testDatabase(options) {
                 // now tx2 can see tx1 modifications
                 query(tx2dom1, null, function(err, items) {
                   expect(items).to.deep.eql([
-                  1, 11,
+                  1, {name: 'one'},
                   2, 22,
                   3, 3,
                   ]);
@@ -676,7 +676,7 @@ function testDatabase(options) {
           tx2.commit(function() {
             query(tx1dom1, null, function(err, items) {
               expect(items).to.deep.eql([
-              1, 11,
+              1, {name: 'one'},
               2, 22,
               3, 3,
               ]);
@@ -690,7 +690,7 @@ function testDatabase(options) {
               tx1.commit(function() {
                 query(tx1dom1, null, function(err, items) {
                   expect(items).to.deep.eql([
-                  1, 11,
+                  1, {name: 'one'},
                   2, 22,
                   3, 3,
                   ]);
@@ -716,7 +716,7 @@ function testDatabase(options) {
                 query(tx4dom1, null, function(err, items) {
                   expect(items).to.deep.eql([
                   1, 1,
-                  2, 2,
+                  2, {name: 'two'},
                   7, 7,
                   ]);
                   query(tx4dom2, null, function(err, items) {
@@ -730,7 +730,7 @@ function testDatabase(options) {
                   tx4.commit(function() {
                     query(tx4dom1, null, function(err, items) {
                       expect(items).to.deep.eql([
-                      1, 11,
+                      1, {name: 'one'},
                       2, 22,
                       7, 7,
                       ]);
@@ -768,6 +768,22 @@ function testDatabase(options) {
                   });
                   tx3.commit(function(err) {
                     expect(err).to.be.instanceOf(ConflictError);
+                    expect(err.conflicts).to.deep.eql([{
+                      index: 'domain1',
+                      key: 1,
+                      originalValue: 1,
+                      actualValue: {name: 'one'}
+                    }, {
+                      index: 'domain1',
+                      key: 2,
+                      originalValue: {name: 'two'},
+                      actualValue: 22 
+                    }, {
+                      index: 'domain2',
+                      key: 5,
+                      originalValue: 5,
+                      actualValue: 55 
+                    }]);
                     done();
                   })
                 });
