@@ -2,6 +2,7 @@
 /// <reference path="./util.ts"/>
 /// <reference path="./local_revision.ts"/>
 /// <reference path="./local_index.ts"/>
+/// <reference path="./custom_errors.ts"/>
 
 class LocalDatabase implements Connection {
   dbStorage: DbStorage;
@@ -156,7 +157,7 @@ class LocalDatabase implements Connection {
        * that the value was modified since the revision checkout.
        */
       if (ref && ref !== revHistoryEntry[3]) {
-        return cb(new Error('key conflict'));
+        return cb(new ConflictError(ref));
       }
       replayOperation();
     };
@@ -182,7 +183,7 @@ class LocalDatabase implements Connection {
     };
     var replayHistoryCb = (err: Error, old: any) => {
       if (err) return cb(err);
-      if (old) return cb(new Error('history entry exists'));
+      if (old) return cb(new DbError('history entry exists'));
       nextHistoryEntry();
     };
     var commitTrees = () => {

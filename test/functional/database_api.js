@@ -749,6 +749,32 @@ function testDatabase(options) {
             });
           });
         });
+
+        describe('with key/value conflict', function() {
+          it('tx1, tx2, tx3', function(done) {
+            tx1.commit(function() {
+              tx2.commit(function() {
+                query(tx3dom1, null, function(err, items) {
+                  expect(items).to.deep.eql([
+                  1, 111,
+                  3, 3,
+                  ]);
+                  query(tx3dom2, null, function(err, items) {
+                    expect(items).to.deep.eql([
+                    4, 4,
+                    5, 555,
+                    6, 6,
+                    ]);
+                  });
+                  tx3.commit(function(err) {
+                    expect(err).to.be.instanceOf(ConflictError);
+                    done();
+                  })
+                });
+              });
+            });
+          });
+        });
       });
     });
 

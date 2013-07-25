@@ -14,14 +14,30 @@ module.exports = (grunt) ->
         src: 'src/*.ts'
         dest: 'tmp'
       browser:
-        src: 'src/platform/browser.ts'
+        src: 'src/platform/browser/*.ts'
         dest: 'tmp'
 
+    copy:
+      browser_include:
+        files: [{
+          expand: true
+          cwd: 'src/'
+          src: 'platform/browser/include/*.js'
+          dest: 'tmp/'
+        }, {
+          src: 'node_modules/setimmediate/setImmediate.js'
+          dest: 'tmp/platform/browser/include/setImmediate.js'
+        }]
+
     mapcat:
-      browser:
+      browser_dev:
         cwd: 'tmp'
-        src: ['platform/browser.js', '*.js']
-        dest: 'build/browser.js'
+        src: [
+          'platform/browser/include/*.js'
+          'platform/browser/*.js'
+          '*.js'
+        ]
+        dest: 'build/browser_dev.js'
 
     connect:
       options:
@@ -41,10 +57,12 @@ module.exports = (grunt) ->
       src:
         files: [
           'src/**/*.ts'
+          'src/**/*.js'
           'test/**/*.js'
         ]
         tasks: [
           'typescript:changed'
+          'copy'
           'mapcat'
           'livereload'
         ]
@@ -55,6 +73,7 @@ module.exports = (grunt) ->
   grunt.loadNpmTasks 'grunt-contrib-clean'
   grunt.loadNpmTasks 'grunt-contrib-connect'
   grunt.loadNpmTasks 'grunt-contrib-livereload'
+  grunt.loadNpmTasks 'grunt-contrib-copy'
   grunt.loadNpmTasks 'grunt-typescript'
 
   grunt.registerMultiTask 'mapcat', ->
@@ -73,8 +92,13 @@ module.exports = (grunt) ->
     concatenated = {}
     files = @filesSrc.map (f) -> path.join(cwd, f)
     while files.length
-      filepath = files.pop()
+      filepath = files.shift()
       if filepath of concatenated
+        continue
+      if /include/.test filepath
+        src = grunt.file.read filepath
+        buffer.push src.replace('\r', '')
+        lineOffset += src.split('\n').length
         continue
       deps = []
       filename = path.relative(cwd, filepath)
@@ -91,14 +115,14 @@ module.exports = (grunt) ->
         # to avoid infinite loops due to circular deps, we mark this file
         # so its dependencies won't be resolved again
         visited[filepath] = null
-        files.push(filepath)
-        files = files.concat(deps)
+        files.unshift(filepath)
+        files = deps.concat(files)
         continue
       concatenated[filepath] = null
       sourceMapPath = filepath + ".map"
       src = grunt.file.read filepath
       src = src.replace(/\/\/@\ssourceMappingURL[^\r\n]*/g, '//')
-      buffer.push src.replace('\r', '')
+      buffer.push src.replace(/\r/, '')
       orig = new SourceMapConsumer grunt.file.read(sourceMapPath)
       orig.eachMapping (m) ->
         gen.addMapping
@@ -116,6 +140,7 @@ module.exports = (grunt) ->
 
   grunt.registerTask 'default', [
     'typescript'
+    'copy'
     'mapcat'
     'connect'
     'livereload-start'

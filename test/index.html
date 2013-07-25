@@ -7,7 +7,6 @@
 </head>
 <body>
 <div id="mocha">
-  <script src="../node_modules/setimmediate/setImmediate.js"></script>
   <script src="http://192.168.56.50:35729/livereload.js"></script>
   <script src="../node_modules/chai/chai.js"></script>
   <script src="../node_modules/mocha/mocha.js"></script>
@@ -23,7 +22,7 @@
       disconnected = true;
     });
   </script>
-  <script src="../build/browser.js"></script>
+  <script src="../build/browser_dev.js"></script>
   <script src="functional/database_api.js"></script>
   <script>
     testDatabase({type: 'local', storage: 'memory'})
