@@ -1,4 +1,4 @@
-/// <reference path="./components.ts"/>
+/// <reference path="./private_api.ts"/>
 /// <reference path="./util.ts"/>
 
 // using negative numbers as temporary node ids allow us to easily

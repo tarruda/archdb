@@ -4,7 +4,7 @@ function testDatabase(options) {
 
   describe(suiteName, function() {
     var db, tx;
-    var domain1 = 'test1', domain2 = 'test2';
+    var domain1 = 'domain1', domain2 = 'domain2';
     var dom1, dom2;
 
     describe('query', function() {
@@ -16,13 +16,13 @@ function testDatabase(options) {
             db.begin(function(err, transaction) {
               tx = transaction;
               dom1 = tx.domain(domain1);
-              dom1.set(1, 'test1');
-              dom1.set(2, 'test2');
-              dom1.set(3, 'test3');
-              dom1.set(4, 'test4');
-              dom1.set(5, 'test5');
-              dom1.set(6, 'test6');
-              dom1.set(7, 'test7');
+              dom1.set(1, {name: 'test1'});
+              dom1.set(2, {name: 'test2'});
+              dom1.set(3, {name: 'test3'});
+              dom1.set(4, {name: 'test4'});
+              dom1.set(5, {name: 'test5'});
+              dom1.set(6, {name: 'test6'});
+              dom1.set(7, {name: 'test7'});
               tx.commit(function(err){
                 if (err) return done(err);
                 done();
@@ -35,13 +35,13 @@ function testDatabase(options) {
           query(dom1, null, function(err, items) {
             if (err) return done(err);
             expect(items).to.deep.eql([
-              1, 'test1',
-              2, 'test2',
-              3, 'test3',
-              4, 'test4',
-              5, 'test5',
-              6, 'test6',
-              7, 'test7',
+              1, {name: 'test1'},
+              2, {name: 'test2'},
+              3, {name: 'test3'},
+              4, {name: 'test4'},
+              5, {name: 'test5'},
+              6, {name: 'test6'},
+              7, {name: 'test7'},
             ]);
             done();
           });
@@ -51,13 +51,13 @@ function testDatabase(options) {
           query(dom1, {$rev: true}, function(err, items) {
             if (err) return done(err);
             expect(items).to.deep.eql([
-              7, 'test7',
-              6, 'test6',
-              5, 'test5',
-              4, 'test4',
-              3, 'test3',
-              2, 'test2',
-              1, 'test1',
+              7, {name: 'test7'},
+              6, {name: 'test6'},
+              5, {name: 'test5'},
+              4, {name: 'test4'},
+              3, {name: 'test3'},
+              2, {name: 'test2'},
+              1, {name: 'test1'},
             ]);
             done();
           });
@@ -67,10 +67,10 @@ function testDatabase(options) {
           query(dom1, {$gte: 4}, function(err, items) {
             if (err) return done(err);
             expect(items).to.deep.eql([
-              4, 'test4',
-              5, 'test5',
-              6, 'test6',
-              7, 'test7',
+              4, {name: 'test4'},
+              5, {name: 'test5'},
+              6, {name: 'test6'},
+              7, {name: 'test7'},
             ]);
             done();
           });
@@ -80,9 +80,9 @@ function testDatabase(options) {
           query(dom1, {$gt: 4}, function(err, items) {
             if (err) return done(err);
             expect(items).to.deep.eql([
-              5, 'test5',
-              6, 'test6',
-              7, 'test7',
+              5, {name: 'test5'},
+              6, {name: 'test6'},
+              7, {name: 'test7'},
             ]);
             done();
           });
@@ -92,11 +92,11 @@ function testDatabase(options) {
           query(dom1, {$rev: true, $lte: 5}, function(err, items) {
             if (err) return done(err);
             expect(items).to.deep.eql([
-              5, 'test5',
-              4, 'test4',
-              3, 'test3',
-              2, 'test2',
-              1, 'test1',
+              5, {name: 'test5'},
+              4, {name: 'test4'},
+              3, {name: 'test3'},
+              2, {name: 'test2'},
+              1, {name: 'test1'},
             ]);
             done();
           });
@@ -106,10 +106,10 @@ function testDatabase(options) {
           query(dom1, {$rev: true, $lt: 5}, function(err, items) {
             if (err) return done(err);
             expect(items).to.deep.eql([
-              4, 'test4',
-              3, 'test3',
-              2, 'test2',
-              1, 'test1',
+              4, {name: 'test4'},
+              3, {name: 'test3'},
+              2, {name: 'test2'},
+              1, {name: 'test1'},
             ]);
             done();
           });
@@ -119,10 +119,10 @@ function testDatabase(options) {
           query(dom1, {$gte: 3, $lte: 6}, function(err, items) {
             if (err) return done(err);
             expect(items).to.deep.eql([
-              3, 'test3',
-              4, 'test4',
-              5, 'test5',
-              6, 'test6',
+              3, {name: 'test3'},
+              4, {name: 'test4'},
+              5, {name: 'test5'},
+              6, {name: 'test6'},
             ]);
             done();
           });
@@ -132,9 +132,9 @@ function testDatabase(options) {
           query(dom1, {$gte: 3, $lt: 6}, function(err, items) {
             if (err) return done(err);
             expect(items).to.deep.eql([
-              3, 'test3',
-              4, 'test4',
-              5, 'test5',
+              3, {name: 'test3'},
+              4, {name: 'test4'},
+              5, {name: 'test5'},
             ]);
             done();
           });
@@ -144,9 +144,9 @@ function testDatabase(options) {
           query(dom1, {$gt: 3, $lte: 6}, function(err, items) {
             if (err) return done(err);
             expect(items).to.deep.eql([
-              4, 'test4',
-              5, 'test5',
-              6, 'test6',
+              4, {name: 'test4'},
+              5, {name: 'test5'},
+              6, {name: 'test6'},
             ]);
             done();
           });
@@ -156,8 +156,8 @@ function testDatabase(options) {
           query(dom1, {$gt: 3, $lt: 6}, function(err, items) {
             if (err) return done(err);
             expect(items).to.deep.eql([
-              4, 'test4',
-              5, 'test5',
+              4, {name: 'test4'},
+              5, {name: 'test5'},
             ]);
             done();
           });
@@ -167,10 +167,10 @@ function testDatabase(options) {
           query(dom1, {$rev: true, $lte: 5, $gte: 2}, function(err, items) {
             if (err) return done(err);
             expect(items).to.deep.eql([
-              5, 'test5',
-              4, 'test4',
-              3, 'test3',
-              2, 'test2',
+              5, {name: 'test5'},
+              4, {name: 'test4'},
+              3, {name: 'test3'},
+              2, {name: 'test2'},
             ]);
             done();
           });
@@ -180,9 +180,9 @@ function testDatabase(options) {
           query(dom1, {$rev: true, $lte: 5, $gt: 2}, function(err, items) {
             if (err) return done(err);
             expect(items).to.deep.eql([
-              5, 'test5',
-              4, 'test4',
-              3, 'test3',
+              5, {name: 'test5'},
+              4, {name: 'test4'},
+              3, {name: 'test3'},
             ]);
             done();
           });
@@ -192,9 +192,9 @@ function testDatabase(options) {
           query(dom1, {$rev: true, $lt: 5, $gte: 2}, function(err, items) {
             if (err) return done(err);
             expect(items).to.deep.eql([
-              4, 'test4',
-              3, 'test3',
-              2, 'test2',
+              4, {name: 'test4'},
+              3, {name: 'test3'},
+              2, {name: 'test2'},
             ]);
             done();
           });
@@ -204,8 +204,8 @@ function testDatabase(options) {
           query(dom1, {$rev: true, $lt: 5, $gt: 2}, function(err, items) {
             if (err) return done(err);
             expect(items).to.deep.eql([
-              4, 'test4',
-              3, 'test3',
+              4, {name: 'test4'},
+              3, {name: 'test3'},
             ]);
             done();
           });
@@ -215,9 +215,9 @@ function testDatabase(options) {
           query(dom1, {$limit: 3}, function(err, items) {
             if (err) return done(err);
             expect(items).to.deep.eql([
-              1, 'test1',
-              2, 'test2',
-              3, 'test3',
+              1, {name: 'test1'},
+              2, {name: 'test2'},
+              3, {name: 'test3'},
             ]);
             done();
           });
@@ -227,8 +227,8 @@ function testDatabase(options) {
           query(dom1, {$rev: true, $limit: 2}, function(err, items) {
             if (err) return done(err);
             expect(items).to.deep.eql([
-              7, 'test7',
-              6, 'test6',
+              7, {name: 'test7'},
+              6, {name: 'test6'},
             ]);
             done();
           });
@@ -238,8 +238,8 @@ function testDatabase(options) {
           query(dom1, {$skip: 5}, function(err, items) {
             if (err) return done(err);
             expect(items).to.deep.eql([
-              6, 'test6',
-              7, 'test7',
+              6, {name: 'test6'},
+              7, {name: 'test7'},
             ]);
             done();
           });
@@ -249,9 +249,9 @@ function testDatabase(options) {
           query(dom1, {$rev: true, $skip: 4}, function(err, items) {
             if (err) return done(err);
             expect(items).to.deep.eql([
-              3, 'test3',
-              2, 'test2',
-              1, 'test1',
+              3, {name: 'test3'},
+              2, {name: 'test2'},
+              1, {name: 'test1'},
             ]);
             done();
           });
@@ -261,9 +261,9 @@ function testDatabase(options) {
           query(dom1, {$limit: 3, $skip: 2}, function(err, items) {
             if (err) return done(err);
             expect(items).to.deep.eql([
-              3, 'test3',
-              4, 'test4',
-              5, 'test5',
+              3, {name: 'test3'},
+              4, {name: 'test4'},
+              5, {name: 'test5'},
             ]);
             done();
           });
@@ -273,8 +273,8 @@ function testDatabase(options) {
           query(dom1, {$rev: true, $limit: 2, $skip: 3}, function(err, items) {
             if (err) return done(err);
             expect(items).to.deep.eql([
-              4, 'test4',
-              3, 'test3',
+              4, {name: 'test4'},
+              3, {name: 'test3'},
             ]);
             done();
           });
@@ -412,6 +412,22 @@ function testDatabase(options) {
               ['abcdef', 3],
             ]);
             done();
+          });
+        });
+      });
+    });
+
+    describe('transaction concurrency', function() {
+      var tx1, tx2, tx3;
+
+      beforeEach(function(done) {
+        var i = 0;
+        function d() { if (++i === 3) done(); }
+
+        openDatabase(options, function(err, database) {
+          db = database;
+          db.begin(function(err, transaction) {
+
           });
         });
       });

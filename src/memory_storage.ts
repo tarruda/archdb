@@ -1,4 +1,4 @@
-/// <reference path="./components.ts"/>
+/// <reference path="./private_api.ts"/>
 /// <reference path="./util.ts"/>
 
 class MemoryStorage implements DbStorage {

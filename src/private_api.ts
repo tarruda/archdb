@@ -1,4 +1,4 @@
-/// <reference path="./public_components.ts"/>
+/// <reference path="./api.ts"/>
 
 var yield: (fn: (...args: any[]) => any) => any;
 

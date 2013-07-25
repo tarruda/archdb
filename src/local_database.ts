@@ -1,4 +1,4 @@
-/// <reference path="./components.ts"/>
+/// <reference path="./private_api.ts"/>
 /// <reference path="./util.ts"/>
 /// <reference path="./local_revision.ts"/>
 /// <reference path="./local_index.ts"/>

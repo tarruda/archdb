@@ -1,4 +1,4 @@
-/// <reference path="./components.ts"/>
+/// <reference path="./private_api.ts"/>
 /// <reference path="./bit_array.ts"/>
 
 /*

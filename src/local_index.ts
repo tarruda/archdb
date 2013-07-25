@@ -1,5 +1,5 @@
-/// <reference path="./components.ts"/>
-/// <reference path="./public_components.ts"/>
+/// <reference path="./private_api.ts"/>
+/// <reference path="./api.ts"/>
 /// <reference path="./util.ts"/>
 
 enum HistoryEntryType {
