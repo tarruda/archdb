@@ -1,4 +1,5 @@
 path = require 'path'
+{spawn} = require 'child_process'
 {SourceMapConsumer, SourceMapGenerator} = require 'source-map'
 
 module.exports = (grunt) ->
@@ -54,17 +55,13 @@ module.exports = (grunt) ->
         ]
         dest: 'build/nodejs_test.js'
 
-    simplemocha:
-      options:
-        ignoreLeaks: true
-        ui: 'bdd'
-      all:
-        src: [
-          'test/init_node.js'
-          'test/unit/*.js'
-          'test/functional/database_api.js'
-          'test/functional/node.js'
-        ]
+    nodejs_test:
+      all: [
+        'test/init_node.js'
+        'test/unit/*.js'
+        'test/functional/database_api.js'
+        'test/functional/node.js'
+      ]
 
     karma:
       options:
@@ -105,7 +102,7 @@ module.exports = (grunt) ->
           'typescript:changed'
           'copy'
           'mapcat'
-          'simplemocha'
+          'nodejs_test'
           'livereload'
         ]
 
@@ -117,15 +114,24 @@ module.exports = (grunt) ->
   grunt.loadNpmTasks 'grunt-contrib-livereload'
   grunt.loadNpmTasks 'grunt-contrib-copy'
   grunt.loadNpmTasks 'grunt-typescript'
-  grunt.loadNpmTasks 'grunt-simple-mocha'
   grunt.loadNpmTasks 'grunt-karma'
+
+  grunt.registerMultiTask 'nodejs_test', ->
+    done = @async()
+    args = @filesSrc
+    # args.unshift('--debug-brk')
+    opts = stdio: 'inherit'
+    child = spawn('./node_modules/.bin/mocha', args, opts)
+    child.on 'close', (code) -> done(code == 0)
 
   grunt.registerMultiTask 'mapcat', ->
     # concatenate compiled javascript while generating a resulting
     # source map for the original typescript files
-    # this is needed as the typescript compiler breaks when generating
-    # source maps from multiple files:
-    # https://typescript.codeplex.com/workitem/1032
+    # this is needed for two reasons:
+    # 1 - the typescript compiler breaks when generating source maps from
+    #     multiple files: https://typescript.codeplex.com/workitem/1032
+    # 2 - this task lets us combine concatenates plain javascript with
+    #     the compiled typescript
     dest = @data.dest
     sourceMappingURL = "#{path.basename(dest)}.map"
     buffer = []
@@ -186,7 +192,7 @@ module.exports = (grunt) ->
     'typescript'
     'copy'
     'mapcat'
-    'simplemocha'
+    'nodejs_test'
     'connect'
     'livereload-start'
     'watch'
