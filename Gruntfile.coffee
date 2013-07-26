@@ -17,6 +17,9 @@ module.exports = (grunt) ->
       browser:
         src: 'src/platform/browser/*.ts'
         dest: 'tmp'
+      nodejs:
+        src: 'src/platform/nodejs/*.ts'
+        dest: 'tmp'
 
     copy:
       browser_include:
@@ -71,13 +74,13 @@ module.exports = (grunt) ->
         runnerPort: 9999
         port: 9876
         configFile: 'karma.conf.js'
-        captureTimeout: 15000
-      dev:
+        captureTimeout: 25000
+        singleRun: true
         reporters: ['dots']
+      dev:
         browsers: ['Chrome', 'Firefox']
       ci:
         browsers: ['PhantomJS']
-        singleRun: true
 
     connect:
       options:
@@ -121,7 +124,7 @@ module.exports = (grunt) ->
   grunt.registerMultiTask 'nodejs_test', ->
     done = @async()
     args = @filesSrc
-    # args.unshift('--check-leaks')
+    args.unshift('--check-leaks')
     # args.unshift('--debug-brk')
     opts = stdio: 'inherit'
     child = spawn('./node_modules/.bin/mocha', args, opts)
@@ -159,11 +162,13 @@ module.exports = (grunt) ->
       origname = filename.replace(/\.js$/, '.ts')
       origpath = path.join('src', origname)
       origdata = grunt.file.read origpath
-      while match = /\/\/\/\s*\<reference\s*path="(.+)\.ts"\/\>/.exec(origdata)
+      while match = /\/\/\/\s*\<reference\s*path="(.+)\.ts"\/\>/.exec(
+          origdata)
         origdata = origdata.replace(match[0], '')
         dep = path.join(path.dirname(filepath), "#{match[1]}.js")
         if !(dep of concatenated)
-          deps.push(dep)
+          if grunt.file.exists(dep)
+            deps.push(dep)
       if deps.length && !(filepath of visited)
         # to avoid infinite loops due to circular deps, we mark this file
         # so its dependencies won't be resolved again

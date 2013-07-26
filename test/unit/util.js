@@ -23,7 +23,7 @@ describe('JobQueue', function() {
   });
 });
 
-describe('EventEmitter', function() {
+describe('Emitter', function() {
   var e, args;
 
   function cb() {
@@ -31,7 +31,7 @@ describe('EventEmitter', function() {
   }
 
   beforeEach(function () {
-    e = new EventEmitter();
+    e = new Emitter();
     args = [];
     e.on('ev', cb);
   });
@@ -60,7 +60,7 @@ describe('EventEmitter', function() {
   });
 
   it('subscribe once multiple times on empty emitter', function() {
-    var e = new EventEmitter();
+    var e = new Emitter();
     e.once('ev', function() { args = args.concat([4, 5, 6]); });
     e.once('ev', function() { args = args.concat([2, 3, 4]); });
     e.emit('ev');

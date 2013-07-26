@@ -105,7 +105,7 @@ class LocalIndex implements Domain {
   }
 }
 
-class LocalCursor extends EventEmitter implements Cursor {
+class LocalCursor extends Emitter implements Cursor {
   dbStorage: DbStorage;
   queue: JobQueue;
   tree: IndexTree;

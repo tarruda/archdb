@@ -5,7 +5,7 @@
 
 var HISTORY = '$history';
 
-class LocalRevision extends EventEmitter implements Transaction {
+class LocalRevision extends Emitter implements Transaction {
   id: Uid;
   db: LocalDatabase;
   dbStorage: DbStorage;

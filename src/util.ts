@@ -142,7 +142,7 @@ class LinkedList {
   }
 }
 
-class EventEmitter {
+class Emitter {
   handlers: Object;
 
   on(event: string, cb: AnyCb) {
