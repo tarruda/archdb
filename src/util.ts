@@ -326,7 +326,7 @@ function normalizeUid(obj) {
 }
 
 function denormalizeUid(obj) {
-  var match = /^!id([abcdef0123456789]{24})$/.exec(obj);
+  var match = /^!id([abcdef0123456789]{28})$/.exec(obj);
   if (match) return new Uid(match[1]);
 }
 

@@ -128,7 +128,7 @@ class LocalDatabase implements Connection {
        */
       if (err) return cb(err);
       currentHistory = new AvlTree(this.dbStorage, ref);
-      rev.history.inOrder(new BitArray(rev.id), historyWalkCb);
+      rev.hist.inOrder(new BitArray(rev.id), historyWalkCb);
     };
     var historyWalkCb = (err: Error, next: NextNodeCb, node: IndexNode) => {
       /*
@@ -205,7 +205,7 @@ class LocalDatabase implements Connection {
         for (var k in rev.treeCache) {
           if (rev.treeCache[k].tree.modified()) commit.push(rev.treeCache[k]);
         }
-        currentHistory = rev.history;
+        currentHistory = rev.hist;
         currentMaster = rev.master;
       }
       commitNextTree(null);

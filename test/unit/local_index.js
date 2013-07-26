@@ -1,5 +1,5 @@
 describe('LocalIndex', function() {
-  var dbStorage, tree, index, queue, generator;
+  var dbStorage, tree, index, queue, generator, history;
 
   beforeEach(function(done) {
     queue = new JobQueue();

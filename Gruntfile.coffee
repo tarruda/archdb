@@ -121,6 +121,7 @@ module.exports = (grunt) ->
   grunt.registerMultiTask 'nodejs_test', ->
     done = @async()
     args = @filesSrc
+    # args.unshift('--check-leaks')
     # args.unshift('--debug-brk')
     opts = stdio: 'inherit'
     child = spawn('./node_modules/.bin/mocha', args, opts)

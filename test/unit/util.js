@@ -126,15 +126,14 @@ describe('Normalization/denormalization', function() {
     expect(d('!orref')).to.eql(new ObjectRef('ref'));
   });
 
-
   it('normalize shallow uid', function() {
-    expect(n(new Uid('00000000000b000505050505'))).to.eql(
-      '!id00000000000b000505050505');
+    expect(n(new Uid('00000000000b0005050505050505'))).to.eql(
+      '!id00000000000b0005050505050505');
   });
 
   it('denormalize shallow uid', function() {
-    expect(d('!id00000000000b000505050505')).to.eql(
-      new Uid('00000000000b000505050505'));
+    expect(d('!id00000000000b0005050505050505')).to.eql(
+      new Uid('00000000000b0005050505050505'));
   });
 
   it('normalize shallow date', function() {

@@ -11,7 +11,7 @@ class LocalIndex implements Domain {
 
   constructor(private name: string,
       public dbStorage: DbStorage, public queue: JobQueue,
-      public tree: IndexTree, public history: IndexTree,
+      public tree: IndexTree, public hist: IndexTree,
       public uidGenerator: UidGenerator) { }
 
   set(key: any, value: any, cb: ObjectCb) {
@@ -45,7 +45,7 @@ class LocalIndex implements Domain {
     var setCb = (err: Error, oldValue: any) => {
       var he;
       if (err) return cb(err, null);
-      if (this.history) {
+      if (this.hist) {
         if (oldValue) {
           old = oldValue;
           he = [HistoryEntryType.Update, this.id, key, oldValue, newValue];
@@ -80,7 +80,7 @@ class LocalIndex implements Domain {
     var delCb = (err: Error, oldValue: any) => {
       var he;
       if (err) return cb(err, null);
-      if (this.history) {
+      if (this.hist) {
         if (oldValue) {
           old = oldValue;
           he = [HistoryEntryType.Delete, this.id, key, oldValue];
@@ -101,7 +101,7 @@ class LocalIndex implements Domain {
 
   private saveHistory(historyEntry, cb: ObjectCb) {
     var key = this.uidGenerator.generate();
-    this.history.set(key, historyEntry, cb);
+    this.hist.set(key, historyEntry, cb);
   }
 }
 

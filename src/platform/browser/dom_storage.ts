@@ -4,9 +4,11 @@
 
 class DomStorage implements DbStorage {
   _uid: number;
+  prefix: string;
 
-  constructor() {
+  constructor(options: any) {
     this._uid = this.getItem('uid') || 0;
+    this.prefix = options.prefix || 'archdb-';
   }
 
   get(type: DbObjectType, ref: string, cb: ObjectCb) {
@@ -36,13 +38,13 @@ class DomStorage implements DbStorage {
   }
 
   private getItem(key: string) {
-    var str = localStorage.getItem(key);
+    var str = localStorage.getItem(this.prefix + key);
     if (!str) return null;
     return denormalize(JSON.parse(str));
   }
 
   private setItem(key: string, value: any) {
-    localStorage.setItem(key, JSON.stringify(normalize(value)));
+    localStorage.setItem(this.prefix + key, JSON.stringify(normalize(value)));
   }
 }
 

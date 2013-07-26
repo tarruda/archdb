@@ -13,7 +13,7 @@ class LocalRevision extends EventEmitter implements Transaction {
   queue: JobQueue;
   uidGenerator: UidGenerator;
   master: IndexTree;
-  history: IndexTree;
+  hist: IndexTree;
   treeCache: any;
 
   constructor(db: LocalDatabase, dbStorage: DbStorage, masterRef: string,
@@ -21,7 +21,7 @@ class LocalRevision extends EventEmitter implements Transaction {
     super();
     var historyCb = (err: Error, tree: IndexTree) => {
       if (err) throw err; // fatal error?
-      this.history = tree
+      this.hist = tree
     };
 
     this.db = db;
@@ -32,7 +32,7 @@ class LocalRevision extends EventEmitter implements Transaction {
     this.queue = new JobQueue();
     this.treeCache = {};
     this.master = new AvlTree(dbStorage, masterRef);
-    this.history = new IndexProxy(HISTORY, this.master, dbStorage,
+    this.hist = new IndexProxy(HISTORY, this.master, dbStorage,
         this.queue, historyCb);
   }
 
@@ -67,7 +67,7 @@ class LocalRevision extends EventEmitter implements Transaction {
           this.queue, treeCb), id: null, name: name });
     var tree = cacheEntry.tree;
     var rv = new LocalIndex(name, this.dbStorage, this.queue, tree,
-        this.history, this.uidGenerator);
+        this.hist, this.uidGenerator);
     
     this.once('committed', committedCb);
     if (!cacheEntry.id) this.queue.add(getIdCb, getIdJob);
@@ -79,12 +79,12 @@ class LocalRevision extends EventEmitter implements Transaction {
     var job = (mergeCb: AnyCb) => {
       this.db.merge(this, mergeCb);
     };
-    var mergeCb = (err: Error, refMap: any, history: IndexTree,
+    var mergeCb = (err: Error, refMap: any, hist: IndexTree,
         master: IndexTree) => {
       var index;
       if (err) return cb(err);
       for (var k in refMap) this.treeCache[k] = refMap[k];
-      this.history = history;
+      this.hist = hist;
       this.master = master;
       this.originalMasterRef = master.getRootRef();
       this.id = this.uidGenerator.generate();
