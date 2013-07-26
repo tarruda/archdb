@@ -1,11 +1,15 @@
-testDatabase = function(options) {
+testDatabase = function(options, init) {
   var suiteName = options.type + ' database with ' + options.storage +
     ' storage';
+
+  if (!init) init = function(cb) { cb(); }
 
   describe(suiteName, function() {
     var db, tx;
     var domain1 = 'domain1', domain2 = 'domain2';
     var dom1, dom2;
+
+    beforeEach(init);
 
     describe('query', function() {
       describe('ranges', function() {

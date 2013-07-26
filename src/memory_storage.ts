@@ -4,12 +4,10 @@
 
 class MemoryStorage implements DbStorage {
   uid: number;
-  masterRef: string;
   data: Object;
 
   constructor() {
     this.uid = 1;
-    this.masterRef = null;
     this.data = {};
     this.data[DbObjectType.Other] = {};
     this.data[DbObjectType.IndexNode] = {};
