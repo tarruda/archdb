@@ -102,7 +102,10 @@ module msgpack {
             // > b.readDoubleBE(0) === n // false, it is -14.490900131870829
             ba = new BitArray();
             ba.packNumber(obj);
-            b = new Buffer([0xcb].concat(ba.getBytes()));
+            b = new Buffer(9);
+            b.writeUInt8(0xcb, 0);
+            b.writeUInt32BE(ba.words[0] >>> 0, 1);
+            b.writeUInt32BE(ba.words[1] >>> 0, 5);
             this.os += 9;
           }
           chunks.push(b); break;

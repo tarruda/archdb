@@ -229,20 +229,20 @@ class BitArray implements IndexKey {
   }
 
   packString(str: string) {
-    var encoded = encodeURIComponent(str);
-    var code, c;
-    var i = 0;
+    var len, i, c;
 
-    while (i < encoded.length) {
-      c = encoded[i];
-      if (c === '%') {
-        code = parseInt(encoded[i+1] + encoded[i+2], 16);
-        i += 3;
-      } else {
-        code = encoded.charCodeAt(i);
-        i++;
+    for (len = str.length, i = 0; i < len; ++i) {
+      c = str.charCodeAt(i);
+      if (c < 0x80) {
+        this.write(c & 0x7f);
+      } else if (c < 0x0800) {
+        this.write(((c >>> 6) & 0x1f) | 0xc0);
+        this.write((c & 0x3f) | 0x80);
+      } else if (c < 0x10000) {
+        this.write(((c >>> 12) & 0x0f) | 0xe0);
+        this.write(((c >>> 6) & 0x3f) | 0x80);
+        this.write((c & 0x3f) | 0x80);
       }
-      this.write(code);
     }
   }
 
@@ -257,14 +257,21 @@ class BitArray implements IndexKey {
   }
 
   unpackString(): string {
-    var b, encoded = '';
+    var b, codes = [];
 
     while (true) {
       if ((b = this.read()) === 0) break;
-      encoded += '%' + b.toString(16).toUpperCase();
+      if (b < 0x80) {
+        codes.push(b);
+      } else if (b < 0xe0) {
+        codes.push((b & 0x1f) << 6 | (this.read() & 0x3f));
+      } else {
+        codes.push((b & 0x0f) << 12 | (this.read() & 0x3f) << 6 |
+            (this.read() & 0x3f));
+      }
     }
 
-    return decodeURIComponent(encoded);
+    return String.fromCharCode.apply(null, codes);
   }
 
   packArray(array: Array) {
@@ -390,7 +397,7 @@ class BitArray implements IndexKey {
     return rv;
   }
 
-  getBytes(): Array<number> {
+  private getBytes(): Array<number> {
     var rv = [];
 
     for (var i = 0;i < this.words.length;i++) {
