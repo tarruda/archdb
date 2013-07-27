@@ -220,8 +220,8 @@ class BitArray implements IndexKey {
     return rv;
   }
 
-  packUid(uid: Uid, length: number) {
-    var len = length * 2;
+  packUid(uid: Uid) {
+    var len = 28;
 
     for (var i = 0;i < len;i++) {
       this.write(parseInt(uid.hex[i], 16), 4);
@@ -246,8 +246,8 @@ class BitArray implements IndexKey {
     }
   }
 
-  unpackUid(length: number): Uid {
-    var hex = '', len = length * 2;
+  unpackUid(): Uid {
+    var hex = '', len = 28;
   
     for (var i = 0;i < len;i++) {
       hex += this.read(4).toString(16);
@@ -311,13 +311,8 @@ class BitArray implements IndexKey {
         this.write(5, 4);
         this.packString(obj);
       } else if (type === ObjectType.Uid) {
-        if (obj.byteLength() === 8) {
-          this.write(6, 4);
-          this.packUid(obj, 8);
-        } else if (obj.byteLength() === 14) {
-          this.write(7, 4);
-          this.packUid(obj, 14);
-        }
+        this.write(6, 4);
+        this.packUid(obj);
       } else if (type === ObjectType.Array) {
         this.write(15, 4);
         this.packArray(obj);
@@ -345,9 +340,7 @@ class BitArray implements IndexKey {
     } else if (type === 5) {
       return this.unpackString();
     } else if (type === 6) {
-      return this.unpackUid(8);
-    } else if (type === 7) {
-      return this.unpackUid(14);
+      return this.unpackUid();
     } else if (type === 15) {
       return this.unpackArray();
     }

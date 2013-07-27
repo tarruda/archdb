@@ -12,10 +12,7 @@
  * undefined values are normalized to null
  */
 module msgpack {
-  var P32 = Math.pow(2, 32), MIN_NORM = Math.pow(2, -1022);
-  var PMANT = Math.pow(2, 52), PSUBN = Math.pow(2, -1074);
   var ud = undefined;
-  var bit2num = {};
 
   export class Encoder {
     os: number;
@@ -137,13 +134,14 @@ module msgpack {
             b = new Buffer([l | (type === ObjectType.Array ? 0x90 : 0x80)]);
             this.os += 1;
           } else if (l < 0x10000) {
-            b = new Buffer([type === ObjectType.Array ? 0xdc : 0xde,
-                l >>> 8, l & 0xff]);
+            b = new Buffer(3);
+            b.writeUInt8(type === ObjectType.Array ? 0xdc : 0xde, 0);
+            b.writeUInt16BE(l, 1);
             this.os += 3;
           } else if (l < 0x100000000) {
-            b = new Buffer([type === ObjectType.Array ? 0xdd : 0xdf,
-                  l >>> 24, (l >>> 16) & 0xff, (l >>> 8) & 0xff,
-                  l & 0xff]);
+            b = new Buffer(5);
+            b.writeUInt8(type === ObjectType.Array ? 0xdd : 0xdf, 0);
+            b.writeUInt32BE(l, 1);
             this.os += 5;
           }
           chunks.push(b);
@@ -228,17 +226,17 @@ module msgpack {
             this.os += l;
           }
           break;
-        case 0xdd: // fixarray, array16 and array32
+        case 0x90: // fixarray, array16 and array32
         case 0xdc: l === ud && (l = b.readUInt16BE(this.os)) && (this.os += 2);
-        case 0x90: l === ud && (l = b.readUInt32BE(this.os)) && (this.os += 4);
+        case 0xdd: l === ud && (l = b.readUInt32BE(this.os)) && (this.os += 4);
           rv = new Array(l);
           if (l) {
             for (var i = 0;i < l;i++) rv[i] = this.decode(b);
           }
           break;
-        case 0xdf: // fixmap, map16 and map32
+        case 0x80: // fixmap, map16 and map32
         case 0xde: l === ud && (l = b.readUInt16BE(this.os)) && (this.os += 2);
-        case 0x80: l === ud && (l = b.readUInt32BE(this.os)) && (this.os += 4);
+        case 0xdf: l === ud && (l = b.readUInt32BE(this.os)) && (this.os += 4);
           rv = {};
           if (l) {
             for (var i = 0;i < l;i++) {
@@ -251,9 +249,5 @@ module msgpack {
 
       return rv;
     }
-  }
-
-  for (var i = 0; i < 0x100; ++i) {
-    bit2num[("0000000" + i.toString(2)).slice(-8)] = i;
   }
 }
