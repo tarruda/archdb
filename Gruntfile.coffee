@@ -63,6 +63,7 @@ module.exports = (grunt) ->
     nodejs_test:
       all: [
         'test/init_node.js'
+        'test/unit/platform/nodejs/*.js'
         'test/unit/*.js'
         'test/functional/database_api.js'
         'test/functional/node.js'

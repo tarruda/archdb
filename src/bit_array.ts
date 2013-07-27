@@ -390,7 +390,7 @@ class BitArray implements IndexKey {
     return rv;
   }
 
-  private getBytes(): Array<number> {
+  getBytes(): Array<number> {
     var rv = [];
 
     for (var i = 0;i < this.words.length;i++) {
@@ -408,5 +408,4 @@ class BitArray implements IndexKey {
 
     return rv;
   }
-
 }
