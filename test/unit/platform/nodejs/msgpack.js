@@ -4,7 +4,7 @@ fs = require('fs')
 // https://github.com/creationix/msgpack-js and
 // https://github.com/msgpack/msgpack-javascript
 
-describe('messagepack encoder/decoder', function() {
+describe.only('messagepack encoder/decoder', function() {
   it('encodes/decodes correctly', function() {
     tests.forEach(function(obj) {
       var encoded = new msgpack.Encoder().encode(obj);
@@ -43,5 +43,7 @@ var tests = [
   -0.000001, -0.000025, -11.7, -11, -34345, -34345.1, -34345.001,
   -9007199254740992, 9007199254740992, Infinity, -Infinity,
   '教育漢字', 'hello', 'world', [1,2,3], [], "Tim", 29,
-  {name: "Tim", age: 29}, {}, {a: 1, b: 2, c: [1, 2, 3]}];
+  {name: "Tim", age: 29}, {}, {a: 1, b: 2, c: [1, 2, 3]},
+  new Date(), new Date(1), new Date(0),
+  new Date(8640000000000000), new Date(-8640000000000000)];
 

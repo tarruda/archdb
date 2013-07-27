@@ -16,7 +16,7 @@ module msgpack {
 
   export class Encoder {
     os: number;
-    private chunks: Array;
+    private chunks: Array<NodeBuffer>;
 
     constructor() {
       this.os = 0;
@@ -29,7 +29,7 @@ module msgpack {
     }
   
     encodeRec(obj) {
-      var b, ba, l, key, keys;
+      var b, l, key, keys;
       var type = typeOf(obj), chunks = this.chunks;
     
       switch (type) {
@@ -97,13 +97,7 @@ module msgpack {
             // > n = -14.49090013186719;
             // > b.writeDoubleBE(n, 0);
             // > b.readDoubleBE(0) === n // false, it is -14.490900131870829
-            ba = new BitArray();
-            ba.packNumber(obj);
-            b = new Buffer(9);
-            b.writeUInt8(0xcb, 0);
-            b.writeUInt32BE(ba.words[0] >>> 0, 1);
-            b.writeUInt32BE(ba.words[1] >>> 0, 5);
-            this.os += 9;
+            b = this.encodeDouble(<number>obj, 0xcb);
           }
           chunks.push(b); break;
         case ObjectType.String:
@@ -122,6 +116,10 @@ module msgpack {
           }
           this.os += l;
           chunks.push(b); break;
+        case ObjectType.Date:
+          // save dates with the same encoding as doubles and use the
+          // reserved code 0xc9
+          chunks.push(this.encodeDouble(<number>obj, 0xc9)); break;
         case ObjectType.Array:
         case ObjectType.Object:
           if (type === ObjectType.Array) {
@@ -156,6 +154,17 @@ module msgpack {
           }
           break;
       }
+    }
+
+    private encodeDouble(num: number, typeCode: number): NodeBuffer {
+      var ba = new BitArray(), b = new Buffer(9);
+
+      ba.packNumber(num);
+      b.writeUInt8(typeCode, 0);
+      b.writeUInt32BE(ba.words[0] >>> 0, 1);
+      b.writeUInt32BE(ba.words[1] >>> 0, 5);
+      this.os += 9;
+      return b;
     }
   }
 
@@ -194,13 +203,10 @@ module msgpack {
           rv = false; break;
         case 0xc3: // true
           rv = true; break;
+        case 0xc9: // date
+          rv = new Date(this.decodeDouble(b)); break;
         case 0xcb: // double
-          ba = new BitArray();
-          ba.words = [
-            b.readUInt32BE(this.os),
-            b.readUInt32BE(this.os += 4),
-          ];
-          rv = ba.unpackNumber(); this.os += 4; break;
+          rv = this.decodeDouble(b); break;
         case 0xcc: // uint8
           rv = b.readUInt8(this.os); this.os += 1; break;
         case 0xcd: // uint16
@@ -248,6 +254,16 @@ module msgpack {
       }
 
       return rv;
+    }
+
+    private decodeDouble(b: NodeBuffer): number {
+      var ba = new BitArray();
+      ba.words = [
+        b.readUInt32BE(this.os),
+        b.readUInt32BE(this.os += 4),
+        ];
+      this.os += 4;
+      return ba.unpackNumber();
     }
   }
 }
