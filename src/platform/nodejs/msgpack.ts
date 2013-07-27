@@ -29,12 +29,12 @@ module msgpack {
     }
   
     encodeRec(obj) {
-      var b, l, key, keys;
+      var b, l, flags, key, keys;
       var type = typeOf(obj), chunks = this.chunks;
     
       switch (type) {
         case ObjectType.Null:
-          chunks.push(new Buffer([0xc0])); this.os += 1; break;
+          chunks.push(new Buffer([0xc0])); this.os++; break;
         case ObjectType.Boolean:
           chunks.push(new Buffer([obj ? 0xc3 : 0xc2])); this.os +=1; break;
         case ObjectType.Number:
@@ -43,7 +43,7 @@ module msgpack {
             if (obj >= 0) { // positive
               if (obj < 0x80) { // fixnum
                 b = new Buffer([obj]);
-                this.os += 1;
+                this.os++;
               } else if (obj < 0x100) { // uint8
                 b = new Buffer([0xcc, obj]);
                 this.os += 2;
@@ -62,7 +62,7 @@ module msgpack {
               // negative
               if (obj >= -0x20) { // fixnum
                 b = new Buffer([0xe0 + obj + 32]);
-                this.os += 1;
+                this.os++;
               } else if (obj > -0x80) { // int8
                 b = new Buffer([0xd0, obj + 0x100]); 
                 this.os += 2;
@@ -78,15 +78,6 @@ module msgpack {
                 this.os += 5;
               }
             }
-            // if (int64) {
-            //   hi32 = Math.floor(obj / 0x100000000);
-            //   lo32 = (obj & 0xffffffff) >>> 0;
-            //   b = new Buffer(9);
-            //   b.writeUInt8(0xd3, 0);
-            //   b.writeInt32BE(hi32, 1);
-            //   b.writeUInt32BE(lo32, 5);
-            //   rv = 9;
-            // }
           }
           if (!b) {
             // For doubles or integers with length > 32 we reuse the
@@ -105,7 +96,7 @@ module msgpack {
           l = b.length;
           if (l < 0x20) { // fix raw
             chunks.push(new Buffer([l | 0xa0]));
-            this.os += 1;
+            this.os++;
           } else if (l < 0x10000) { // raw 16
             chunks.push(new Buffer([0xda, l >>> 8, l & 0xff]));
             this.os += 3;
@@ -119,7 +110,35 @@ module msgpack {
         case ObjectType.Date:
           // save dates with the same encoding as doubles and use the
           // reserved code 0xc9
-          chunks.push(this.encodeDouble(<number>obj, 0xc9)); break;
+          chunks.push(this.encodeDouble(<number>obj, 0xc4)); break;
+        case ObjectType.ObjectRef:
+          // on the filesystem backend, the objectref is nothing but
+          // the offset location in the data file, so we can represent
+          // any objectref instance with a 64-bit integer.
+          // use reserved code 0xc5 here.
+          chunks.push(new Buffer('c5' + obj.ref, 'hex')); break;
+        case ObjectType.Uid:
+          // use 0xc6 for Uids
+          chunks.push(new Buffer('c6' + obj.hex, 'hex')); break;
+        case ObjectType.RegExp:
+          // besides the source string, regexps will store 3 flags,
+          // so we use 1 byte for code(0xc7) and 3 bytes for flags and
+          // source length, where 3 bits will store the flags and
+          // 21 bits will store the length (maximum 2097151 bytes should
+          // be enough for any regexp)
+          b = new Buffer(obj.source, 'utf8');
+          l = b.length;
+          flags = obj.multiline | obj.ignoreCase << 1 | obj.global << 2;
+          flags <<= 5;
+          chunks.push(new Buffer([
+                0xc7,
+                flags | (l >>> 16),
+                (l >>> 8) & 0xff,
+                l & 0xff
+                ]));
+          chunks.push(b);
+          this.os += 4 + l;
+          break;
         case ObjectType.Array:
         case ObjectType.Object:
           if (type === ObjectType.Array) {
@@ -130,7 +149,7 @@ module msgpack {
           }
           if (l < 0x10) {
             b = new Buffer([l | (type === ObjectType.Array ? 0x90 : 0x80)]);
-            this.os += 1;
+            this.os++;
           } else if (l < 0x10000) {
             b = new Buffer(3);
             b.writeUInt8(type === ObjectType.Array ? 0xdc : 0xde, 0);
@@ -176,7 +195,7 @@ module msgpack {
     }
 
     decode(b: NodeBuffer) {
-      var l, ba, key, rv;
+      var l, key, rv, flags;
       var type = b[this.os++];
 
       if (type >= 0xe0) { // negative fixnum
@@ -203,18 +222,37 @@ module msgpack {
           rv = false; break;
         case 0xc3: // true
           rv = true; break;
-        case 0xc9: // date
+        case 0xc4: // date
           rv = new Date(this.decodeDouble(b)); break;
+        case 0xc5: // objectref
+          rv = new ObjectRef(b.slice(this.os, this.os + 8).toString('hex'));
+          break;
+        case 0xc6: // uid
+          rv = new Uid(b.slice(this.os, this.os + 14).toString('hex'));
+          break;
+        case 0xc7: // regexp
+          flags = b.readUInt8(this.os++);
+          l = ((flags & 0x1f) << 16) | (b.readUInt8(this.os++) << 8) |
+            b.readUInt8(this.os++);
+          flags >>>= 5;
+          flags =
+            ((flags & 0x01) ? 'm' : '') +
+            ((flags & 0x02) ? 'i' : '') +
+            ((flags & 0x04) ? 'g' : '');
+          rv = new RegExp(b.slice(this.os, this.os + l).toString('utf8'),
+              flags);
+          this.os += l;
+          break;
         case 0xcb: // double
           rv = this.decodeDouble(b); break;
         case 0xcc: // uint8
-          rv = b.readUInt8(this.os); this.os += 1; break;
+          rv = b.readUInt8(this.os); this.os++; break;
         case 0xcd: // uint16
           rv = b.readUInt16BE(this.os); this.os += 2; break;
         case 0xce: // uint32
           rv = b.readUInt32BE(this.os); this.os += 4; break;
         case 0xd0: // int8
-          rv = b.readInt8(this.os); this.os += 1; break;
+          rv = b.readInt8(this.os); this.os++; break;
         case 0xd1: // int16
           rv = b.readInt16BE(this.os); this.os += 2; break;
         case 0xd2: // int32

@@ -6,11 +6,15 @@ fs = require('fs')
 
 describe.only('messagepack encoder/decoder', function() {
   it('encodes/decodes correctly', function() {
-    tests.forEach(function(obj) {
-      var encoded = new msgpack.Encoder().encode(obj);
+    expect(decoded).to.deep.eql(obj);
+    tests.forEach(function(item) {
+      var encoded = new msgpack.Encoder().encode(item);
       var decoded = new msgpack.Decoder().decode(encoded);
-      expect(decoded).to.deep.eql(obj);
+      expect(decoded).to.deep.eql(item);
     });
+    var obj = {name: 'deep', type: {name: 'object', items: tests}};
+    var encoded = new msgpack.Encoder().encode(obj);
+    var decoded = new msgpack.Decoder().decode(encoded);
   });
 
   // these two tests are slow and should only be ran when changes
@@ -45,5 +49,16 @@ var tests = [
   '教育漢字', 'hello', 'world', [1,2,3], [], "Tim", 29,
   {name: "Tim", age: 29}, {}, {a: 1, b: 2, c: [1, 2, 3]},
   new Date(), new Date(1), new Date(0),
-  new Date(8640000000000000), new Date(-8640000000000000)];
+  new Date(8640000000000000), new Date(-8640000000000000),
+  new ObjectRef('550032332daafff0'), new Uid('00000000000b0005050505050505'),
+  /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/,
+  /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/m,
+  /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/i,
+  /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g,
+  /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/mi,
+  /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/mg,
+  /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/gi,
+  /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/gm,
+  /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/gmi
+];
 
