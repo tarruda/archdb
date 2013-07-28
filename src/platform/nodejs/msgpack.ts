@@ -116,10 +116,10 @@ module msgpack {
           // the offset location in the data file, so we can represent
           // any objectref instance with a 64-bit integer.
           // use reserved code 0xc5 here.
-          chunks.push(new Buffer('c5' + obj.ref, 'hex')); break;
+          chunks.push(new Buffer('c5' + obj.ref, 'hex')); this.os += 9; break;
         case ObjectType.Uid:
           // use 0xc6 for Uids
-          chunks.push(new Buffer('c6' + obj.hex, 'hex')); break;
+          chunks.push(new Buffer('c6' + obj.hex, 'hex')); this.os += 15; break;
         case ObjectType.RegExp:
           // besides the source string, regexps will store 3 flags,
           // so we use 1 byte for code(0xc7) and 3 bytes for flags and
@@ -225,10 +225,10 @@ module msgpack {
         case 0xc4: // date
           rv = new Date(this.decodeDouble(b)); break;
         case 0xc5: // objectref
-          rv = new ObjectRef(b.slice(this.os, this.os + 8).toString('hex'));
+          rv = new ObjectRef(b.slice(this.os, this.os += 8).toString('hex'));
           break;
         case 0xc6: // uid
-          rv = new Uid(b.slice(this.os, this.os + 14).toString('hex'));
+          rv = new Uid(b.slice(this.os, this.os += 14).toString('hex'));
           break;
         case 0xc7: // regexp
           flags = b.readUInt8(this.os++);

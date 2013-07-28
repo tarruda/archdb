@@ -65,6 +65,7 @@ module.exports = (grunt) ->
         'test/init_node.js'
         'test/unit/platform/nodejs/*.js'
         'test/unit/*.js'
+        'test/functional/fs_storage.js'
         'test/functional/database_api.js'
         'test/functional/node.js'
       ]

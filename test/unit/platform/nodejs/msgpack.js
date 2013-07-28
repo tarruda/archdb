@@ -1,12 +1,9 @@
-fs = require('fs')
-
 // tests stolen from
 // https://github.com/creationix/msgpack-js and
 // https://github.com/msgpack/msgpack-javascript
 
-describe.only('messagepack encoder/decoder', function() {
+describe('messagepack encoder/decoder', function() {
   it('encodes/decodes correctly', function() {
-    expect(decoded).to.deep.eql(obj);
     tests.forEach(function(item) {
       var encoded = new msgpack.Encoder().encode(item);
       var decoded = new msgpack.Decoder().decode(encoded);
@@ -15,6 +12,7 @@ describe.only('messagepack encoder/decoder', function() {
     var obj = {name: 'deep', type: {name: 'object', items: tests}};
     var encoded = new msgpack.Encoder().encode(obj);
     var decoded = new msgpack.Decoder().decode(encoded);
+    expect(decoded).to.deep.eql(obj);
   });
 
   // these two tests are slow and should only be ran when changes
@@ -59,6 +57,10 @@ var tests = [
   /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/mg,
   /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/gi,
   /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/gm,
-  /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/gmi
+  /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/gmi,
+  [ 1, new ObjectRef('550032332daafff0'),
+    /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/gmi,
+    new Date(8640000000000000),
+    new Uid('00000000000b0005050505050505'), 5555 ],
 ];
 
