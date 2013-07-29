@@ -144,6 +144,9 @@ module.exports = (grunt) ->
     sourceMappingURL = "#{path.basename(dest)}.map"
     buffer = []
     lineOffset = 0
+    if @data.source_map_ref_type == 'nodejs'
+      buffer.push "//# sourceMappingURL=#{sourceMappingURL}"
+      lineOffset++
     cwd = path.resolve(@data.cwd)
     gen = new SourceMapGenerator { file: dest }
     visited = {}
@@ -196,8 +199,6 @@ module.exports = (grunt) ->
       lineOffset += src.split('\n').length
     if @data.source_map_ref_type == 'chrome'
       buffer.push "//@ sourceMappingURL=#{sourceMappingURL}"
-    else if @data.source_map_ref_type == 'nodejs'
-      buffer.unshift "//# sourceMappingURL=#{sourceMappingURL}"
     grunt.file.write dest, buffer.join('\n')
     grunt.file.write "#{dest}.map", gen.toString()
 

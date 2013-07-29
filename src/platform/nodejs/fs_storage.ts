@@ -99,10 +99,11 @@ class FsStorage implements DbStorage {
   }
 
   private getFd(fd: number, ref: ObjectRef, cb: ObjectCb) {
-    var readMore = (cb: msgpack.ReadMoreCb) => {
+    var readMore = (count: number, cb: msgpack.ReadMoreCb) => {
       moreCb = cb;
-      buffer = new Buffer(BLOCK_SIZE);
-      fs.read(fd, buffer, 0, BLOCK_SIZE, pos, readMoreCb);
+      count = Math.max(count, BLOCK_SIZE);
+      buffer = new Buffer(count);
+      fs.read(fd, buffer, 0, count, pos, readMoreCb);
     };
     var readMoreCb = (err: Error, bytesRead: number) => {
       if (err) return moreCb(err, null);
@@ -112,7 +113,7 @@ class FsStorage implements DbStorage {
     var readCb = (err: Error, bytesRead: number) => {
       if (err) return cb(err, null);
       pos += bytesRead;
-      cb(null, msgpack.decode(buffer, readMore, cb));
+      msgpack.decode(buffer, readMore, cb);
     };
     var buffer, pos, moreCb;
   
