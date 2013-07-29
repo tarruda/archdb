@@ -2,19 +2,13 @@
 
 var yield: (fn: (...args: any[]) => any) => any;
 
-enum DbObjectType {
-  Other = 0,
-  IndexNode = 1,
-  IndexData = 2
-}
-
 interface EmptyCb { (): void; }
 
 interface AnyCb { (...args: any[]); }
 
 interface PredicateCb { (obj: any): boolean; }
 
-interface RefCb { (err: Error, ref: string); }
+interface RefCb { (err: Error, ref: ObjectRef); }
 
 interface NextNodeCb { (stop?: boolean) }
 
@@ -48,14 +42,34 @@ interface IndexTree {
   inOrder(minKey: IndexKey, cb: VisitNodeCb);
   revInOrder(maxKey: IndexKey, cb: VisitNodeCb);
   commit(releaseCache: boolean, cb: DoneCb);
-  getRootRef(): string;
-  getOriginalRootRef(): string;
-  setOriginalRootRef(ref: string);
+  getRootRef(): ObjectRef;
+  getOriginalRootRef(): ObjectRef;
+  setOriginalRootRef(ref: ObjectRef);
   modified(): boolean;
 }
 
 interface DbStorage {
-  get(type: DbObjectType, ref: string, cb: ObjectCb);
-  set(type: DbObjectType, ref: string, obj: any, cb: ObjectCb);
-  save(type: DbObjectType, obj: any, cb: RefCb);
+  set(key: string, val: any, cb: DoneCb);
+  get(key: string, cb: ObjectCb);
+  saveIndexNode(obj: any, cb: RefCb);
+  getIndexNode(ref: ObjectRef, cb: ObjectCb);
+  saveIndexData(obj: any, cb: RefCb);
+  getIndexData(ref: ObjectRef, cb: ObjectCb);
+}
+
+class ObjectRef {
+  val;
+
+  constructor(refVal: any) {
+    this.val = refVal;
+  }
+
+  valueOf() {
+    return this.val;
+  }
+
+  equals(other: ObjectRef) {
+    if (!(other instanceof ObjectRef)) return false;
+    return this.valueOf() === other.valueOf();
+  }
 }

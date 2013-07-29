@@ -7,22 +7,22 @@
 
 class LocalDatabase implements Connection {
   dbStorage: DbStorage;
-  masterRef: string;
+  masterRef: ObjectRef;
   queue: JobQueue;
   uidGenerator: UidGenerator;
   sequences: any;
 
   constructor(dbStorage: DbStorage) {
     var sequencesJob = (cb: AnyCb) => {
-      this.dbStorage.get(DbObjectType.Other, 'sequences', cb);
+      this.dbStorage.get('sequences', cb);
     };
     var sequencesCb = (err: Error, sequences: any) => {
       this.sequences = sequences || [1];
     };
     var masterRefJob = (cb: AnyCb) => {
-      this.dbStorage.get(DbObjectType.Other, 'masterRef', cb);
+      this.dbStorage.get('masterRef', cb);
     };
-    var masterRefCb = (err: Error, masterRef: string) => {
+    var masterRefCb = (err: Error, masterRef: ObjectRef) => {
       this.masterRef = masterRef;
     };
 
@@ -78,7 +78,8 @@ class LocalDatabase implements Connection {
        */
       mergeCb = nextJob;
       refMap = {};
-      if (rev.originalMasterRef === this.masterRef) return commitTrees();
+      if (!rev.originalMasterRef ||
+          rev.originalMasterRef.equals(this.masterRef)) return commitTrees();
       forwarded = {};
       replay = {};
       cached = [];
@@ -97,7 +98,7 @@ class LocalDatabase implements Connection {
       currentIndexKey = ['refs', currentIndex.name];
       currentMaster.get(currentIndexKey, currentIndexCb);
     };
-    var currentIndexCb = (err: Error, ref: string) => {
+    var currentIndexCb = (err: Error, ref: ObjectRef) => {
       /*
        * If the current index it wasn't modified in the master branch,
        * mark it for fast-forward.
@@ -109,20 +110,20 @@ class LocalDatabase implements Connection {
       var orig, currentMasterIndex;
       if (err) return cb(err);
       orig = currentIndex.tree.getOriginalRootRef();
-      if (!ref || orig === ref) {
+      if (!ref || orig.equals(ref)) {
         forwarded[currentIndex.name] = currentIndex;
         return yield(nextIndex);
       }
       currentMasterIndex = { tree: new AvlTree(this.dbStorage, ref),
         name: currentIndex.name, id: currentIndex.id };
-      if (!currentIndex.tree.modified() && orig !== ref) {
+      if (!currentIndex.tree.modified() && !ref.equals(orig)) {
         refMap[currentIndex.name] = currentMasterIndex;
       } else {
         replay[currentIndex.id] = currentMasterIndex;
       }
       yield(nextIndex);
     };
-    var currentHistoryCb = (err: Error, ref: string) => {
+    var currentHistoryCb = (err: Error, ref: ObjectRef) => {
       /*
        * Start iterating the revision history to check for possible conflicts
        */
@@ -154,11 +155,12 @@ class LocalDatabase implements Connection {
       }
       replayOperation();
     };
-    var checkIndexCb = (err: Error, ref: string) => {
+    var checkIndexCb = (err: Error, ref: ObjectRef) => {
       /*
        * Collects all conflicts due to concurrent value updates.
        */
-      if (ref && ref !== revHistoryEntry[3]) {
+      if ((ref instanceof ObjectRef && !ref.equals(revHistoryEntry[3])) ||
+          (ref && ref !== revHistoryEntry)) {
         conflicts = conflicts || [];
         conflicts.push({
           index: replay[revHistoryEntry[1]].name,
@@ -233,13 +235,11 @@ class LocalDatabase implements Connection {
     };
     var commitMasterCb = (err: Error) => {
       if (err) return cb(err);
-      this.dbStorage.set(DbObjectType.Other, 'sequences', this.sequences,
-          commitSequencesCb);
+      this.dbStorage.set('sequences', this.sequences, commitSequencesCb);
     }
     var commitSequencesCb = (err: Error) => {
       if (err) return cb(err);
-      return this.dbStorage.set(DbObjectType.Other, 'masterRef',
-          currentMaster.getRootRef(), cb);
+      return this.dbStorage.set('masterRef', currentMaster.getRootRef(), cb);
     };
     var cb = (err: Error) => {
       if (err) {
@@ -264,8 +264,8 @@ class LocalDatabase implements Connection {
       if (i === conflicts.length) return cb(new ConflictError(conflicts));
       conflict = conflicts[i++];
       if (typeOf(conflict.actualValue) === ObjectType.ObjectRef) {
-        return this.dbStorage.get(DbObjectType.IndexData,
-            conflict.actualValue.ref, actualValueCb);
+        return this.dbStorage.getIndexData(conflict.actualValue,
+            actualValueCb);
       }
       actualValueCb(null, conflict.actualValue);
     };
@@ -273,8 +273,8 @@ class LocalDatabase implements Connection {
       if (err) return cb(err);
       conflict.actualValue = value;
       if (typeOf(conflict.originalValue) === ObjectType.ObjectRef) {
-        return this.dbStorage.get(DbObjectType.IndexData,
-            conflict.originalValue.ref, originalValueCb);
+        return this.dbStorage.getIndexData(conflict.originalValue,
+            originalValueCb);
       }
       originalValueCb(null, conflict.originalValue);
     };

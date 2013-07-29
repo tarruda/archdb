@@ -2,7 +2,7 @@
 // https://github.com/creationix/msgpack-js and
 // https://github.com/msgpack/msgpack-javascript
 
-describe('messagepack encoder/decoder', function() {
+describe.skip('messagepack encoder/decoder', function() {
   it('encodes/decodes correctly', function() {
     tests.forEach(function(item) {
       var encoded = new msgpack.Encoder().encode(item);

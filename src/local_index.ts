@@ -35,8 +35,8 @@ class LocalIndex implements Domain {
   }
 
   private setJob(key: any, value: any, cb: ObjectCb) {
-    var refCb = (err: Error, ref: string) => {
-      set(new ObjectRef(ref));
+    var refCb = (err: Error, ref: ObjectRef) => {
+      set(ref);
     };
     var set = (ref: ObjectRef) => {
       newValue = ref;
@@ -71,7 +71,7 @@ class LocalIndex implements Domain {
         set(value);
         break;
       default:
-        this.dbStorage.save(DbObjectType.IndexData, value, refCb);
+        this.dbStorage.saveIndexData(value, refCb);
         break;
     }
   }
@@ -138,22 +138,21 @@ class LocalCursor extends Emitter implements Cursor {
       }
       nextCb = next;
       key = k;
-      value = v;
-      if (value instanceof ObjectRef) this.dbStorage.get(
-          DbObjectType.IndexData, value.ref, refCb);
-      else refCb(null, value);
+      val = v;
+      if (val instanceof ObjectRef) this.dbStorage.getIndexData(val, refCb);
+      else refCb(null, val);
     };
     var refCb = (err: Error, obj: any) => {
       var row;
-      if (value instanceof ObjectRef) row = new Row(key, obj, value)
-      else row = new Row(key, value, null);
+      if (val instanceof ObjectRef) row = new IndexRow(key, obj, val)
+      else row = new IndexRow(key, val, null);
       rowCb(row);
       if (this.closed) return nextCb(true);
       if (this.paused) return this.once('resume', nextCb);
       nextCb();
     };
 
-    var key, value, nextCb;
+    var key, val, nextCb;
 
     if (this.closed) throw new Error('Cursor is closed');
 
@@ -311,4 +310,8 @@ class LocalCursor extends Emitter implements Cursor {
 
     this.tree.revInOrder(lte || lt, nodeCb);
   }
+}
+
+class IndexRow {
+  constructor(public key: any, public value: any, public ref: ObjectRef) { }
 }

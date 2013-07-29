@@ -11,16 +11,17 @@ import path = require('path');
 var BLOCK_SIZE = 4096;
 
 class FsStorage implements DbStorage {
-  uid: number;
+  tmpId: number;
   kvDir: string;
-  writes: JobQueue;
-  indexOffset: number;
+  dataWrites: JobQueue;
+  nodeWrites: JobQueue;
+  nodeOffset: number;
   dataOffset: number;
-  indexFd: number;
+  nodeFd: number;
   dataFd: number;
 
   constructor(options: any) {
-    var kvDir, dataDir, indexFile, dataFile;
+    var kvDir, dataDir, nodeFile, dataFile;
     var dirPath = path.resolve(options.path);
 
     // do we need to run the asynchronous versions of these fs
@@ -29,87 +30,83 @@ class FsStorage implements DbStorage {
     dataDir = path.join(dirPath, 'data');
     if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
     if (!fs.existsSync(kvDir)) fs.mkdirSync(kvDir);
-    indexFile = path.join(dataDir, 'index');
+    nodeFile = path.join(dataDir, 'node');
     dataFile = path.join(dataDir, 'objects');
-    this.indexFd = fs.openSync(indexFile, 'a+');
+    this.nodeFd = fs.openSync(nodeFile, 'a+');
     this.dataFd = fs.openSync(dataFile, 'a+');
-    this.indexOffset = fs.fstatSync(this.indexFd).size;
+    this.nodeOffset = fs.fstatSync(this.nodeFd).size;
     this.dataOffset = fs.fstatSync(this.dataFd).size;
     this.kvDir = kvDir;
-    this.writes = new JobQueue();
-    this.uid = 0;
+    this.nodeWrites = new JobQueue();
+    this.dataWrites = new JobQueue();
+    this.tmpId = 0;
   }
 
-  get(type: DbObjectType, ref: string, cb: ObjectCb) {
-    var readFileCb = (err: Error, buf: NodeBuffer) => {
-      if (err) return cb(err, null);
-      cb(null, new msgpack.Decoder().decode(buf));
-    };
-    var readCb = (err: Error) => {
+  get(key: string, cb: ObjectCb) {
+    var readCb = (err: Error, buffer: NodeBuffer) => {
       if (err) return cb(err, null);
       cb(null, new msgpack.Decoder().decode(buffer));
     };
-    var pos, buffer, fd, fullPath;
+    var fullPath;
 
-    if (type === DbObjectType.Other) {
-      fullPath = path.join(this.kvDir, ref);
-      return fs.readFile(fullPath, readFileCb);
-    }
-
-    pos = parseInt(ref, 16);
-    buffer = new Buffer(BLOCK_SIZE);
-    fd = type === DbObjectType.IndexData ? this.indexFd : this.dataFd;
-
-    fs.read(fd, buffer, 0, BLOCK_SIZE, pos, readCb);
+    fullPath = path.join(this.kvDir, key);
+    fs.readFile(fullPath, readCb);
   }
 
-  set(type: DbObjectType, ref: string, obj: any, cb: DoneCb) {
+  set(key: string, obj: any, cb: DoneCb) {
     var writeCb = (err: Error) => {
       if (err) return cb(err);
-      fs.rename(tmpPath, fullPath, mvCb);
+      fs.rename(tmpPath, fullPath, cb);
     };
-    var mvCb = (err: Error) => {
-      return cb(err);
-    };
-    var fullPath = path.join(this.kvDir, ref);
-    var tmpFile = new Date().getTime().toString() + this.uid++;
+    var fullPath = path.join(this.kvDir, key);
+    var tmpFile = new Date().getTime().toString() + this.tmpId++;
     var tmpPath = path.join(this.kvDir, tmpFile);
 
     fs.writeFile(tmpPath, new msgpack.Encoder().encode(obj), null, writeCb);
   }
 
-  del(type: DbObjectType, ref: string, cb: ObjectCb) {
-    throw new Error('not implemented');
+  saveIndexNode(obj: any, cb: RefCb) {
+    this.saveFd(this.nodeFd, this.nodeOffset, this.nodeWrites, obj, cb);
   }
 
-  save(type: DbObjectType, obj: any, cb: RefCb) {
+  getIndexNode(ref: ObjectRef, cb: ObjectCb) {
+    this.getFd(this.nodeFd, ref, cb);
+  }
+
+  saveIndexData(obj: any, cb: RefCb) {
+    this.saveFd(this.dataFd, this.dataOffset, this.dataWrites, obj, cb);
+  }
+
+  getIndexData(ref: ObjectRef, cb: ObjectCb) {
+    this.getFd(this.dataFd, ref, cb);
+  }
+
+  private saveFd(fd: number, pos: number, queue: JobQueue, obj: any,
+      cb: RefCb) {
     var job = (appendCb) => {
       fs.write(fd, buffer, 0, buffer.length, null, appendCb);
     };
     var appendCb = (err: Error, written: number) => {
       if (err) return cb(err, null);
-      if (type === DbObjectType.IndexData) this.indexOffset += written;
+      if (fd === this.nodeFd) this.nodeOffset += written;
       else this.dataOffset += written;
-      cb(null, pos);
+      cb(null, new ObjectRef(pos));
     };
-    var pos, fd, buffer, dif, pad = '0000000000000000';
-
-    if (type === DbObjectType.IndexData) {
-      fd = this.indexFd;
-      pos = this.indexOffset;
-    } else {
-      fd = this.dataFd;
-      pos = this.dataOffset;
-    }
+    var buffer;
 
     buffer = new msgpack.Encoder().encode(obj);
-    // normalize to an even number of hex characters
-    pos = pos.toString(16);
-    if (dif = (pad.length - pos.length)) {
-      pos = pad.slice(0, dif) + pos;
-    }
+    queue.add(appendCb, job);
+  }
 
-    this.writes.add(appendCb, job);
+  private getFd(fd: number, ref: ObjectRef, cb: ObjectCb) {
+    var readCb = (err: Error) => {
+      if (err) return cb(err, null);
+      cb(null, new msgpack.Decoder().decode(buffer));
+    };
+    var buffer;
+  
+    buffer = new Buffer(BLOCK_SIZE);
+    fs.read(fd, buffer, 0, BLOCK_SIZE, ref.valueOf(), readCb);
   }
 }
 

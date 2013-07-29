@@ -119,11 +119,11 @@ describe('Normalization/denormalization', function() {
   var n = normalize, d = denormalize;
 
   it('normalize shallow object ref', function() {
-    expect(n(new ObjectRef('ref'))).to.eql('!orref');
+    expect(n(new ObjectRef('ref'))).to.eql('!or"ref"');
   });
 
   it('denormalize shallow object ref', function() {
-    expect(d('!orref')).to.eql(new ObjectRef('ref'));
+    expect(d('!or"ref"').valueOf()).to.eql(new ObjectRef('ref').valueOf());
   });
 
   it('normalize shallow uid', function() {

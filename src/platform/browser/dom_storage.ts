@@ -3,47 +3,53 @@
 /// <reference path="../../open.ts"/>
 
 class DomStorage implements DbStorage {
-  _uid: number;
+  uid: number;
   prefix: string;
 
   constructor(options: any) {
-    this._uid = this.getItem('uid') || 0;
-    this.prefix = options.prefix || 'archdb-';
+    this.uid = this.getItem('u', 'uid') || 0;
+    this.prefix = options.prefix || '';
   }
 
-  get(type: DbObjectType, ref: string, cb: ObjectCb) {
-    cb(null, this.getItem(ref));
+  get(key: string, cb: ObjectCb) {
+    cb(null, this.getItem('k', key));
   }
 
-  set(type: DbObjectType, ref: string, obj: any, cb: DoneCb) {
-    this.setItem(ref, obj);
+  set(key: string, obj: any, cb: DoneCb) {
+    this.setItem('k', key, obj);
     cb(null);
   }
 
-  del(type: DbObjectType, ref: string, cb: ObjectCb) {
-    throw new Error('not implemented');
+  saveIndexNode(obj: any, cb: RefCb) {
+    this.save('n', obj, cb);
   }
 
-  save(type: DbObjectType, obj: any, cb: RefCb) {
-    var setCb = () => cb(null, ref);
-    var ref = this.uid().toString();
-
-    this.set(type, ref, obj, setCb);
+  getIndexNode(ref: ObjectRef, cb: ObjectCb) {
+    cb(null, this.getItem('n', ref.valueOf()));
   }
 
-  private uid(): number {
-    var rv = ++this._uid;
-    this.setItem('uid', rv);
-    return rv;
+  saveIndexData(obj: any, cb: RefCb) {
+    this.save('d', obj, cb);
   }
 
-  private getItem(key: string) {
+  getIndexData(ref: ObjectRef, cb: ObjectCb) {
+    cb(null, this.getItem('d', ref.valueOf()));
+  }
+
+  private save(ns: string, value: any, cb: RefCb) {
+    var ref = new ObjectRef(++this.uid);
+
+    this.setItem(ns, ref.valueOf(), value);
+    cb(null, ref);
+  }
+
+  private getItem(ns: string, key: string) {
     var str = localStorage.getItem(this.prefix + key);
     if (!str) return null;
     return denormalize(JSON.parse(str));
   }
 
-  private setItem(key: string, value: any) {
+  private setItem(ns: string, key: string, value: any) {
     localStorage.setItem(this.prefix + key, JSON.stringify(normalize(value)));
   }
 }

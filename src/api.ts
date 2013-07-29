@@ -34,10 +34,8 @@ interface Cursor {
   close();
 }
 
-class Row {
-  constructor(public key: any, public value: any, public ref: ObjectRef) { }
-}
-
-class ObjectRef {
-  constructor(public ref: string) { }
+interface Row {
+  key: any;
+  value: any;
+  ref: ObjectRef;
 }

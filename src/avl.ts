@@ -11,10 +11,9 @@ class AvlNode implements IndexNode {
   value: any;
   left: AvlNode;
   right: AvlNode;
-  leftRef: string;
-  rightRef: string;
-  ref: string;
-  type: DbObjectType;
+  leftRef: ObjectRef;
+  rightRef: ObjectRef;
+  ref: ObjectRef;
 
   constructor(key: IndexKey, value: any) {
     this.key = key instanceof BitArray ? key: new BitArray(key);
@@ -24,8 +23,7 @@ class AvlNode implements IndexNode {
     this.right = null
     this.rightRef = null;
     this.height = 0;
-    this.ref = (avlNodeId--).toString();
-    this.type = DbObjectType.IndexNode;
+    this.ref = new ObjectRef(avlNodeId--);
   }
 
   getKey(): IndexKey {
@@ -42,7 +40,7 @@ class AvlNode implements IndexNode {
   }
 
   volatile(): boolean {
-    return this.ref[0] === '-';
+    return this.ref.valueOf() < 0;
   }
 
   clone(): AvlNode {
@@ -79,11 +77,11 @@ interface AvlSearchCb {
 
 class AvlTree implements IndexTree {
   dbStorage: DbStorage;
-  rootRef: string;
-  originalRootRef: string;
+  rootRef: ObjectRef;
+  originalRootRef: ObjectRef;
   root: AvlNode;
 
-  constructor(dbStorage: DbStorage, rootRef: string) {
+  constructor(dbStorage: DbStorage, rootRef: ObjectRef) {
     this.dbStorage = dbStorage;
     this.rootRef = rootRef;
     this.originalRootRef = rootRef;
@@ -307,14 +305,14 @@ class AvlTree implements IndexTree {
   }
 
   commit(releaseCache: boolean, cb: DoneCb) {
-    var flushNodeCb = (err: Error, ref: string) => {
+    var flushNodeCb = (err: Error, ref: ObjectRef) => {
       var parent, currentRef;
       if (err) return cb(err);
       currentRef = current.ref;
       current.ref = ref; 
       if (parents.length) {
         parent = parents.pop();
-        if (parent.leftRef === currentRef) {
+        if (parent.leftRef && parent.leftRef.equals(currentRef)) {
           parent.leftRef = current.ref;
           if (releaseCache) parent.left = null;
         } else {
@@ -340,8 +338,7 @@ class AvlTree implements IndexTree {
         pending.push(current.right);
         return yield(visit);
       } else {
-        this.dbStorage.save(DbObjectType.IndexNode, current.normalize(),
-            flushNodeCb);
+        this.dbStorage.saveIndexNode(current.normalize(), flushNodeCb);
       }
     };
 
@@ -354,9 +351,9 @@ class AvlTree implements IndexTree {
     visit();
   }
 
-  getRootRef(): string { return this.rootRef; }
-  getOriginalRootRef(): string { return this.originalRootRef; }
-  setOriginalRootRef(ref: string) { this.originalRootRef = ref; }
+  getRootRef(): ObjectRef { return this.rootRef; }
+  getOriginalRootRef(): ObjectRef { return this.originalRootRef; }
+  setOriginalRootRef(ref: ObjectRef) { this.originalRootRef = ref; }
   modified(): boolean { return this.rootRef !== this.originalRootRef; }
 
   private search(copyPath: boolean, key: IndexKey, cb: AvlSearchCb) {
@@ -418,7 +415,7 @@ class AvlTree implements IndexTree {
       if (err) return cb(err, null);
       // replace the node with its child
       if (parent) {
-        if (parent.leftRef === node.ref) {
+        if (parent.leftRef && parent.leftRef.equals(node.ref)) {
           parent.leftRef = child.ref; 
           parent.left = child;
         } else {
@@ -444,7 +441,7 @@ class AvlTree implements IndexTree {
     } else {
       if (!node.leftRef && !node.rightRef) {
         if (parent) {
-          if (parent.leftRef === node.ref) {
+          if (parent.leftRef && parent.leftRef.equals(node.ref)) {
             parent.leftRef = null;
             parent.left = null;
           } else {
@@ -468,15 +465,15 @@ class AvlTree implements IndexTree {
   private findInOrderPredecessor(path: Array<AvlNode>,
       cb: (err: Error, node: AvlNode) => any) {
     var currentCb = (err: Error, current: AvlNode) => {
-      var currentId;
+      var currentRef;
       if (err) return cb(err, null);
       if (current === null) 
         // TODO remove debug assert
         throw new Error('invalid tree state');
       if (!current.volatile()) {
-        currentId = current.ref;
+        currentRef = current.ref;
         current = current.clone();
-        if (parent.leftRef === currentId) {
+        if (parent.leftRef && parent.leftRef.equals(currentRef)) {
           parent.left = current;
           parent.leftRef = current.ref;
         } else {
@@ -511,7 +508,7 @@ class AvlTree implements IndexTree {
     };
     var childCb = (err: Error, child: AvlNode) => {
       if (err) return cb(err, null);
-      if (child.ref === node.leftRef) node.left = child;
+      if (child.ref.equals(node.leftRef)) node.left = child;
       else node.right = child;
       if ((node.leftRef && !node.left) || (node.rightRef && !node.right))
         // TODO remove debug assert
@@ -653,7 +650,7 @@ class AvlTree implements IndexTree {
     this.resolveLeft(left, leftLeftCb);
   }
 
-  private resolveNode(ref: string, cb: ObjectCb) {
+  private resolveNode(ref: ObjectRef, cb: ObjectCb) {
     var getCb = (err: Error, array: Array) => {
       var node;
       if (err) return cb(err, null);
@@ -664,7 +661,7 @@ class AvlTree implements IndexTree {
       node.ref = ref;
       cb(null, node);
     };
-    this.dbStorage.get(DbObjectType.IndexNode, ref, getCb);
+    this.dbStorage.getIndexNode(ref, getCb);
   }
 
   private resolveLeft(from: AvlNode, cb: ObjectCb) {

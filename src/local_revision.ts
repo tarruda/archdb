@@ -9,14 +9,14 @@ class LocalRevision extends Emitter implements Transaction {
   id: Uid;
   db: LocalDatabase;
   dbStorage: DbStorage;
-  originalMasterRef: string;
+  originalMasterRef: ObjectRef;
   queue: JobQueue;
   uidGenerator: UidGenerator;
   master: IndexTree;
   hist: IndexTree;
   treeCache: any;
 
-  constructor(db: LocalDatabase, dbStorage: DbStorage, masterRef: string,
+  constructor(db: LocalDatabase, dbStorage: DbStorage, masterRef: ObjectRef,
       suffix: string) {
     super();
     var historyCb = (err: Error, tree: IndexTree) => {
@@ -106,7 +106,7 @@ class IndexProxy implements IndexTree {
       cb = nextJob;
       master.get(['refs', name], getCb);
     };
-    var getCb = (err: Error, ref: string) => {
+    var getCb = (err: Error, ref: ObjectRef) => {
       if (err) return cb(err);
       this.tree = new AvlTree(dbStorage, ref);
       if (this.pending) {
@@ -157,9 +157,9 @@ class IndexProxy implements IndexTree {
     this.delegate(cb, dcb);
   }
 
-  getRootRef(): string { return this.tree.getRootRef(); }
-  getOriginalRootRef(): string { return this.tree.getOriginalRootRef(); }
-  setOriginalRootRef(ref: string) { this.tree.setOriginalRootRef(ref); }
+  getRootRef(): ObjectRef { return this.tree.getRootRef(); }
+  getOriginalRootRef(): ObjectRef { return this.tree.getOriginalRootRef(); }
+  setOriginalRootRef(ref: ObjectRef) { this.tree.setOriginalRootRef(ref); }
   modified(): boolean { return this.tree.modified(); }
 
   private delegate(cb: AnyCb, fn: AnyCb) {

@@ -313,12 +313,12 @@ function denormalizeString(obj) {
 }
 
 function normalizeObjectRef(obj) {
-  return '!or' + obj.ref;
+  return '!or' + JSON.stringify(obj.valueOf());
 }
 
 function denormalizeObjectRef(obj) {
   var match = /^!or(.+)$/.exec(obj);
-  if (match) return new ObjectRef(match[1]);
+  if (match) return new ObjectRef(JSON.parse(match[1]));
 }
 
 function normalizeUid(obj) {

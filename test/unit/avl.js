@@ -1202,10 +1202,11 @@ describe('AvlTree', function() {
     q = [];
     q.push(rootRef);
     while (q.length) {
-      data = dbStorage.data[DbObjectType.IndexNode][q.shift()];
+      var val = q.shift().valueOf();
+      data = dbStorage.indexNode[val];
       rv.push(data[0]);
-      if (data[2]) q.push(data[2]);
-      if (data[3]) q.push(data[3]);
+      if (data[2]) q.push(denormalize(data[2]));
+      if (data[3]) q.push(denormalize(data[3]));
     }
   
     return rv;
@@ -1312,10 +1313,6 @@ describe('AvlNode', function() {
     node = new AvlNode(5, 'value');
     node.leftRef = 'abc';
     node.rightRef = 'def';
-  });
-
-  it('has IndexNode type', function() {
-    expect(node.type).to.eql(DbObjectType.IndexNode);
   });
 
   it('normalizes to a simple array', function() {

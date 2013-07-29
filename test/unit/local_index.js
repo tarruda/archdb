@@ -46,7 +46,7 @@ describe('LocalIndex', function() {
   it('returns old values when deleting keys', function(done) {
     index.del('3', function(err, oldRef) {
       expect(oldRef).to.be.instanceOf(ObjectRef);
-      dbStorage.get(DbObjectType.IndexData, oldRef.ref, function(err, oldVal) {
+      dbStorage.getIndexData(oldRef, function(err, oldVal) {
         expect(oldVal).to.deep.eql({name: 'doc3'});
         done();
       });
@@ -56,7 +56,7 @@ describe('LocalIndex', function() {
   it('returns old values when updating keys', function(done) {
     index.set(2, [1, 2], function(err, oldRef) {
       expect(oldRef).to.be.instanceOf(ObjectRef);
-      dbStorage.get(DbObjectType.IndexData, oldRef.ref, function(err, oldVal) {
+      dbStorage.getIndexData(oldRef, function(err, oldVal) {
         expect(oldVal).to.deep.eql({name: 'doc2'});
         done();
       });
@@ -145,12 +145,10 @@ describe('LocalIndex', function() {
       items.push(val);
 
       if (val.value instanceof ObjectRef) {
-        dbStorage.get(DbObjectType.IndexData, val.value.ref,
-                      function(err, v) {
+        dbStorage.getIndexData(val.value, function(err, v) {
           val.value = v;
           if (val.oldValue instanceof ObjectRef) {
-            dbStorage.get(DbObjectType.IndexData, val.oldValue.ref,
-                          function(err, v) {
+            dbStorage.getIndexData(val.oldValue, function(err, v) {
               val.oldValue = v;
               next();
             });
@@ -159,8 +157,7 @@ describe('LocalIndex', function() {
           }
         });
       } else if (val.oldValue instanceof ObjectRef){
-        dbStorage.get(DbObjectType.IndexData, val.oldValue.ref,
-                      function(err, v) {
+        dbStorage.getIndexData(val.oldValue, function(err, v) {
           val.oldValue = v;
           next();
         });
@@ -267,8 +264,8 @@ describe('LocalCursor', function() {
         // store string values inline
         tree.set(key, value, next);
       } else {
-        dbStorage.save(DbObjectType.IndexData, value, function(err, ref) {
-          tree.set(key, new ObjectRef(ref), next);
+        dbStorage.saveIndexData(value, function(err, ref) {
+          tree.set(key, ref, next);
         });
       }
     };
@@ -277,7 +274,7 @@ describe('LocalCursor', function() {
 });
 
 function row(key, value) { 
-  return new Row(key, value, null);
+  return new IndexRow(key, value, null);
 }
 
 function rows(array) {

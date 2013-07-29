@@ -4,37 +4,47 @@
 
 class MemoryStorage implements DbStorage {
   uid: number;
-  data: Object;
+  kv: any;
+  indexData: any;
+  indexNode: any;
 
   constructor() {
     this.uid = 1;
-    this.data = {};
-    this.data[DbObjectType.Other] = {};
-    this.data[DbObjectType.IndexNode] = {};
-    this.data[DbObjectType.IndexData] = {};
+    this.kv = {};
+    this.indexData = {};
+    this.indexNode = {};
   }
 
-  get(type: DbObjectType, ref: string, cb: ObjectCb) {
-    cb(null, denormalize(this.data[type][ref]));
+  get(key: string, cb: ObjectCb) {
+    cb(null, denormalize(this.kv[key]));
   }
 
-  set(type: DbObjectType, ref: string, obj: any, cb: DoneCb) {
-    this.data[type][ref] = normalize(obj);
+  set(key: string, obj: any, cb: DoneCb) {
+    this.kv[key] = normalize(obj);
     cb(null);
   }
 
-  del(type: DbObjectType, ref: string, cb: ObjectCb) {
-    var rv = this.data[type][ref];
-
-    delete this.data[type][ref];
-    cb(null, rv);
+  saveIndexNode(obj: any, cb: RefCb) {
+    this.save(this.indexNode, obj, cb);
   }
 
-  save(type: DbObjectType, obj: any, cb: RefCb) {
-    var setCb = () => cb(null, ref);
-    var ref = (this.uid++).toString();
+  getIndexNode(ref: ObjectRef, cb: ObjectCb) {
+    cb(null, denormalize(this.indexNode[ref.valueOf()]));
+  }
 
-    this.set(type, ref, obj, setCb);
+  saveIndexData(obj: any, cb: RefCb) {
+    this.save(this.indexData, obj, cb);
+  }
+
+  getIndexData(ref: ObjectRef, cb: ObjectCb) {
+    cb(null, denormalize(this.indexData[ref.valueOf()]));
+  }
+
+  private save(hash: any, obj: any, cb: RefCb) {
+    var ref = new ObjectRef(this.uid++);
+
+    hash[ref.valueOf()] = normalize(obj);
+    cb(null, ref);
   }
 }
 
