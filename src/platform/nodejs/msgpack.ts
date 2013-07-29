@@ -29,7 +29,7 @@ module msgpack {
     }
   
     encodeRec(obj) {
-      var b, l, flags, key, keys;
+      var b, l, ref, flags, key, keys;
       var type = typeOf(obj), chunks = this.chunks;
     
       switch (type) {
@@ -88,7 +88,7 @@ module msgpack {
             // > n = -14.49090013186719;
             // > b.writeDoubleBE(n, 0);
             // > b.readDoubleBE(0) === n // false, it is -14.490900131870829
-            b = this.encodeDouble(<number>obj, 0xcb);
+            b = this.encodeDouble(<number>obj, 0xd4);
           }
           chunks.push(b); break;
         case ObjectType.String:
@@ -109,20 +109,29 @@ module msgpack {
           chunks.push(b); break;
         case ObjectType.Date:
           // save dates with the same encoding as doubles and use the
-          // reserved code 0xc9
+          // reserved code 0xc4
           chunks.push(this.encodeDouble(<number>obj, 0xc4)); break;
         case ObjectType.ObjectRef:
+          ref = obj.valueOf();
           // on the filesystem backend, the objectref is nothing but
           // the offset location in the data file, so we can represent
-          // any objectref instance with a 64-bit integer.
-          // use reserved code 0xc5 here.
-          chunks.push(this.encodeDouble(<number>obj.valueOf(), 0xc5)); break;
+          // any objectref instance with a 32 or 64 bit uint.
+          // use reserved codes 0xc5/0xc6 here.
+          if (ref < 0x100000000) {
+            b = new Buffer(5);
+            b.writeUInt8(0xc5, 0);
+            b.writeUInt32BE(ref, 1);
+            this.os += 5;
+          } else {
+            b = this.encodeDouble(ref, 0xc6);
+          }
+          chunks.push(b); break;
         case ObjectType.Uid:
-          // use 0xc6 for Uids
-          chunks.push(new Buffer('c6' + obj.hex, 'hex')); this.os += 15; break;
+          // use 0xc7 for Uids
+          chunks.push(new Buffer('c7' + obj.hex, 'hex')); this.os += 15; break;
         case ObjectType.RegExp:
           // besides the source string, regexps will store 3 flags,
-          // so we use 1 byte for code(0xc7) and 3 bytes for flags and
+          // so we use 1 byte for code(0xc8) and 3 bytes for flags and
           // source length, where 3 bits will store the flags and
           // 21 bits will store the length (maximum 2097151 bytes should
           // be enough for any regexp)
@@ -131,7 +140,7 @@ module msgpack {
           flags = obj.multiline | obj.ignoreCase << 1 | obj.global << 2;
           flags <<= 5;
           chunks.push(new Buffer([
-                0xc7,
+                0xc8,
                 flags | (l >>> 16),
                 (l >>> 8) & 0xff,
                 l & 0xff
@@ -224,13 +233,13 @@ module msgpack {
           rv = true; break;
         case 0xc4: // date
           rv = new Date(this.decodeDouble(b)); break;
-        case 0xc5: // objectref
-          rv = new ObjectRef(this.decodeDouble(b));
-          break;
-        case 0xc6: // uid
-          rv = new Uid(b.slice(this.os, this.os += 14).toString('hex'));
-          break;
-        case 0xc7: // regexp
+        case 0xc5: // objectref <= 32
+          rv = new ObjectRef(b.readUInt32BE(this.os)); this.os += 4; break;
+        case 0xc6: // objectref > 32
+          rv = new ObjectRef(this.decodeDouble(b)); break;
+        case 0xc7: // uid
+          rv = new Uid(b.slice(this.os, this.os += 14).toString('hex')); break;
+        case 0xc8: // regexp
           flags = b.readUInt8(this.os++);
           l = ((flags & 0x1f) << 16) | (b.readUInt8(this.os++) << 8) |
             b.readUInt8(this.os++);
@@ -243,7 +252,7 @@ module msgpack {
               flags);
           this.os += l;
           break;
-        case 0xcb: // double
+        case 0xd4: // double or int > 32
           rv = this.decodeDouble(b); break;
         case 0xcc: // uint8
           rv = b.readUInt8(this.os); this.os++; break;
@@ -257,10 +266,6 @@ module msgpack {
           rv = b.readInt16BE(this.os); this.os += 2; break;
         case 0xd2: // int32
           rv = rv = b.readInt32BE(this.os); this.os += 4; break;
-        // case 0xd3: // int64
-        //   hi32 = b.readInt32BE(this.os); this.os += 4;
-        //   lo32 = b.readUInt32BE(this.os); this.os += 4;
-        //   rv = hi32 * 0x100000000 + lo32; break;
         case 0xa0: // fixraw, raw16 and raw32
         case 0xda: l === ud && (l = b.readUInt16BE(this.os)) && (this.os += 2);
         case 0xdb: l === ud && (l = b.readUInt32BE(this.os)) && (this.os += 4);
