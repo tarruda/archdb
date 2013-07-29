@@ -5,27 +5,27 @@
 describe('messagepack encoder/decoder', function() {
   it('encodes/decodes correctly', function() {
     tests.forEach(function(item) {
-      var encoded = new msgpack.Encoder().encode(item);
-      var decoded = new msgpack.Decoder().decode(encoded);
+      var encoded = msgpack.encode(item);
+      var decoded = msgpack.decode(encoded);
       expect(decoded).to.deep.eql(item);
     });
     var obj = {name: 'deep', type: {name: 'object', items: tests}};
-    var encoded = new msgpack.Encoder().encode(obj);
-    var decoded = new msgpack.Decoder().decode(encoded);
+    var encoded = msgpack.encode(obj);
+    var decoded = msgpack.decode(encoded);
     expect(decoded).to.deep.eql(obj);
   });
 
   // these two tests are slow and should only be ran when changes
   // are made to the 'msgpack' module
   it.skip('10000 keys map', function() {
-    var encoded = new msgpack.Encoder().encode(solid10000);
-    var decoded = new msgpack.Decoder().decode(encoded);
+    var encoded = msgpack.encode(solid10000);
+    var decoded = msgpack.decode(encoded);
     expect(decoded).to.deep.eql(solid10000);
   });
 
   it.skip('100000 keys map', function() {
-    var encoded = new msgpack.Encoder().encode(solid100000);
-    var decoded = new msgpack.Decoder().decode(encoded);
+    var encoded = msgpack.encode(solid100000);
+    var decoded = msgpack.decode(encoded);
     expect(decoded).to.deep.eql(solid100000);
   });
 });

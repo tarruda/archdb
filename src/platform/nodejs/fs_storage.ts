@@ -45,7 +45,7 @@ class FsStorage implements DbStorage {
   get(key: string, cb: ObjectCb) {
     var readCb = (err: Error, buffer: NodeBuffer) => {
       if (err) return cb(err, null);
-      cb(null, new msgpack.Decoder().decode(buffer));
+      cb(null, msgpack.decode(buffer));
     };
     var fullPath;
 
@@ -62,7 +62,7 @@ class FsStorage implements DbStorage {
     var tmpFile = new Date().getTime().toString() + this.tmpId++;
     var tmpPath = path.join(this.kvDir, tmpFile);
 
-    fs.writeFile(tmpPath, new msgpack.Encoder().encode(obj), null, writeCb);
+    fs.writeFile(tmpPath, msgpack.encode(obj), null, writeCb);
   }
 
   saveIndexNode(obj: any, cb: RefCb) {
@@ -94,14 +94,14 @@ class FsStorage implements DbStorage {
     };
     var buffer;
 
-    buffer = new msgpack.Encoder().encode(obj);
+    buffer = msgpack.encode(obj);
     queue.add(appendCb, job);
   }
 
   private getFd(fd: number, ref: ObjectRef, cb: ObjectCb) {
     var readCb = (err: Error) => {
       if (err) return cb(err, null);
-      cb(null, new msgpack.Decoder().decode(buffer));
+      cb(null, msgpack.decode(buffer));
     };
     var buffer;
   
