@@ -45,7 +45,7 @@ class FsStorage implements DbStorage {
   get(key: string, cb: ObjectCb) {
     var readCb = (err: Error, buffer: NodeBuffer) => {
       if (err) return cb(err, null);
-      cb(null, msgpack.decode(buffer));
+      cb(null, msgpack.decode(buffer, null, cb));
     };
     var fullPath;
 
@@ -99,14 +99,26 @@ class FsStorage implements DbStorage {
   }
 
   private getFd(fd: number, ref: ObjectRef, cb: ObjectCb) {
-    var readCb = (err: Error) => {
-      if (err) return cb(err, null);
-      cb(null, msgpack.decode(buffer));
+    var readMore = (cb: msgpack.ReadMoreCb) => {
+      moreCb = cb;
+      buffer = new Buffer(BLOCK_SIZE);
+      fs.read(fd, buffer, 0, BLOCK_SIZE, pos, readMoreCb);
     };
-    var buffer;
+    var readMoreCb = (err: Error, bytesRead: number) => {
+      if (err) return moreCb(err, null);
+      pos += bytesRead;
+      moreCb(null, buffer);
+    };
+    var readCb = (err: Error, bytesRead: number) => {
+      if (err) return cb(err, null);
+      pos += bytesRead;
+      cb(null, msgpack.decode(buffer, readMore, cb));
+    };
+    var buffer, pos, moreCb;
   
+    pos = ref.valueOf();
     buffer = new Buffer(BLOCK_SIZE);
-    fs.read(fd, buffer, 0, BLOCK_SIZE, ref.valueOf(), readCb);
+    fs.read(fd, buffer, 0, BLOCK_SIZE, pos, readCb);
   }
 }
 

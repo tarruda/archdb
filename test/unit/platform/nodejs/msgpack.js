@@ -3,30 +3,47 @@
 // https://github.com/msgpack/msgpack-javascript
 
 describe('messagepack encoder/decoder', function() {
-  it('encodes/decodes correctly', function() {
-    tests.forEach(function(item) {
+  it('encodes/decodes each', function(done) {
+    function next() {
+      if (!t.length) return done();
+      var item = t.pop();
       var encoded = msgpack.encode(item);
-      var decoded = msgpack.decode(encoded);
-      expect(decoded).to.deep.eql(item);
-    });
+      msgpack.decode(encoded, null, function(err, decoded) {
+        expect(decoded).to.deep.eql(item);
+        yield(next);
+      });
+    };
+    var t = tests.slice();
+    next();
+  });
+
+  it('encodes/decodes deep object', function(done) {
     var obj = {name: 'deep', type: {name: 'object', items: tests}};
     var encoded = msgpack.encode(obj);
-    var decoded = msgpack.decode(encoded);
-    expect(decoded).to.deep.eql(obj);
+    msgpack.decode(encoded, null, function(err, decoded) {
+      expect(decoded).to.deep.eql(obj);
+      done();
+    });
   });
 
   // these two tests are slow and should only be ran when changes
   // are made to the 'msgpack' module
-  it.skip('10000 keys map', function() {
+  it.skip('10000 keys map', function(done) {
+    this.timeout(10000);
     var encoded = msgpack.encode(solid10000);
-    var decoded = msgpack.decode(encoded);
-    expect(decoded).to.deep.eql(solid10000);
+    msgpack.decode(encoded, null, function(err, decoded) {
+      expect(decoded).to.deep.eql(solid10000);
+      done();
+    });
   });
 
-  it.skip('100000 keys map', function() {
+  it.skip('100000 keys map', function(done) {
+    this.timeout(600000);
     var encoded = msgpack.encode(solid100000);
-    var decoded = msgpack.decode(encoded);
-    expect(decoded).to.deep.eql(solid100000);
+    msgpack.decode(encoded, null, function(err, decoded) {
+      expect(decoded).to.deep.eql(solid100000);
+      done();
+    });
   });
 });
 

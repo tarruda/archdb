@@ -184,14 +184,156 @@ module msgpack {
     return Buffer.concat(chunks, os);
   }
 
-  export function decode(b: NodeBuffer) {
-    var decodeRec = (b: NodeBuffer) => {
+  export interface ReadMoreFn { (cb: ReadMoreCb); }
+
+  export interface ReadMoreCb { (err: Error, buffer: NodeBuffer); }
+
+  export function decode(b: NodeBuffer, fn: ReadMoreFn, cb: ObjectCb) {
+    var decodeRec = (cb: ObjectCb) => {
+      var dateCb = (err: Error) => {
+        if (err) return cb(err, undefined);
+        cb(null, new Date(decodeDouble(b)));
+      };
+      var ref32Cb = (err: Error) => {
+        if (err) return cb(err, undefined);
+        rv = new ObjectRef(b.readUInt32BE(os));
+        os += 4;
+        cb(null, rv);
+      };
+      var ref64Cb = (err: Error) => {
+        if (err) return cb(err, undefined);
+        cb(null, new ObjectRef(decodeDouble(b)));
+      };
+      var uidCb = (err: Error) => {
+        if (err) return cb(err, undefined);
+        cb(null, new Uid(b.slice(os, os += 14).toString('hex')));
+      };
+      var regExpLengthCb = (err: Error) => {
+        if (err) return cb(err, undefined);
+        flags = b.readUInt8(os++);
+        l = ((flags & 0x1f) << 16) | (b.readUInt8(os++) << 8) |
+          b.readUInt8(os++);
+        flags >>>= 5;
+        flags =
+          ((flags & 0x01) ? 'm' : '') +
+          ((flags & 0x02) ? 'i' : '') +
+          ((flags & 0x04) ? 'g' : '');
+        ensure(l, regExpCb);
+      };
+      var regExpCb = (err: Error) => {
+        if (err) return cb(err, undefined);
+        rv = new RegExp(b.slice(os, os + l).toString('utf8'),
+          flags);
+        os += l;
+        cb(null, rv);
+      };
+      var doubleCb = (err: Error) => {
+        if (err) return cb(err, undefined);
+        cb(null, decodeDouble(b));
+      };
+      var uint8Cb = (err: Error) => {
+        if (err) return cb(err, undefined);
+        cb(null, b.readUInt8(os++));
+      };
+      var uint16Cb = (err: Error) => {
+        if (err) return cb(err, undefined);
+        rv = b.readUInt16BE(os);
+        os += 2;
+        cb(null, rv);
+      };
+      var uint32Cb = (err: Error) => {
+        if (err) return cb(err, undefined);
+        rv = b.readUInt32BE(os);
+        os += 4;
+        cb(null, rv);
+      };
+      var int8Cb = (err: Error) => {
+        if (err) return cb(err, undefined);
+        cb(null, b.readInt8(os++));
+      };
+      var int16Cb = (err: Error) => {
+        if (err) return cb(err, undefined);
+        rv = b.readInt16BE(os);
+        os += 2;
+        cb(null, rv);
+      };
+      var int32Cb = (err: Error) => {
+        if (err) return cb(err, undefined);
+        rv = b.readInt32BE(os);
+        os += 4;
+        cb(null, rv);
+      };
+      var rawLengthCb = (err: Error) => {
+        if (err) return cb(err, undefined);
+        if (l) return ensure(l, rawCb);
+        if (type === 0xda) {
+          l = b.readUInt16BE(os);
+          os += 2;
+        } else {
+          l = b.readUInt32BE(os);
+          os += 4;
+        }
+        ensure(l, rawCb);
+      };
+      var rawCb = (err: Error) => {
+        if (err) return cb(err, undefined);
+        rv = ''
+        if (l) {
+          rv = b.slice(os, os + l).toString('utf8');
+          os += l;
+        }
+        return cb(null, rv);
+      };
+      var arrayLengthCb = (err: Error) => {
+        if (err) return cb(err, undefined);
+        if (type === 0xdc) {
+          l = b.readUInt16BE(os);
+          os += 2;
+        } else {
+          l = b.readUInt32BE(os);
+          os += 4;
+        }
+        rv = new Array(l);
+        arrayNext();
+      };
+      var arrayNext = () => {
+        if (i === l) return cb(null, rv);
+        decodeRec(arrayItemDecodeCb);
+      };
+      var arrayItemDecodeCb = (err: Error, item: any) => {
+        rv[i++] = item;
+        yield(arrayNext);
+      };
+      var mapLengthCb = (err: Error) => {
+        if (type === 0xde) {
+          l = b.readUInt16BE(os);
+          os += 2;
+        } else {
+          l = b.readUInt32BE(os);
+          os += 4;
+        }
+        rv = {};
+        mapNext();
+      };
+      var mapNext = () => {
+        if (i++ === l) return cb(null, rv);
+        decodeRec(mapKeyDecodeCb);
+      };
+      var mapKeyDecodeCb = (err: Error, k: any) => {
+        key = k;
+        decodeRec(mapValueDecodeCb);
+      };
+      var mapValueDecodeCb = (err: Error, value: any) => {
+        rv[key] = value;
+        yield(mapNext);
+      };
       var l, key, rv, flags;
-      var type = b[os++];
+      var type = b[os++], i = 0;
+
       if (type >= 0xe0) { // negative fixnum
-        rv = type - 0x100;
+        return cb(null, type - 0x100);
       } else if (type < 0x80) { // positive fixnum 
-        rv = type;
+        return cb(null, type);
       } else if (type < 0x90) { // fixmap
         l = type - 0x80;
         type = 0x80;
@@ -202,79 +344,33 @@ module msgpack {
         l = type - 0xa0;
         type = 0xa0;
       }
-      if (rv != ud) return rv;
+
       switch (type) {
-        case 0xc0: // null
-          rv = null; break;
-        case 0xc2: // false
-          rv = false; break;
-        case 0xc3: // true
-          rv = true; break;
-        case 0xc4: // date
-          rv = new Date(decodeDouble(b)); break;
-        case 0xc5: // objectref <= 32
-          rv = new ObjectRef(b.readUInt32BE(os)); os += 4; break;
-        case 0xc6: // objectref > 32
-          rv = new ObjectRef(decodeDouble(b)); break;
-        case 0xc7: // uid
-          rv = new Uid(b.slice(os, os += 14).toString('hex')); break;
-        case 0xc8: // regexp
-          flags = b.readUInt8(os++);
-          l = ((flags & 0x1f) << 16) | (b.readUInt8(os++) << 8) |
-            b.readUInt8(os++);
-          flags >>>= 5;
-          flags =
-            ((flags & 0x01) ? 'm' : '') +
-            ((flags & 0x02) ? 'i' : '') +
-            ((flags & 0x04) ? 'g' : '');
-          rv = new RegExp(b.slice(os, os + l).toString('utf8'),
-              flags);
-          os += l;
-          break;
-        case 0xd4: // double or int > 32
-          rv = decodeDouble(b); break;
-        case 0xcc: // uint8
-          rv = b.readUInt8(os); os++; break;
-        case 0xcd: // uint16
-          rv = b.readUInt16BE(os); os += 2; break;
-        case 0xce: // uint32
-          rv = b.readUInt32BE(os); os += 4; break;
-        case 0xd0: // int8
-          rv = b.readInt8(os); os++; break;
-        case 0xd1: // int16
-          rv = b.readInt16BE(os); os += 2; break;
-        case 0xd2: // int32
-          rv = rv = b.readInt32BE(os); os += 4; break;
-        case 0xa0: // fixraw, raw16 and raw32
-        case 0xda: l === ud && (l = b.readUInt16BE(os)) && (os += 2);
-        case 0xdb: l === ud && (l = b.readUInt32BE(os)) && (os += 4);
-          rv = ''
-          if (l) {
-            rv = b.slice(os, os + l).toString('utf8');
-            os += l;
-          }
-          break;
-        case 0x90: // fixarray, array16 and array32
-        case 0xdc: l === ud && (l = b.readUInt16BE(os)) && (os += 2);
-        case 0xdd: l === ud && (l = b.readUInt32BE(os)) && (os += 4);
-          rv = new Array(l);
-          if (l) {
-            for (var i = 0;i < l;i++) rv[i] = decodeRec(b);
-          }
-          break;
-        case 0x80: // fixmap, map16 and map32
-        case 0xde: l === ud && (l = b.readUInt16BE(os)) && (os += 2);
-        case 0xdf: l === ud && (l = b.readUInt32BE(os)) && (os += 4);
-          rv = {};
-          if (l) {
-            for (var i = 0;i < l;i++) {
-              key = decodeRec(b);
-              rv[key] = decodeRec(b);
-            }
-          }
-          break;
+        case 0xc0: return cb(null, null);
+        case 0xc2: return cb(null, false);
+        case 0xc3: return cb(null, true);
+        case 0xc4: return ensure(8, dateCb);
+        case 0xc5: return ensure(4, ref32Cb);
+        case 0xc6: return ensure(8, ref64Cb);
+        case 0xc7: return ensure(14, uidCb);
+        case 0xc8: return ensure(3, regExpLengthCb);
+        case 0xd4: return ensure(8, doubleCb);
+        case 0xcc: return ensure(1, uint8Cb);
+        case 0xcd: return ensure(2, uint16Cb);
+        case 0xce: return ensure(4, uint32Cb);
+        case 0xd0: return ensure(1, int8Cb);
+        case 0xd1: return ensure(2, int16Cb);
+        case 0xd2: return ensure(4, int32Cb);
+        case 0xa0: return rawLengthCb(null);
+        case 0xda: return ensure(2, rawLengthCb);
+        case 0xdb: return ensure(4, rawLengthCb);
+        case 0x90: rv = new Array(l); return arrayNext();
+        case 0xdc: return ensure(2, arrayLengthCb);
+        case 0xdd: return ensure(4, arrayLengthCb);
+        case 0x80: rv = {}; return mapNext();
+        case 0xde: return ensure(2, mapLengthCb);
+        case 0xdf: return ensure(4, mapLengthCb);
       }
-      return rv;
     };
     var decodeDouble = (b: NodeBuffer): number => {
       var ba = new BitArray();
@@ -285,9 +381,18 @@ module msgpack {
       os += 4;
       return ba.unpackNumber();
     };
-    var os = 0;
-    debugger;
+    var ensure = (count: number, cb: DoneCb) => {
+      var resultOffset = os + count;
+      if (resultOffset <= b.length) return cb(null);
+      bTrail = b.slice(os, resultOffset);
+      fn(readMoreCb);
+    };
+    var readMoreCb = (err: Error, buffer: NodeBuffer) => {
+      b = Buffer.concat([bTrail, buffer]);
+      os = 0;
+    };
+    var bTrail, os = 0;
 
-    return decodeRec(b);
+    decodeRec(cb);
   }
 }
