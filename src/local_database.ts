@@ -156,11 +156,16 @@ class LocalDatabase implements Connection {
       replayOperation();
     };
     var checkIndexCb = (err: Error, ref: ObjectRef) => {
+      var hasConflict;
       /*
        * Collects all conflicts due to concurrent value updates.
        */
-      if ((ref instanceof ObjectRef && !ref.equals(revHistoryEntry[3])) ||
-          (ref && ref !== revHistoryEntry)) {
+      if (ref instanceof ObjectRef) {
+         hasConflict = !ref.equals(revHistoryEntry[3]);
+      } else {
+         hasConflict = ref !== revHistoryEntry[3];
+      }
+      if (hasConflict) {
         conflicts = conflicts || [];
         conflicts.push({
           index: replay[revHistoryEntry[1]].name,

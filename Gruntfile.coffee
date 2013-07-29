@@ -205,7 +205,7 @@ module.exports = (grunt) ->
     'typescript'
     'copy'
     'mapcat'
-    'nodejs_test'
+    # 'nodejs_test'
     'connect'
     'livereload-start'
     'watch'

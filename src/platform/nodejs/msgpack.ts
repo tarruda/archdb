@@ -116,7 +116,7 @@ module msgpack {
           // the offset location in the data file, so we can represent
           // any objectref instance with a 64-bit integer.
           // use reserved code 0xc5 here.
-          chunks.push(new Buffer('c5' + obj.ref, 'hex')); this.os += 9; break;
+          chunks.push(this.encodeDouble(<number>obj.valueOf(), 0xc5)); break;
         case ObjectType.Uid:
           // use 0xc6 for Uids
           chunks.push(new Buffer('c6' + obj.hex, 'hex')); this.os += 15; break;
@@ -225,7 +225,7 @@ module msgpack {
         case 0xc4: // date
           rv = new Date(this.decodeDouble(b)); break;
         case 0xc5: // objectref
-          rv = new ObjectRef(b.slice(this.os, this.os += 8).toString('hex'));
+          rv = new ObjectRef(this.decodeDouble(b));
           break;
         case 0xc6: // uid
           rv = new Uid(b.slice(this.os, this.os += 14).toString('hex'));

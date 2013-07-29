@@ -2,7 +2,7 @@
 // https://github.com/creationix/msgpack-js and
 // https://github.com/msgpack/msgpack-javascript
 
-describe.skip('messagepack encoder/decoder', function() {
+describe('messagepack encoder/decoder', function() {
   it('encodes/decodes correctly', function() {
     tests.forEach(function(item) {
       var encoded = new msgpack.Encoder().encode(item);
@@ -48,7 +48,8 @@ var tests = [
   {name: "Tim", age: 29}, {}, {a: 1, b: 2, c: [1, 2, 3]},
   new Date(), new Date(1), new Date(0),
   new Date(8640000000000000), new Date(-8640000000000000),
-  new ObjectRef('550032332daafff0'), new Uid('00000000000b0005050505050505'),
+  new ObjectRef(2345), new ObjectRef(70000),
+  new Uid('00000000000b0005050505050505'),
   /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/,
   /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/m,
   /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/i,
@@ -58,7 +59,7 @@ var tests = [
   /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/gi,
   /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/gm,
   /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/gmi,
-  [ 1, new ObjectRef('550032332daafff0'),
+  [ 1, new ObjectRef(3), new ObjectRef(300000),
     /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/gmi,
     new Date(8640000000000000),
     new Uid('00000000000b0005050505050505'), 5555 ],
