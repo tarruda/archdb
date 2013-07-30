@@ -36,6 +36,8 @@ class DomStorage implements DbStorage {
     cb(null, this.getItem('d', ref.valueOf()));
   }
 
+  flush(cb: DoneCb) { cb(null); }
+
   private save(ns: string, value: any, cb: RefCb) {
     var ref = new ObjectRef(++this.uid);
 

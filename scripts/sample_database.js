@@ -33,7 +33,7 @@ function newCustomer() {
   };
 }
 
-var batchSize = 100000;
+var batchSize = 10000;
 var remaining = 1000000;
 
 function checkUsage() {
@@ -51,14 +51,13 @@ function insert(total) {
       customers.ins(newCustomer(), function(err, key) {
         if (err) throw err;
         count++;
-        if (count % Math.floor(total / 10) === 0) {
-          console.log('Row count', key);
-        }
         if (count === total){
           return tx.commit(function(err) {
             if (err) throw err;
             setImmediate(checkUsage);
             remaining -= count;
+            if (remaining % 10000 === 0)
+              console.log('Row count', key);
           });
         }
         setImmediate(next);

@@ -40,6 +40,8 @@ class MemoryStorage implements DbStorage {
     cb(null, denormalize(this.indexData[ref.valueOf()]));
   }
 
+  flush(cb: DoneCb) { cb(null); }
+
   private save(hash: any, obj: any, cb: RefCb) {
     var ref = new ObjectRef(this.uid++);
 

@@ -1,4 +1,5 @@
 /// <reference path="./msgpack.ts"/>
+/// <reference path="../../custom_errors.ts"/>
 /// <reference path="../../util.ts"/>
 /// <reference path="../../private_api.ts"/>
 /// <reference path="../../open.ts"/>
@@ -19,51 +20,87 @@ class FsStorage implements DbStorage {
   dataOffset: number;
   nodeFd: number;
   dataFd: number;
+  metadataFd: number;
+  metadata: any;
+  metadataOffset: number;
+  metadataLength: number;
+  metadataCbs: Array<{ cb: ObjectCb; key: string; }>;
+  tmpMetadata: any;
 
   constructor(options: any) {
-    var kvDir, dataDir, nodeFile, dataFile;
-    var dirPath = path.resolve(options.path);
+    var metadataDecodeCb = (err: Error, md: any) => {
+      var mdGet;
+      this.metadata = md;
+      if (this.tmpMetadata) {
+        for (var k in this.tmpMetadata) {
+          this.metadata[k] = this.tmpMetadata[k];
+        }
+        this.tmpMetadata = null;
+      }
+      if (this.metadataCbs) {
+        while (this.metadataCbs.length) {
+          mdGet = this.metadataCbs.shift();
+          mdGet.cb(null, md[mdGet.key]);
+        }
+        this.metadataCbs = null;
+      }
+    };
+    var nodeFile, dataFile, metadataFile, buffer;
+    var dataDir = path.resolve(options.path);
 
-    // do we need to run the asynchronous versions of these fs
-    // operations in the constructor?
-    kvDir = path.join(dirPath, 'kv');
-    dataDir = path.join(dirPath, 'data');
-    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
-    if (!fs.existsSync(kvDir)) fs.mkdirSync(kvDir);
-    nodeFile = path.join(dataDir, 'node');
-    dataFile = path.join(dataDir, 'objects');
+    nodeFile = path.join(dataDir, 'nodes');
+    dataFile = path.join(dataDir, 'data');
+    metadataFile = path.join(dataDir, 'metadata');
     this.nodeFd = fs.openSync(nodeFile, 'a+');
     this.dataFd = fs.openSync(dataFile, 'a+');
     this.nodeOffset = fs.fstatSync(this.nodeFd).size;
     this.dataOffset = fs.fstatSync(this.dataFd).size;
-    this.kvDir = kvDir;
     this.nodeWrites = new JobQueue();
     this.dataWrites = new JobQueue();
     this.tmpId = 0;
-  }
-
-  get(key: string, cb: ObjectCb) {
-    var readCb = (err: Error, buffer: NodeBuffer) => {
-      if (err) return cb(err, null);
-      debugger;
-      msgpack.decode(buffer, null, cb);
-    };
-    var fullPath;
-
-    fullPath = path.join(this.kvDir, key);
-    fs.readFile(fullPath, readCb);
+    if (fs.existsSync(metadataFile)) {
+      this.metadataCbs = null;
+      this.tmpMetadata = null;
+      // read metadata
+      // the metadata file header is stored in the first 8 bytes of the file,
+      // and is composed of two 32-bit unsigned integers which correspond to:
+      // - offset where the metadata body begins
+      // - length of the metadata body
+      this.metadataFd = fs.openSync(metadataFile, 'r+');
+      buffer = new Buffer(8);
+      fs.readSync(this.metadataFd, buffer, 0, buffer.length, 0);
+      this.metadataOffset = buffer.readUInt32BE(0);
+      this.metadataLength = buffer.readUInt32BE(4);
+      buffer = new Buffer(this.metadataLength);
+      fs.readSync(this.metadataFd, buffer, 0, this.metadataLength,
+          this.metadataOffset);
+      msgpack.decode(buffer, null, metadataDecodeCb);
+    } else {
+      this.metadataFd = fs.openSync(metadataFile, 'w+');
+      this.metadataOffset = 8;
+      this.metadataLength = 0;
+      this.metadata = {};
+    }
   }
 
   set(key: string, obj: any, cb: DoneCb) {
-    var writeCb = (err: Error) => {
-      if (err) return cb(err);
-      fs.rename(tmpPath, fullPath, cb);
-    };
-    var fullPath = path.join(this.kvDir, key);
-    var tmpFile = new Date().getTime().toString() + this.tmpId++;
-    var tmpPath = path.join(this.kvDir, tmpFile);
+    if (!this.metadata) {
+      this.tmpMetadata = this.tmpMetadata || {};
+      this.tmpMetadata[key] = normalize(obj);
+    } else {
+      this.metadata[key] = normalize(obj);
+    }
+    cb(null);
+  }
 
-    fs.writeFile(tmpPath, msgpack.encode(obj), null, writeCb);
+  get(key: string, cb: ObjectCb) {
+    if (!this.metadata) {
+      this.metadataCbs = this.metadataCbs || [];
+      this.metadataCbs.push({cb: cb, key: key});
+    } else {
+      if (!this.metadata[key]) return cb(null, null);
+      cb(null, denormalize(this.metadata[key]));
+    }
   }
 
   saveIndexNode(obj: any, cb: RefCb) {
@@ -81,6 +118,54 @@ class FsStorage implements DbStorage {
   getIndexData(ref: ObjectRef, cb: ObjectCb) {
     this.getFd(this.dataFd, ref, cb);
   }
+
+  flush(cb: DoneCb) {
+    var bodyWriteCb = (err: Error) => {
+      if (err) return cb(err);
+      fs.fsync(this.dataFd, syncDataCb);
+    };
+    var syncDataCb = (err: Error) => {
+      if (err) return cb(err);
+      fs.fsync(this.nodeFd, syncNodesCb);
+    };
+    var syncNodesCb = (err: Error) => {
+      if (err) return cb(err);
+      fs.fsync(this.metadataFd, syncBodyCb);
+    };
+    var syncBodyCb = (err: Error) => {
+      var header;
+      if (err) return cb(err);
+      // now that everything is synced, we make the flush as atomic as
+      // possible by writing/syncing the metadata header separately
+      // lets hope we don't get a power failure or system crash while
+      // the operating system is in middle of writing the 8 bytes :)
+      header = new Buffer(8);
+      header.writeUInt32BE(pos, 0);
+      header.writeUInt32BE(body.length, 4);
+      fs.write(this.metadataFd, header, 0, header.length, 0, headerWriteCb);
+    };
+    var headerWriteCb = (err: Error) => {
+      if (err) return cb(new FatalError('Failed to write metadata header'));
+      fs.fsync(this.metadataFd, headerSyncCb);
+    };
+    var headerSyncCb = (err: Error) => {
+      if (err) return cb(new FatalError('Failed to sync metadata header'));
+      this.metadataOffset = pos;
+      this.metadataLength = body.length;
+      cb(null);
+    };
+    var pos;
+    var body = msgpack.encode(this.metadata);
+
+    // save the metadata body first. if the buffer fits
+    // before the current metadata offset, then save at the beginning
+    // (offset 8, after the header), else save after the current
+    // metadata body
+    if (8 + body.length < this.metadataOffset) pos = 8;
+    else pos = this.metadataOffset + this.metadataLength;
+    fs.write(this.metadataFd, body, 0, body.length, pos, bodyWriteCb);
+  }
+
 
   private saveFd(fd: number, pos: number, queue: JobQueue, obj: any,
       cb: RefCb) {
@@ -100,27 +185,27 @@ class FsStorage implements DbStorage {
   }
 
   private getFd(fd: number, ref: ObjectRef, cb: ObjectCb) {
-    var readMore = (count: number, cb: msgpack.ReadMoreCb) => {
-      moreCb = cb;
-      count = Math.max(count, BLOCK_SIZE);
-      buffer = new Buffer(count);
-      fs.read(fd, buffer, 0, count, pos, readMoreCb);
-    };
-    var readMoreCb = (err: Error, bytesRead: number) => {
-      if (err) return moreCb(err, null);
-      pos += bytesRead;
-      moreCb(null, buffer);
-    };
     var readCb = (err: Error, bytesRead: number) => {
       if (err) return cb(err, null);
       pos += bytesRead;
       msgpack.decode(buffer, readMore, cb);
     };
-    var buffer, pos, moreCb;
+    var readMore = (count: number, cb: msgpack.ReadMoreCb) => {
+      continueCb = cb;
+      count = Math.max(count, BLOCK_SIZE);
+      buffer = new Buffer(count);
+      fs.read(fd, buffer, 0, count, pos, readMoreCb);
+    };
+    var readMoreCb = (err: Error, bytesRead: number) => {
+      if (err) return continueCb(err, null);
+      pos += bytesRead;
+      continueCb(null, buffer);
+    };
+    var buffer, pos, continueCb;
   
     pos = ref.valueOf();
     buffer = new Buffer(BLOCK_SIZE);
-    fs.read(fd, buffer, 0, BLOCK_SIZE, pos, readCb);
+    fs.read(fd, buffer, 0, buffer.length, pos, readCb);
   }
 }
 

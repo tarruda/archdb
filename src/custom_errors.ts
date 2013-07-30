@@ -15,10 +15,26 @@ class DbError extends ErrorClass {
   }
 }
 
+class InvalidOperationError extends DbError {
+  name = 'InvalidOperationError';
+
+  constructor(message: string) {
+    super(message || 'This operation is invalid in this context');
+  }
+}
+
 class ConflictError extends DbError {
-  name = 'ConflictError'
+  name = 'ConflictError';
 
   constructor(public conflicts: any) {
     super('One or more values were updated after read in the transaction');
+  }
+}
+
+class FatalError extends DbError {
+  name = 'FatalError';
+
+  constructor(message: string) {
+    super(message || 'Fatal error!');
   }
 }

@@ -240,11 +240,15 @@ class LocalDatabase implements Connection {
     };
     var commitMasterCb = (err: Error) => {
       if (err) return cb(err);
-      this.dbStorage.set('sequences', this.sequences, commitSequencesCb);
+      this.dbStorage.set('sequences', this.sequences, setSequencesCb);
     }
-    var commitSequencesCb = (err: Error) => {
+    var setSequencesCb = (err: Error) => {
       if (err) return cb(err);
-      return this.dbStorage.set('masterRef', currentMaster.getRootRef(), cb);
+      this.dbStorage.set('masterRef', currentMaster.getRootRef(), flush);
+    };
+    var flush = (err: Error) => {
+      if (err) return cb(err);
+      this.dbStorage.flush(cb);
     };
     var cb = (err: Error) => {
       if (err) {

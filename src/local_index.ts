@@ -2,6 +2,7 @@
 /// <reference path="./api.ts"/>
 /// <reference path="./util.ts"/>
 /// <reference path="./local_database.ts"/>
+/// <reference path="./custom_errors.ts"/>
 
 enum HistoryEntryType {
   Insert = 1, Delete = 2, Update = 3
@@ -147,32 +148,32 @@ class LocalCursor extends Emitter implements Cursor {
       this.once('close', cb);
       this.find(visitCb);
     };
-    var visitCb = (err: Error, next: NextNodeCb, k: any, v: any) => {
+    var visitCb = (err: Error, next: NextNodeCb, key: any, val: any) => {
       if (err || !next) {
         this.err = err;
         return this.close();
       }
-      nextCb = next;
-      key = k;
-      val = v;
-      if (val instanceof ObjectRef) this.dbStorage.getIndexData(val, refCb);
-      else refCb(null, val);
+      this.visitRow(key, val, rowCb, next);
     };
+
+    if (this.closed) throw new Error('Cursor is closed');
+
+    this.queue.add(cb, jobCb);
+  }
+
+  visitRow(key: any, val: any, rowCb: RowCb, next: NextNodeCb) {
     var refCb = (err: Error, obj: any) => {
       var row;
       if (val instanceof ObjectRef) row = new IndexRow(key, obj, val)
       else row = new IndexRow(key, val, null);
       rowCb(row);
-      if (this.closed) return nextCb(true);
-      if (this.paused) return this.once('resume', nextCb);
-      nextCb();
+      if (this.closed) return next(true);
+      if (this.paused) return this.once('resume', next);
+      next();
     };
 
-    var key, val, nextCb;
-
-    if (this.closed) throw new Error('Cursor is closed');
-
-    this.queue.add(cb, jobCb);
+    if (val instanceof ObjectRef) this.dbStorage.getIndexData(val, refCb);
+    else refCb(null, val);
   }
 
   all(cb: RowArrayCb) {
@@ -326,6 +327,31 @@ class LocalCursor extends Emitter implements Cursor {
 
     this.tree.revInOrder(lte || lt, nodeCb);
   }
+}
+
+class HistoryIndex extends LocalIndex {
+  ins(value: any, cb: ObjectCb) {
+    throw new InvalidOperationError(
+        "Direct modifications are forbidden on the $history domain");
+  }
+
+  set(key: any, value: any, cb: ObjectCb) {
+    throw new InvalidOperationError(
+        "Direct modifications are forbidden on the $history domain");
+  }
+
+  del(key: any, cb: ObjectCb) {
+    throw new InvalidOperationError(
+        "Direct modifications are forbidden on the $history domain");
+  }
+
+  find(query: any): Cursor {
+    return new HistoryCursor(this.dbStorage, this.queue, this.tree, query);
+  }
+}
+
+class HistoryCursor extends LocalCursor {
+
 }
 
 class IndexRow {
