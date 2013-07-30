@@ -66,7 +66,7 @@ class LocalRevision extends Emitter implements Transaction {
       { tree: new IndexProxy(name, this.master, this.dbStorage,
           this.queue, treeCb), id: null, name: name });
     var tree = cacheEntry.tree;
-    var rv = new LocalIndex(name, this.dbStorage, this.queue, tree,
+    var rv = new LocalIndex(name, this.db, this.dbStorage, this.queue, tree,
         this.hist, this.uidGenerator);
     
     this.once('committed', committedCb);

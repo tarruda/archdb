@@ -1,6 +1,7 @@
 /// <reference path="./private_api.ts"/>
 /// <reference path="./api.ts"/>
 /// <reference path="./util.ts"/>
+/// <reference path="./local_database.ts"/>
 
 enum HistoryEntryType {
   Insert = 1, Delete = 2, Update = 3
@@ -9,10 +10,25 @@ enum HistoryEntryType {
 class LocalIndex implements Domain {
   id: number;
 
-  constructor(private name: string,
+  constructor(private name: string, private db: LocalDatabase,
       public dbStorage: DbStorage, public queue: JobQueue,
       public tree: IndexTree, public hist: IndexTree,
       public uidGenerator: UidGenerator) { }
+
+  ins(value: any, cb: ObjectCb) {
+    var insCb = (err: Error) => {
+      if (err) return cb(err, null);
+      cb(null, key);
+    };
+    var job = (next: ObjectCb) => {
+      key = this.db.next(this.id);
+      this.setJob(key, value, next);
+    }
+    var key;
+
+    if (cb) this.queue.add(insCb, job);
+    else this.queue.add(null, job);
+  }
 
   set(key: any, value: any, cb: ObjectCb) {
     var job = (next: ObjectCb) => {

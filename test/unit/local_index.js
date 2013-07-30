@@ -1,20 +1,43 @@
 describe('LocalIndex', function() {
-  var dbStorage, tree, index, queue, generator, history;
+  var db, dbStorage, tree, index, queue, generator, history;
 
   beforeEach(function(done) {
     queue = new JobQueue();
     dbStorage = new MemoryStorage();
+    db = new LocalDatabase(dbStorage);
     tree = new AvlTree(dbStorage);
     history = new AvlTree(dbStorage);
     generator = new UidGenerator();
-    index = new LocalIndex('test', dbStorage, queue, tree, history, generator);
+    index = new LocalIndex('test', db, dbStorage, queue, tree, history,
+                           generator);
     index.id = 1;
 
-    index.set(1, {name: 'doc1'});
-    index.set(2, {name: 'doc2'});
+    index.ins({name: 'doc1'});
+    index.ins({name: 'doc2'});
     index.set('3', {name: 'doc3'});
     index.set([4, 3], {name: 'doc4'});
     index.set(true, {name: 'doc5'}, done);
+  });
+
+  it('insert new values using key sequence generator', function(done) {
+    index.ins({name: 'doc6'}, function(err, key) {
+      expect(key).to.eql(3);
+      index.ins({name: 'doc7'}, function(err, key) {
+        expect(key).to.eql(4);
+      });
+      index.find().all(function(err, items) {
+        expect(rows(items)).to.deep.eql([
+          row(true, {name: 'doc5'}),
+          row(1, {name: 'doc1'}),
+          row(2, {name: 'doc2'}),
+          row(3, {name: 'doc6'}),
+          row(4, {name: 'doc7'}),
+          row('3', {name: 'doc3'}),
+          row([4, 3], {name: 'doc4'})
+        ]);
+        done();
+      });
+    });
   });
 
   it('sets keys/values', function(done) {
@@ -169,7 +192,7 @@ describe('LocalIndex', function() {
 });
 
 describe('LocalCursor', function() {
-  var dbStorage, tree, cursor, queue;
+  var db, dbStorage, tree, cursor, queue;
   var expected = [
     row(1, {name: 'doc1'}),
     row(2, {name: 'doc2'}),
@@ -188,6 +211,7 @@ describe('LocalCursor', function() {
       beforeEach(function(done) {
         queue = new JobQueue();
         dbStorage = new MemoryStorage();
+        db = new LocalDatabase(dbStorage);
         tree = new AvlTree(dbStorage);
         cursor = new LocalCursor(dbStorage, queue, tree, query);
 

@@ -20,6 +20,7 @@ interface Transaction {
 }
 
 interface Domain {
+  ins(value: any, cb: ObjectCb);
   set(key: any, value: any, cb: ObjectCb);
   del(key: any, cb: ObjectCb);
   find(query: any): Cursor;
