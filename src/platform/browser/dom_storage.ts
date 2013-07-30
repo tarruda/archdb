@@ -38,6 +38,8 @@ class DomStorage implements DbStorage {
 
   flush(cb: DoneCb) { cb(null); }
 
+  close(cb: DoneCb) { cb(null); }
+
   private save(ns: string, value: any, cb: RefCb) {
     var ref = new ObjectRef(++this.uid);
 

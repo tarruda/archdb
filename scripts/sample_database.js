@@ -33,12 +33,12 @@ function newCustomer() {
   };
 }
 
-var batchSize = 10000;
+var batchSize = 1;
 var remaining = 1000000;
 
 function checkUsage() {
   if (remaining > 0) setImmediate(function() { insert(batchSize); });
-  else console.log("Done!");
+  else console.log('Start: ', begin, 'End:', new Date());
 }
 
 function insert(total) {
@@ -51,13 +51,15 @@ function insert(total) {
       customers.ins(newCustomer(), function(err, key) {
         if (err) throw err;
         count++;
+        if (count % 1000 === 0) console.log('Row count', key);
         if (count === total){
           return tx.commit(function(err) {
             if (err) throw err;
-            setImmediate(checkUsage);
-            remaining -= count;
-            if (remaining % 10000 === 0)
-              console.log('Row count', key);
+            conn.close(function(err) {
+              if (err) throw err;
+              setImmediate(checkUsage);
+              remaining -= count;
+            });
           });
         }
         setImmediate(next);
@@ -67,4 +69,5 @@ function insert(total) {
   });
 }
 
+var begin = new Date();
 insert(batchSize);

@@ -166,6 +166,17 @@ class FsStorage implements DbStorage {
     fs.write(this.metadataFd, body, 0, body.length, pos, bodyWriteCb);
   }
 
+  close(cb: DoneCb) {
+    var closeCb = (err: Error) => {
+      if (err) return cb(err);
+      if (!--remainingFds) cb(null);
+    };
+    var remainingFds = 3;
+  
+    fs.close(this.metadataFd, closeCb);
+    fs.close(this.nodeFd, closeCb);
+    fs.close(this.dataFd, closeCb);
+  }
 
   private saveFd(fd: number, pos: number, queue: JobQueue, obj: any,
       cb: RefCb) {

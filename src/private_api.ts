@@ -56,4 +56,5 @@ interface DbStorage {
   saveIndexData(obj: any, cb: RefCb);
   getIndexData(ref: ObjectRef, cb: ObjectCb);
   flush(cb: DoneCb);
+  close(cb: DoneCb);
 }

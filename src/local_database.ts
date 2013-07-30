@@ -47,6 +47,10 @@ class LocalDatabase implements Connection {
     else job(cb);
   }
 
+  close(cb: DoneCb) {
+    this.dbStorage.close(cb);
+  }
+
   /*
    *  High level description of the merge(commit) algorithm:
    * 
