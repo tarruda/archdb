@@ -2,4 +2,5 @@
 /dist/
 /tmp/
 /build/
+/lib/
 /.tmpdb/

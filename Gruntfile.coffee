@@ -41,7 +41,7 @@ module.exports = (grunt) ->
         }]
 
     mapcat:
-      browser_test:
+      browser_debug:
         source_map_ref_type: 'chrome'
         cwd: 'tmp'
         src: [
@@ -49,8 +49,19 @@ module.exports = (grunt) ->
           'platform/browser/*.js'
           '*.js'
         ]
-        dest: 'build/browser_test.js'
-      nodejs_test:
+        dest: 'build/browser_debug.js'
+      browser_release:
+        top: '(function(exports) {'
+        bottom: '})(window.archdb = {});'
+        source_map_ref_type: 'chrome'
+        cwd: 'tmp'
+        src: [
+          'platform/browser/include/*.js'
+          'platform/browser/*.js'
+          '*.js'
+        ]
+        dest: 'build/browser_release.js'
+      nodejs_release:
         source_map_ref_type: 'nodejs'
         cwd: 'tmp'
         src: [
@@ -58,7 +69,7 @@ module.exports = (grunt) ->
           'platform/nodejs/*.js'
           '*.js'
         ]
-        dest: 'build/nodejs_test.js'
+        dest: 'lib/archdb.js'
 
     nodejs_test:
       all: [
@@ -108,7 +119,8 @@ module.exports = (grunt) ->
         tasks: [
           'typescript:changed'
           'copy:changed'
-          'mapcat'
+          'mapcat:nodejs_release'
+          'mapcat:browser_debug'
           'livereload'
           'nodejs_test'
         ]
@@ -146,6 +158,9 @@ module.exports = (grunt) ->
     lineOffset = 0
     if @data.source_map_ref_type == 'nodejs'
       buffer.push "//# sourceMappingURL=#{sourceMappingURL}"
+      lineOffset++
+    if @data.top
+      buffer.push @data.top
       lineOffset++
     cwd = path.resolve(@data.cwd)
     gen = new SourceMapGenerator { file: dest }
@@ -197,6 +212,8 @@ module.exports = (grunt) ->
               column: m.originalColumn
           source: m.source
       lineOffset += src.split('\n').length
+    if @data.bottom
+      buffer.push @data.bottom
     if @data.source_map_ref_type == 'chrome'
       buffer.push "//@ sourceMappingURL=#{sourceMappingURL}"
     grunt.file.write dest, buffer.join('\n')
@@ -205,11 +222,22 @@ module.exports = (grunt) ->
   grunt.registerTask 'default', [
     'typescript'
     'copy'
-    'mapcat'
-    'nodejs_test'
+    'mapcat:nodejs_release'
+    'mapcat:browser_debug'
+    # 'nodejs_test'
     'connect'
     'livereload-start'
     'watch'
+  ]
+
+  grunt.registerTask 'release', [
+    'typescript'
+    'copy'
+    'mapcat:nodejs_release'
+    'mapcat:browser_debug'
+    'mapcat:browser_release'
+    # 'nodejs_test'
+    'karma'
   ]
 
   grunt.event.on 'watch', (action, filepath) ->
@@ -226,4 +254,4 @@ module.exports = (grunt) ->
       copy.changed.cwd = 'src/'
       copy.changed.src = path.relative(copy.changed.cwd, filepath)
       copy.changed.dest = 'tmp/'
-    grunt.regarde = changed: ['browser_test.js']
+    grunt.regarde = changed: ['browser_debug.js']

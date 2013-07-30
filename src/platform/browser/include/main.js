@@ -1,6 +1,6 @@
 var injectStackTrace;
 var ErrorClass = Error;
-var exp = typeof exports != 'undefined' ? exports : {};
+var exports = typeof exports != 'undefined' ? exports : {};
 
 if (Error.captureStackTrace) {
   injectStackTrace = function(err) {

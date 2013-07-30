@@ -1,6 +1,5 @@
 var yield;
 var ErrorClass = Error;
-var exp = typeof module != 'undefined' ? module.exports : {};
 
 function injectStackTrace(err) {
   Error.captureStackTrace(err, arguments.callee.caller.caller);

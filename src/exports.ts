@@ -1,6 +1,6 @@
 /// <reference path="./open.ts"/>
-declare var exp;
+declare var exports: any;
 
-exp.connect = openDb;
-exp.registerBackend = registerBackend;
-exp.registerFrontend = registerFrontend;
+exports.connect = openDb;
+exports.registerBackend = registerBackend;
+exports.registerFrontend = registerFrontend;

@@ -39,3 +39,20 @@ interface Row {
   value: any;
   ref: ObjectRef;
 }
+
+class ObjectRef {
+  val;
+
+  constructor(refVal: any) {
+    this.val = refVal;
+  }
+
+  valueOf() {
+    return this.val;
+  }
+
+  equals(other: ObjectRef) {
+    if (!(other instanceof ObjectRef)) return false;
+    return this.valueOf() === other.valueOf();
+  }
+}
