@@ -15,6 +15,15 @@ describe('fs_storage', function() {
     expect(function() { new FsStorage({path: tmpDb}); }).to.throw;
   });
 
+  it('get/set', function(done) {
+    var storage = new FsStorage({path: tmpDb});
+    storage.set('mastetRef', {ref: '0001'}, function(err) {
+      storage.get('mastetRef', function(err, obj) {
+        expect(obj).to.deep.eql({ref: '0001'});
+        done();
+      });
+    });
+  });
   // very slow test, only here to verify messagepack decoding
   // of objects bigger than 4096 bytes
   it.skip('save and restore 100000 keys map', function(done) {

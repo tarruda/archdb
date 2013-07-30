@@ -125,7 +125,7 @@ module.exports = (grunt) ->
           'nodejs_test'
         ]
 
-    clean: ['tmp', 'build', 'dist']
+    clean: ['tmp', 'build', 'lib', 'dist']
 
   grunt.loadNpmTasks 'grunt-contrib-watch'
   grunt.loadNpmTasks 'grunt-contrib-clean'

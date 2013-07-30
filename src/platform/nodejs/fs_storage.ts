@@ -45,7 +45,8 @@ class FsStorage implements DbStorage {
   get(key: string, cb: ObjectCb) {
     var readCb = (err: Error, buffer: NodeBuffer) => {
       if (err) return cb(err, null);
-      cb(null, msgpack.decode(buffer, null, cb));
+      debugger;
+      msgpack.decode(buffer, null, cb);
     };
     var fullPath;
 

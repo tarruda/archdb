@@ -20,6 +20,7 @@ module msgpack {
       var type = typeOf(obj);
       switch (type) {
         case ObjectType.Null:
+        case ObjectType.Undefined:
           chunks.push(new Buffer([0xc0])); offset++; break;
         case ObjectType.Boolean:
           chunks.push(new Buffer([obj ? 0xc3 : 0xc2])); offset +=1; break;
