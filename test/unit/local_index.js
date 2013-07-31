@@ -226,7 +226,10 @@ describe('LocalCursor', function() {
         cursor.each(function(row) {
           row.ref = null;
           expect(row).to.deep.eql(expected[i++]);
-        }, function() { expect(i).to.eql(expected.length); done(); });
+          if (this.hasNext()) this.next();
+        }).then(function() {
+          expect(i).to.eql(expected.length); done();
+        });
       });
 
       it('query all', function(done) {

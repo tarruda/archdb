@@ -2,10 +2,6 @@
 
 var yield: (fn: (...args: any[]) => any) => any;
 
-interface EmptyCb { (): void; }
-
-interface AnyCb { (...args: any[]); }
-
 interface PredicateCb { (obj: any): boolean; }
 
 interface RefCb { (err: Error, ref: ObjectRef); }

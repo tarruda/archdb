@@ -1,8 +1,12 @@
+interface EmptyCb { (): void; }
+
+interface AnyCb { (...args: any[]); }
+
 interface DoneCb { (err: Error); }
 
-interface RowCb { (record: Row); }
+interface RowCb { (row: Row); }
 
-interface RowErrCb { (err: Error, record: Row); }
+interface RowErrCb { (err: Error, row: Row); }
 
 interface RowArrayCb { (err: Error, array: Array<Row>); }
 
@@ -28,11 +32,12 @@ interface Domain {
 }
 
 interface Cursor {
-  each(eachCb: RowCb, cb: DoneCb);
   all(cb: RowArrayCb);
   one(cb: RowErrCb);
-  pause();
-  resume();
+  each(eachCb: RowCb);
+  then(cb: DoneCb);
+  hasNext(): boolean;
+  next();
   close();
 }
 

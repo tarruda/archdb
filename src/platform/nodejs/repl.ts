@@ -176,19 +176,16 @@ class SyncDomain {
 }
 
 class SyncCursor {
-  constructor(private inner: Cursor) { }
+  started: boolean;
+  currentFiber: any;
+  currentRow: Row;
+  err: Error;
 
-  each(eachCb: RowCb) {
-    var doneCb = (e: Error) => {
-      err = e;
-      fiber.run(); 
-    };
-    var err;
-    var fiber = Fiber.current;
-
-    this.inner.each(eachCb, doneCb);
-    Fiber.yield();
-    if (err) throw err;
+  constructor(private inner: Cursor) {
+    this.started = false;
+    this.currentFiber = null;
+    this.currentRow = null;
+    this.err = null;
   }
 
   all() {
@@ -221,8 +218,33 @@ class SyncCursor {
     return rv;
   }
 
-  pause() { this.inner.pause(); }
-  resume() { this.inner.resume(); }
+  next() {
+    var rowCb = (row: Row) => {
+      this.currentRow = row;
+      this.currentFiber.run();
+    };
+    var endCb = (err: Error) => {
+      this.err = err; 
+      this.currentRow = null;
+      this.currentFiber.run();
+    }
+
+    this.currentFiber = Fiber.current;
+
+    if (!this.started || this.inner.hasNext()) {
+      if (!this.started) {
+        this.started = true;
+        this.inner.each(rowCb).then(endCb);
+      } else {
+        this.inner.next();
+      }
+      Fiber.yield();
+    }
+
+    if (this.err) throw this.err;
+    return this.currentRow;
+  }
+
   close() { this.inner.close(); }
 }
 

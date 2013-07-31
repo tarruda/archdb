@@ -128,48 +128,101 @@ class LocalCursor extends Emitter implements Cursor {
   tree: IndexTree;
   query: any;
   closed: boolean;
-  paused: boolean;
+  started: boolean;
   err: Error;
+  nextNodeCb: NextNodeCb;
+  thenCb: DoneCb;
 
   constructor(dbStorage: DbStorage, queue: JobQueue, tree: IndexTree,
       query: any) {
     super();
-    this.dbStorage = dbStorage; 
+    this.dbStorage = dbStorage;
     this.queue = queue;
     this.tree = tree;
     this.query = query;
     this.closed = false;
-    this.paused = false;
+    this.started = false;
     this.err = null;
+    this.nextNodeCb = null;
+    this.thenCb = null;
   }
 
-  each(rowCb: RowCb, cb: DoneCb) {
-    var completeCb = (err: Error) => {
-      this.err = err;
+  all(cb: RowArrayCb) {
+    var rowCb = (row: Row) => {
+      rv.push(row);
+      if (this.hasNext()) this.next();
+    };
+    var endCb = (err: Error) => {
+      if (err) return cb(err, null);
+      cb(null, rv);
+    };
+    var rv: Array<Row> = [];
+
+    this.each(rowCb).then(endCb);
+  }
+
+  one(cb: RowErrCb) {
+    var rowCb = (row: Row) => {
+      rv = row;
       this.close();
     };
-    var jobCb = (cb) => {
-      this.once('close', cb);
+    var endCb = (err: Error) => {
+      if (err) return cb(err, null);
+      cb(null, rv);
+    };
+    var rv;
+
+    this.each(rowCb).then(endCb);
+  }
+
+  each(cb: RowCb) {
+    var job = (cb) => {
+      this.once('end', cb);
       this.find(visitCb);
     };
-    var fetchRowCb = (err: Error, row: Row) => {
-      if (err) return this.emit('complete', err);
-      rowCb(row);
-      if (this.closed) return nextNode(true);
-      if (this.paused) return this.once('resume', nextNode);
-      nextNode();
-    };
     var visitCb = (err: Error, next: NextNodeCb, key: any, val: any) => {
-      if (err || !next) return this.emit('complete', err);
-      nextNode = next;
+      this.nextNodeCb = next;
+      if (err || !next) return this.emit('end', err);
       this.fetchRow(key, val, fetchRowCb);
     };
-    var nextNode;
+    var fetchRowCb = (err: Error, row: Row) => {
+      if (err) return this.emit('end', err);
+      cb.call(this, row);
+    };
+    var endCb = (err: Error) => {
+      if (err) this.err = err;
+      if (this.hasNext()) this.nextNodeCb(true);
+      this.nextNodeCb = null;
+      if (this.thenCb) {
+        this.thenCb(err);
+        this.thenCb = null;
+      }
+    };
 
-    if (this.closed) throw new Error('Cursor is closed');
+    if (this.closed) throw new CursorError('Cursor already closed');
+    if (this.started) throw new CursorError('Cursor already started');
+    this.started = true;
+    this.queue.add(endCb, job);
+    return this;
+  }
 
-    this.on('complete', completeCb);
-    this.queue.add(cb, jobCb);
+  then(cb: DoneCb) {
+    this.thenCb = cb;
+  }
+
+  hasNext(): boolean {
+    return !!this.nextNodeCb;
+  }
+
+  next() {
+    if (!this.hasNext()) throw new CursorError('No more rows');
+    this.nextNodeCb();
+  }
+
+  close() {
+    if (this.closed) return;
+    this.closed = true;
+    this.emit('end');
   }
 
   fetchRow(key: any, val: any, cb: RowErrCb) {
@@ -186,48 +239,6 @@ class LocalCursor extends Emitter implements Cursor {
     } 
 
     refCb(null, val);
-  }
-
-  all(cb: RowArrayCb) {
-    var rowCb = (row: Row) => rv.push(row);
-    var doneCb = (err: Error) => {
-      if (err) return cb(err, null);
-      cb(null, rv);
-    };
-
-    var rv: Array<Row> = [];
-
-    this.each(rowCb, doneCb);
-  }
-
-  one(cb: RowErrCb) {
-    var rowCb = (row: Row) => {
-      rv = row;
-      this.close();
-    };
-    var doneCb = (err: Error) => {
-      if (err) return cb(err, null);
-      cb(null, rv);
-    };
-
-    var rv;
-
-    this.each(rowCb, doneCb);
-  }
-
-  close() {
-    if (this.closed) return;
-    this.closed = true;
-    this.emit('close', this.err);
-  }
-
-  pause() {
-    this.paused = true;
-  }
-
-  resume() {
-    this.paused = false;
-    this.emit('resume');
   }
 
   private find(cb: VisitKvCb) {

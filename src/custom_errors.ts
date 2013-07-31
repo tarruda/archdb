@@ -31,6 +31,14 @@ class ConflictError extends DbError {
   }
 }
 
+class CursorError extends DbError {
+  name = 'CursorError';
+
+  constructor(message: string) {
+    super(message);
+  }
+}
+
 class FatalError extends DbError {
   name = 'FatalError';
 
