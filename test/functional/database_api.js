@@ -790,6 +790,140 @@ testDatabase = function(options, init) {
       });
     });
 
+    describe('$history domain', function() {
+      var hist;
+      beforeEach(function(done) {
+        db = openDb(options);
+        db.begin(function(err, transaction) {
+          tx = transaction;
+          dom1 = tx.domain(domain1);
+          dom2 = tx.domain(domain2);
+          dom1.set(1, {name: 'test1'});
+          dom1.set(2, {name: 'test2'});
+          dom1.set(3, {name: 'test3'});
+          dom1.set(4, {name: 'test4'});
+          dom1.set(5, {name: 'test5'});
+          dom2.set(6, {name: 'test6'});
+          dom2.set(7, {name: 'test7'});
+          tx.commit(function(err){
+            if (err) return done(err);
+            hist = tx.domain('$history');
+            done();
+          });
+        });
+      });
+
+      it('records inserts executed on each domain', function(done) {
+        hist.find().all(function(err, rowset) {
+          expect(rowset.total).to.eql(7);
+          expect(rowset.rows.map(mapHistory)).to.deep.eql([{
+            type: 'Insert', domain: 'domain1', key: 1, oldValue: null,
+            value: {name: 'test1'}
+          }, {
+            type: 'Insert', domain: 'domain1', key: 2, oldValue: null,
+            value: {name: 'test2'}
+          }, {
+            type: 'Insert', domain: 'domain1', key: 3, oldValue: null,
+            value: {name: 'test3'}
+          }, {
+            type: 'Insert', domain: 'domain1', key: 4, oldValue: null,
+            value: {name: 'test4'}
+          }, {
+            type: 'Insert', domain: 'domain1', key: 5, oldValue: null,
+            value: {name: 'test5'}
+          }, {
+            type: 'Insert', domain: 'domain2', key: 6, oldValue: null,
+            value: {name: 'test6'}
+          }, {
+            type: 'Insert', domain: 'domain2', key: 7, oldValue: null,
+            value: {name: 'test7'}
+          }]);
+          done();
+        });
+      });
+
+      it('records deletes executed on each domain', function(done) {
+        dom2.del(6);
+        dom1.del(3);
+        hist.find().all(function(err, rowset) {
+          expect(rowset.total).to.eql(9);
+          expect(rowset.rows.map(mapHistory)).to.deep.eql([{
+            type: 'Insert', domain: 'domain1', key: 1, oldValue: null,
+            value: {name: 'test1'}
+          }, {
+            type: 'Insert', domain: 'domain1', key: 2, oldValue: null,
+            value: {name: 'test2'}
+          }, {
+            type: 'Insert', domain: 'domain1', key: 3, oldValue: null,
+            value: {name: 'test3'}
+          }, {
+            type: 'Insert', domain: 'domain1', key: 4, oldValue: null,
+            value: {name: 'test4'}
+          }, {
+            type: 'Insert', domain: 'domain1', key: 5, oldValue: null,
+            value: {name: 'test5'}
+          }, {
+            type: 'Insert', domain: 'domain2', key: 6, oldValue: null,
+            value: {name: 'test6'}
+          }, {
+            type: 'Insert', domain: 'domain2', key: 7, oldValue: null,
+            value: {name: 'test7'}
+          }, {
+            type: 'Delete', domain: 'domain2', key: 6, value: null,
+            oldValue: {name: 'test6'}
+          }, {
+            type: 'Delete', domain: 'domain1', key: 3, value: null,
+            oldValue: {name: 'test3'}
+          }]);
+          done();
+        });
+      });
+
+      it('records updates executed on each domain', function(done) {
+        dom1.set(4, [1, 2]);
+        dom2.set(7, 3);
+        hist.find().all(function(err, rowset) {
+          expect(rowset.total).to.eql(9);
+          expect(rowset.rows.map(mapHistory)).to.deep.eql([{
+            type: 'Insert', domain: 'domain1', key: 1, oldValue: null,
+            value: {name: 'test1'}
+          }, {
+            type: 'Insert', domain: 'domain1', key: 2, oldValue: null,
+            value: {name: 'test2'}
+          }, {
+            type: 'Insert', domain: 'domain1', key: 3, oldValue: null,
+            value: {name: 'test3'}
+          }, {
+            type: 'Insert', domain: 'domain1', key: 4, oldValue: null,
+            value: {name: 'test4'}
+          }, {
+            type: 'Insert', domain: 'domain1', key: 5, oldValue: null,
+            value: {name: 'test5'}
+          }, {
+            type: 'Insert', domain: 'domain2', key: 6, oldValue: null,
+            value: {name: 'test6'}
+          }, {
+            type: 'Insert', domain: 'domain2', key: 7, oldValue: null,
+            value: {name: 'test7'}
+          }, {
+            type: 'Update', domain: 'domain1', key: 4, value: [1, 2],
+            oldValue: {name: 'test4'}
+          }, {
+            type: 'Update', domain: 'domain2', key: 7, value: 3,
+            oldValue: {name: 'test7'}
+          }]);
+          done();
+        });
+      });
+
+      function mapHistory(historyEntry) {
+        delete historyEntry.date;
+        delete historyEntry.ref;
+        delete historyEntry.oldRef;
+        return historyEntry;
+      }
+    });
+
     function query(domain, q, cb) {
       var rv = [];
       domain.find(q).all(function(err, rowset) {
