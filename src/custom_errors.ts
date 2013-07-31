@@ -38,3 +38,12 @@ class FatalError extends DbError {
     super(message || 'Fatal error!');
   }
 }
+
+class CorruptedStateError extends FatalError {
+  name = 'CorruptedStateError';
+
+  constructor() {
+    super('Sorry but the database seems to be corrupted!');
+  }
+}
+

@@ -37,6 +37,24 @@ class LocalRevision extends Emitter implements Transaction {
   }
 
   domain(name: string): Domain {
+    switch (name) {
+      case '$history': return this.historyDomain();
+      default: return this.simpleDomain(name);
+    }
+  }
+
+  private historyDomain(): Domain {
+    var committedCb = () => {
+      rv.tree = this.hist;
+    };
+    var rv = new HistoryIndex(this.dbStorage, this.queue, this.hist,
+        this.master);
+
+    this.once('committed', committedCb);
+    return rv;
+  }
+
+  private simpleDomain(name: string): Domain {
     var getIdJob = (cb: AnyCb) => {
       indexIdKey = ['ids', name];
       this.master.get(indexIdKey, cb);
@@ -45,13 +63,18 @@ class LocalRevision extends Emitter implements Transaction {
       if (err) throw err;
       if (!id) {
         id = this.db.next(0);
+        indexIdReverseKey = ['names', id];
         this.queue.add(null, setIdJob);
+        this.queue.add(null, setIdReverseJob);
       }
       cacheEntry.id = id;
       rv.id = id;
     };
     var setIdJob = (cb: AnyCb) => {
       this.master.set(indexIdKey, cacheEntry.id, cb);
+    };
+    var setIdReverseJob = (cb: AnyCb) => {
+      this.master.set(indexIdReverseKey, name, cb);
     };
     var treeCb = (err: Error, tree: IndexTree) => {
       if (err) throw err;
@@ -60,7 +83,7 @@ class LocalRevision extends Emitter implements Transaction {
     var committedCb = () => {
       rv.tree = this.treeCache[name].tree;
     };
-    var indexIdKey;
+    var indexIdKey, indexIdReverseKey;
     var cacheEntry =
       this.treeCache[name] || (this.treeCache[name] =
       { tree: new IndexProxy(name, this.master, this.dbStorage,

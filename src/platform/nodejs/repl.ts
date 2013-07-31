@@ -1,5 +1,6 @@
 /// <reference path="../../exports.ts"/>
 /// <reference path="../../open.ts"/>
+/// <reference path="../../open.ts"/>
 /// <reference path="../../declarations/node.d.ts"/>
 
 import fs = require('fs');

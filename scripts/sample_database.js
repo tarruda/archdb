@@ -34,7 +34,7 @@ function newCustomer() {
 }
 
 var batchSize = 500000;
-var remaining = 1000000;
+var remaining = 500000;
 var totalCount = 0;
 
 function checkUsage() {

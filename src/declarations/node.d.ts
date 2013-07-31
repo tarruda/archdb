@@ -3,6 +3,37 @@
 
 declare var process: NodeProcess;
 
+declare class EventEmitter {
+    addListener(event: string, listener: Function);
+    on(event: string, listener: Function);
+    once(event: string, listener: Function): void;
+    removeListener(event: string, listener: Function): void;
+    removeAllListener(event: string): void;
+    setMaxListeners(n: number): void;
+    listeners(event: string): { Function; }[];
+    emit(event: string, arg1?: any, arg2?: any): void;
+}
+
+declare class WritableStream extends EventEmitter {
+    writable: boolean;
+    write(str: string, encoding?: string, fd?: string): boolean;
+    write(buffer: NodeBuffer): boolean;
+    end(): void;
+    end(str: string, enconding: string): void;
+    end(buffer: NodeBuffer): void;
+    destroy(): void;
+    destroySoon(): void;
+}
+
+declare class ReadableStream extends EventEmitter {
+    readable: boolean;
+    setEncoding(encoding: string): void;
+    pause(): void;
+    resume(): void;
+    destroy(): void;
+    pipe(destination: WritableStream, options?: { end?: boolean; }): void;
+}
+
 declare class NodeProcess extends EventEmitter {
     stdout: WritableStream;
     stderr: WritableStream;

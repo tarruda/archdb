@@ -330,6 +330,11 @@ class LocalCursor extends Emitter implements Cursor {
 }
 
 class HistoryIndex extends LocalIndex {
+  constructor(dbStorage: DbStorage, queue: JobQueue, tree: IndexTree,
+      private master: IndexTree) {
+    super(null, null, dbStorage, queue, tree, null, null);
+  }
+
   ins(value: any, cb: ObjectCb) {
     throw new InvalidOperationError(
         "Direct modifications are forbidden on the $history domain");
@@ -346,12 +351,84 @@ class HistoryIndex extends LocalIndex {
   }
 
   find(query: any): Cursor {
-    return new HistoryCursor(this.dbStorage, this.queue, this.tree, query);
+    return new HistoryCursor(this.dbStorage, this.queue, this.tree, query,
+        this.master);
   }
 }
 
 class HistoryCursor extends LocalCursor {
+  constructor(dbStorage: DbStorage, queue: JobQueue, tree: IndexTree,
+      query, private master: IndexTree) {
+    super(dbStorage, queue, tree, query);
+  }
 
+  visitRow(key: any, val: any, rowCb: RowCb, next: NextNodeCb) {
+    var getDomainNameCb = (err: Error, name: string) => {
+      rv.domain = name;
+      if (getOld) return this.dbStorage.getIndexData(rv.oldRef, getOldCb);
+      getOldCb(null, null);
+    };
+    var getOldCb = (err: Error, value: any) => {
+      rv.oldValue = value;
+      if (getNew) return this.dbStorage.getIndexData(rv.ref, getNewCb);
+      getNewCb(null, null);
+    };
+    var getNewCb = (err: Error, value: any) => {
+      rv.value = value;
+      rowCb(rv);
+      if (this.closed) return next(true);
+      if (this.paused) return this.once('resume', next);
+      next();
+    };
+    var getOld = false, getNew = false;
+    var rv = {
+      date: new Date(key.getTime()),
+      type: HistoryEntryType[val[0]],
+      domain: null,
+      key: val[2],
+      value: null,
+      ref: null,
+      oldValue: null,
+      oldRef: null
+    };
+
+    switch (val[0]) {
+      case HistoryEntryType.Insert:
+        if (val[3] instanceof ObjectRef) {
+          getNew = true;
+          rv.ref = val[3];
+        } else {
+          rv.value = val[3];
+        }
+        break;
+      case HistoryEntryType.Delete:
+        if (val[3] instanceof ObjectRef) {
+          getOld = true;
+          rv.oldRef = val[3];
+        } else {
+          rv.oldValue = val[3];
+        }
+        break;
+      case HistoryEntryType.Update:
+        if (val[3] instanceof ObjectRef) {
+          getOld = true;
+          rv.oldRef = val[3];
+        } else {
+          rv.oldValue = val[3];
+        }
+        if (val[4] instanceof ObjectRef) {
+          getNew = true;
+          rv.ref = val[4];
+        } else {
+          rv.value = val[4];
+        }
+        break;
+      default:
+        throw new CorruptedStateError();
+    }
+
+    this.master.get(['names', val[1]], getDomainNameCb);
+  }
 }
 
 class IndexRow {
