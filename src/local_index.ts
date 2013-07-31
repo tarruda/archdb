@@ -144,36 +144,48 @@ class LocalCursor extends Emitter implements Cursor {
   }
 
   each(rowCb: RowCb, cb: DoneCb) {
+    var completeCb = (err: Error) => {
+      this.err = err;
+      this.close();
+    };
     var jobCb = (cb) => {
       this.once('close', cb);
       this.find(visitCb);
     };
-    var visitCb = (err: Error, next: NextNodeCb, key: any, val: any) => {
-      if (err || !next) {
-        this.err = err;
-        return this.close();
-      }
-      this.visitRow(key, val, rowCb, next);
+    var fetchRowCb = (err: Error, row: Row) => {
+      if (err) return this.emit('complete', err);
+      rowCb(row);
+      if (this.closed) return nextNode(true);
+      if (this.paused) return this.once('resume', nextNode);
+      nextNode();
     };
+    var visitCb = (err: Error, next: NextNodeCb, key: any, val: any) => {
+      if (err || !next) return this.emit('complete', err);
+      nextNode = next;
+      this.fetchRow(key, val, fetchRowCb);
+    };
+    var nextNode;
 
     if (this.closed) throw new Error('Cursor is closed');
 
+    this.on('complete', completeCb);
     this.queue.add(cb, jobCb);
   }
 
-  visitRow(key: any, val: any, rowCb: RowCb, next: NextNodeCb) {
+  fetchRow(key: any, val: any, cb: RowErrCb) {
     var refCb = (err: Error, obj: any) => {
-      var row;
-      if (val instanceof ObjectRef) row = new IndexRow(key, obj, val)
-      else row = new IndexRow(key, val, null);
-      rowCb(row);
-      if (this.closed) return next(true);
-      if (this.paused) return this.once('resume', next);
-      next();
+      if (err) return cb(err, null);
+      rv.value = obj;
+      cb(null, rv);
     };
+    var rv = new IndexRow(key, null, null);
 
-    if (val instanceof ObjectRef) this.dbStorage.getIndexData(val, refCb);
-    else refCb(null, val);
+    if (val instanceof ObjectRef) {
+      rv.ref = val;
+      return this.dbStorage.getIndexData(val, refCb);
+    } 
+
+    refCb(null, val);
   }
 
   all(cb: RowArrayCb) {
@@ -362,35 +374,27 @@ class HistoryCursor extends LocalCursor {
     super(dbStorage, queue, tree, query);
   }
 
-  visitRow(key: any, val: any, rowCb: RowCb, next: NextNodeCb) {
+  fetchRow(key: any, val: any, cb: RowErrCb) {
     var getDomainNameCb = (err: Error, name: string) => {
+      if (err) return cb(err, null);
       rv.domain = name;
       if (getOld) return this.dbStorage.getIndexData(rv.oldRef, getOldCb);
       getOldCb(null, null);
     };
     var getOldCb = (err: Error, value: any) => {
+      if (err) return cb(err, null);
       rv.oldValue = value;
       if (getNew) return this.dbStorage.getIndexData(rv.ref, getNewCb);
       getNewCb(null, null);
     };
     var getNewCb = (err: Error, value: any) => {
+      if (err) return cb(err, null);
       rv.value = value;
-      rowCb(rv);
-      if (this.closed) return next(true);
-      if (this.paused) return this.once('resume', next);
-      next();
+      cb(null, rv);
     };
     var getOld = false, getNew = false;
-    var rv = {
-      date: new Date(key.getTime()),
-      type: HistoryEntryType[val[0]],
-      domain: null,
-      key: val[2],
-      value: null,
-      ref: null,
-      oldValue: null,
-      oldRef: null
-    };
+    var rv = new HistoryRow(new Date(key.getTime()), HistoryEntryType[val[0]],
+        null, val[2], null, null, null, null);
 
     switch (val[0]) {
       case HistoryEntryType.Insert:
@@ -433,4 +437,10 @@ class HistoryCursor extends LocalCursor {
 
 class IndexRow {
   constructor(public key: any, public value: any, public ref: ObjectRef) { }
+}
+
+class HistoryRow {
+  constructor(public date: Date, public type: string, public domain: string,
+      public key: any, public oldValue: any, public oldRef: ObjectRef,
+      public value: any, public ref: ObjectRef) { }
 }
