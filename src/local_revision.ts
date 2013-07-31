@@ -31,7 +31,7 @@ class LocalRevision extends Emitter implements Transaction {
     this.id = this.uidGenerator.generate();
     this.queue = new JobQueue();
     this.treeCache = {};
-    this.master = new AvlTree(dbStorage, masterRef);
+    this.master = new AvlTree(dbStorage, masterRef, 0);
     this.hist = new IndexProxy(HISTORY, this.master, dbStorage,
         this.queue, historyCb);
   }
@@ -129,9 +129,13 @@ class IndexProxy implements IndexTree {
       cb = nextJob;
       master.get(['refs', name], getCb);
     };
-    var getCb = (err: Error, ref: ObjectRef) => {
+    var getCb = (err: Error, refCount: Array) => {
       if (err) return cb(err);
-      this.tree = new AvlTree(dbStorage, ref);
+      if (refCount) {
+        this.tree = new AvlTree(dbStorage, refCount[0], refCount[1]);
+      } else {
+        this.tree = new AvlTree(dbStorage, null, null);
+      }
       if (this.pending) {
         this.pending.add(cb, proxyJob);
         this.pending.frozen = false;
@@ -163,6 +167,10 @@ class IndexProxy implements IndexTree {
   del(key: any, cb: ObjectCb) {
     var dcb = (tree: IndexTree, cb: AnyCb) => tree.del(key, cb);
     this.delegate(cb, dcb);
+  }
+
+  getCount(): number {
+    return this.tree.getCount();
   }
 
   inOrder(minKey: IndexKey, cb: VisitNodeCb) {

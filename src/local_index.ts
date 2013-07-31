@@ -147,16 +147,20 @@ class LocalCursor extends Emitter implements Cursor {
     this.thenCb = null;
   }
 
-  all(cb: RowArrayCb) {
+  all(cb: RowsetCb) {
     var rowCb = (row: Row) => {
-      rv.push(row);
+      rv.rows.push(row);
       if (this.hasNext()) this.next();
     };
     var endCb = (err: Error) => {
       if (err) return cb(err, null);
+      rv.total = this.tree.getCount();
       cb(null, rv);
     };
-    var rv: Array<Row> = [];
+    var rv = {
+      total: 0,
+      rows: []
+    };
 
     this.each(rowCb).then(endCb);
   }

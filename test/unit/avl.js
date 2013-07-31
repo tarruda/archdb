@@ -9,19 +9,23 @@ describe('AvlTree', function() {
   it('manages committed and uncommitted data transparently', function(done) {
     var rootRef;
     insCommit(tree, 1, 1, function() {
+      expect(tree.count).to.eql(1);
       expect(inspectStorage(tree.rootRef)).to.deep.eql([1]);
       insCommit(tree, 2, 3, function() {
+        expect(tree.count).to.eql(3);
         expect(inspectStorage(tree.rootRef)).to.deep.eql([
           2,
         1,  3
         ]);
         insCommit(tree, 4, 7, function() {
+          expect(tree.count).to.eql(7);
           expect(inspectStorage(tree.rootRef)).to.deep.eql([
                 4, 
             2,      6,
           1,  3,  5,  7
           ]);
           insCommit(tree, 8, 15, function() {
+            expect(tree.count).to.eql(15);
             expect(inspectStorage(tree.rootRef)).to.deep.eql([
                            8, 
                   4,               12,
@@ -31,6 +35,7 @@ describe('AvlTree', function() {
             // save the persisted rootRef
             rootRef = tree.rootRef;
             insTransaction(tree, 16, 31, function() {
+              expect(tree.count).to.eql(31);
               tree.levelOrder(function(err, items) {
                 // this state is only visible in the current transaction
                 expect(items).to.deep.eql([
@@ -71,6 +76,7 @@ describe('AvlTree', function() {
       describe('height', function() {
         it('is logarithmic', function(done) {
           function cb(err, node) {
+            expect(tree.count).to.eql(256);
             expect(node.height).to.eql(8);
             done();
           }
@@ -89,6 +95,7 @@ describe('AvlTree', function() {
 
         it('in order', function(done) {
           inOrder(null, tree, function(items) {
+            expect(tree.count).to.eql(80);
             expectFromTo(items, 1, size);
             done();
           });
@@ -109,6 +116,7 @@ describe('AvlTree', function() {
 
         it('reverse in order', function(done) {
           revOrder(null, tree, function(items) {
+            expect(tree.count).to.eql(80);
             expectFromTo(items, size, 1);
             done();
           });
@@ -131,6 +139,7 @@ describe('AvlTree', function() {
       describe('descending insert rotations', function() {
         it('24-22', function(done) {
           ins(tree, 24, 22, function(err) {
+            expect(tree.count).to.eql(3);
             expect(inspect(tree)).to.deep.eql([
                                          23, 
                          22,                            24
@@ -141,6 +150,7 @@ describe('AvlTree', function() {
 
         it('24-20', function(done) {
           ins(tree, 24, 20, function(err) {
+            expect(tree.count).to.eql(5);
             expect(inspect(tree)).to.deep.eql([
                                          23, 
                          21,                            24,
@@ -152,6 +162,7 @@ describe('AvlTree', function() {
 
         it('24-19', function(done) {
           ins(tree, 24, 19, function(err) {
+            expect(tree.count).to.eql(6);
             expect(inspect(tree)).to.deep.eql([
                                          21, 
                          20,                            23,
@@ -163,6 +174,7 @@ describe('AvlTree', function() {
 
         it('24-18', function(done) {
           ins(tree, 24, 18, function(err) {
+            expect(tree.count).to.eql(7);
             expect(inspect(tree)).to.deep.eql([
                                          21, 
                          19,                            23,
@@ -174,6 +186,7 @@ describe('AvlTree', function() {
 
         it('24-16', function(done) {
           ins(tree, 24, 16, function(err) {
+            expect(tree.count).to.eql(9);
             expect(inspect(tree)).to.deep.eql([
                                          21, 
                          19,                            23,
@@ -186,18 +199,7 @@ describe('AvlTree', function() {
 
         it('24-15', function(done) {
           ins(tree, 24, 15, function(err) {
-            expect(inspect(tree)).to.deep.eql([
-                                         21, 
-                         17,                            23,
-                 16,             19,            22,             24,
-              15,             18,   20
-            ]);
-            done();
-          });
-        });
-
-        it('24-15', function(done) {
-          ins(tree, 24, 15, function(err) {
+            expect(tree.count).to.eql(10);
             expect(inspect(tree)).to.deep.eql([
                                          21, 
                          17,                            23,
@@ -210,6 +212,7 @@ describe('AvlTree', function() {
 
         it('24-14', function(done) {
           ins(tree, 24, 14, function(err) {
+            expect(tree.count).to.eql(11);
             expect(inspect(tree)).to.deep.eql([
                                          21, 
                          17,                             23,
@@ -222,6 +225,7 @@ describe('AvlTree', function() {
 
         it('24-13', function(done) {
           ins(tree, 24, 13, function(err) {
+            expect(tree.count).to.eql(12);
             expect(inspect(tree)).to.deep.eql([
                                          17, 
                          15,                             21,
@@ -234,6 +238,7 @@ describe('AvlTree', function() {
 
         it('24-12', function(done) {
           ins(tree, 24, 12, function(err) {
+            expect(tree.count).to.eql(13);
             expect(inspect(tree)).to.deep.eql([
                                          17, 
                          15,                             21,
@@ -246,6 +251,7 @@ describe('AvlTree', function() {
 
         it('24-11', function(done) {
           ins(tree, 24, 11, function(err) {
+            expect(tree.count).to.eql(14);
             expect(inspect(tree)).to.deep.eql([
                                          17, 
                          13,                             21,
@@ -258,6 +264,7 @@ describe('AvlTree', function() {
 
         it('24-10', function(done) {
           ins(tree, 24, 10, function(err) {
+            expect(tree.count).to.eql(15);
             expect(inspect(tree)).to.deep.eql([
                                          17, 
                          13,                             21,
@@ -270,6 +277,7 @@ describe('AvlTree', function() {
 
         it('24-8', function(done) {
           ins(tree, 24, 8, function(err) {
+            expect(tree.count).to.eql(17);
             expect(inspect(tree)).to.deep.eql([
                                          17, 
                          13,                             21,
@@ -283,6 +291,7 @@ describe('AvlTree', function() {
 
         it('24-7', function(done) {
           ins(tree, 24, 7, function(err) {
+            expect(tree.count).to.eql(18);
             expect(inspect(tree)).to.deep.eql([
                                          17, 
                          13,                             21,
@@ -296,6 +305,7 @@ describe('AvlTree', function() {
 
         it('24-6', function(done) {
           ins(tree, 24, 6, function(err) {
+            expect(tree.count).to.eql(19);
             expect(inspect(tree)).to.deep.eql([
                                           17, 
                           13,                             21,
@@ -309,6 +319,7 @@ describe('AvlTree', function() {
 
         it('24-5', function(done) {
           ins(tree, 24, 5, function(err) {
+            expect(tree.count).to.eql(20);
             expect(inspect(tree)).to.deep.eql([
                                            17, 
                             9,                             21,
@@ -322,6 +333,7 @@ describe('AvlTree', function() {
 
         it('24-4', function(done) {
           ins(tree, 24, 4, function(err) {
+            expect(tree.count).to.eql(21);
             expect(inspect(tree)).to.deep.eql([
                                            17, 
                             9,                             21,
@@ -335,6 +347,7 @@ describe('AvlTree', function() {
 
         it('24-3', function(done) {
           ins(tree, 24, 3, function(err) {
+            expect(tree.count).to.eql(22);
             expect(inspect(tree)).to.deep.eql([
                                            17, 
                             9,                             21,
@@ -348,6 +361,7 @@ describe('AvlTree', function() {
 
         it('24-2', function(done) {
           ins(tree, 24, 2, function(err) {
+            expect(tree.count).to.eql(23);
             expect(inspect(tree)).to.deep.eql([
                                            17, 
                             9,                             21,
@@ -361,6 +375,7 @@ describe('AvlTree', function() {
 
         it('24-1', function(done) {
           ins(tree, 24, 1, function(err) {
+            expect(tree.count).to.eql(24);
             expect(inspect(tree)).to.deep.eql([
                                            9, 
                             5,                             17,
@@ -380,6 +395,7 @@ describe('AvlTree', function() {
 
         it('24-22', function(done) {
           del(tree, 24, 22, function(err) {
+            expect(tree.count).to.eql(21);
             expect(inspect(tree)).to.deep.eql([
                                            9, 
                             5,                             17,
@@ -393,6 +409,7 @@ describe('AvlTree', function() {
 
         it('24-19', function(done) {
           del(tree, 24, 19, function(err) {
+            expect(tree.count).to.eql(18);
             expect(inspect(tree)).to.deep.eql([
                                            9, 
                             5,                             13,
@@ -406,6 +423,7 @@ describe('AvlTree', function() {
 
         it('24-16', function(done) {
           del(tree, 24, 16, function(err) {
+            expect(tree.count).to.eql(15);
             expect(inspect(tree)).to.deep.eql([
                                            9, 
                             5,                             13,
@@ -419,6 +437,7 @@ describe('AvlTree', function() {
 
         it('24-13', function(done) {
           del(tree, 24, 13, function(err) {
+            expect(tree.count).to.eql(12);
             expect(inspect(tree)).to.deep.eql([
                                            5, 
                             3,                             9,
@@ -431,6 +450,7 @@ describe('AvlTree', function() {
 
         it('24-10', function(done) {
           del(tree, 24, 10, function(err) {
+            expect(tree.count).to.eql(9);
             expect(inspect(tree)).to.deep.eql([
                                            5, 
                             3,                             7,
@@ -443,6 +463,7 @@ describe('AvlTree', function() {
 
         it('24-7', function(done) {
           del(tree, 24, 7, function(err) {
+            expect(tree.count).to.eql(6);
             expect(inspect(tree)).to.deep.eql([
                                            3, 
                             2,                             5,
@@ -454,6 +475,7 @@ describe('AvlTree', function() {
 
         it('24-4', function(done) {
           del(tree, 24, 4, function(err) {
+            expect(tree.count).to.eql(3);
             expect(inspect(tree)).to.deep.eql([
                                            2, 
                             1,                             3
@@ -464,6 +486,7 @@ describe('AvlTree', function() {
 
         it('24-2', function(done) {
           del(tree, 24, 2, function(err) {
+            expect(tree.count).to.eql(1);
             expect(inspect(tree)).to.deep.eql([1]);
             done();
           });
@@ -471,6 +494,7 @@ describe('AvlTree', function() {
 
         it('24-1', function(done) {
           del(tree, 24, 1, function(err) {
+            expect(tree.count).to.eql(0);
             expect(inspect(tree)).to.deep.eql([]);
             done();
           });
@@ -480,6 +504,7 @@ describe('AvlTree', function() {
       describe('acending insert rotations', function() {
         it('1-3', function(done) {
           ins(tree, 1, 3, function(err) {
+            expect(tree.count).to.eql(3);
             expect(inspect(tree)).to.deep.eql([
               2, 
             1,  3 
@@ -490,6 +515,7 @@ describe('AvlTree', function() {
 
         it('1-5', function(done) {
           ins(tree, 1, 5, function(err) {
+            expect(tree.count).to.eql(5);
             expect(inspect(tree)).to.deep.eql([
                 2, 
             1,      4,
@@ -501,6 +527,7 @@ describe('AvlTree', function() {
 
         it('1-6', function(done) {
           ins(tree, 1, 6, function(err) {
+            expect(tree.count).to.eql(6);
             expect(inspect(tree)).to.deep.eql([
                   4, 
               2,      5,
@@ -512,6 +539,7 @@ describe('AvlTree', function() {
 
         it('1-7', function(done) {
           ins(tree, 1, 7, function(err) {
+            expect(tree.count).to.eql(7);
             expect(inspect(tree)).to.deep.eql([
                   4, 
               2,      6,
@@ -523,6 +551,7 @@ describe('AvlTree', function() {
 
         it('1-9', function(done) {
           ins(tree, 1, 9, function(err) {
+            expect(tree.count).to.eql(9);
             expect(inspect(tree)).to.deep.eql([
                     4, 
                2,         6,
@@ -535,6 +564,7 @@ describe('AvlTree', function() {
 
         it('1-10', function(done) {
           ins(tree, 1, 10, function(err) {
+            expect(tree.count).to.eql(10);
             expect(inspect(tree)).to.deep.eql([
                       4, 
                2,             8,
@@ -547,6 +577,7 @@ describe('AvlTree', function() {
 
         it('1-11', function(done) {
           ins(tree, 1, 11, function(err) {
+            expect(tree.count).to.eql(11);
             expect(inspect(tree)).to.deep.eql([
                       4, 
                2,             8,
@@ -559,6 +590,7 @@ describe('AvlTree', function() {
 
         it('1-12', function(done) {
           ins(tree, 1, 12, function(err) {
+            expect(tree.count).to.eql(12);
             expect(inspect(tree)).to.deep.eql([
                           8, 
                   4,             10,
@@ -571,6 +603,7 @@ describe('AvlTree', function() {
 
         it('1-13', function(done) {
           ins(tree, 1, 13, function(err) {
+            expect(tree.count).to.eql(13);
             expect(inspect(tree)).to.deep.eql([
                           8, 
                   4,             10,
@@ -583,6 +616,7 @@ describe('AvlTree', function() {
 
         it('1-14', function(done) {
           ins(tree, 1, 14, function(err) {
+            expect(tree.count).to.eql(14);
             expect(inspect(tree)).to.deep.eql([
                           8, 
                   4,               12,
@@ -595,6 +629,7 @@ describe('AvlTree', function() {
 
         it('1-15', function(done) {
           ins(tree, 1, 15, function(err) {
+            expect(tree.count).to.eql(15);
             expect(inspect(tree)).to.deep.eql([
                            8, 
                   4,               12,
@@ -607,6 +642,7 @@ describe('AvlTree', function() {
 
         it('1-16', function(done) {
           ins(tree, 1, 16, function(err) {
+            expect(tree.count).to.eql(16);
             expect(inspect(tree)).to.deep.eql([
                            8, 
                   4,               12,
@@ -620,6 +656,7 @@ describe('AvlTree', function() {
 
         it('1-17', function(done) {
           ins(tree, 1, 17, function(err) {
+            expect(tree.count).to.eql(17);
             expect(inspect(tree)).to.deep.eql([
                            8, 
                   4,               12,
@@ -633,6 +670,7 @@ describe('AvlTree', function() {
 
         it('1-18', function(done) {
           ins(tree, 1, 18, function(err) {
+            expect(tree.count).to.eql(18);
             expect(inspect(tree)).to.deep.eql([
                            8, 
                   4,               12,
@@ -646,6 +684,7 @@ describe('AvlTree', function() {
 
         it('1-19', function(done) {
           ins(tree, 1, 19, function(err) {
+            expect(tree.count).to.eql(19);
             expect(inspect(tree)).to.deep.eql([
                            8, 
                   4,               12,
@@ -659,6 +698,7 @@ describe('AvlTree', function() {
 
         it('1-20', function(done) {
           ins(tree, 1, 20, function(err) {
+            expect(tree.count).to.eql(20);
             expect(inspect(tree)).to.deep.eql([
                              8, 
                   4,                      16,
@@ -672,6 +712,7 @@ describe('AvlTree', function() {
 
         it('1-21', function(done) {
           ins(tree, 1, 21, function(err) {
+            expect(tree.count).to.eql(21);
             expect(inspect(tree)).to.deep.eql([
                              8, 
                   4,                      16,
@@ -685,6 +726,7 @@ describe('AvlTree', function() {
 
         it('1-22', function(done) {
           ins(tree, 1, 22, function(err) {
+            expect(tree.count).to.eql(22);
             expect(inspect(tree)).to.deep.eql([
                              8, 
                   4,                      16,
@@ -698,6 +740,7 @@ describe('AvlTree', function() {
 
         it('1-23', function(done) {
           ins(tree, 1, 23, function(err) {
+            expect(tree.count).to.eql(23);
             expect(inspect(tree)).to.deep.eql([
                              8, 
                   4,                      16,
@@ -711,6 +754,7 @@ describe('AvlTree', function() {
 
         it('1-24', function(done) {
           ins(tree, 1, 24, function(err) {
+            expect(tree.count).to.eql(24);
             expect(inspect(tree)).to.deep.eql([
                                           16, 
                           8,                             20,
@@ -730,6 +774,7 @@ describe('AvlTree', function() {
 
         it('1-3', function(done) {
           del(tree, 1, 3, function(err) {
+            expect(tree.count).to.eql(21);
             expect(inspect(tree)).to.deep.eql([
                                           16, 
                           8,                             20,
@@ -743,6 +788,7 @@ describe('AvlTree', function() {
 
         it('1-5', function(done) {
           del(tree, 1, 5, function(err) {
+            expect(tree.count).to.eql(19);
             expect(inspect(tree)).to.deep.eql([
                                           16, 
                           8,                             20,
@@ -756,6 +802,7 @@ describe('AvlTree', function() {
 
         it('1-6', function(done) {
           del(tree, 1, 6, function(err) {
+            expect(tree.count).to.eql(18);
             expect(inspect(tree)).to.deep.eql([
                                           16, 
                           12,                             20,
@@ -769,6 +816,7 @@ describe('AvlTree', function() {
 
         it('1-7', function(done) {
           del(tree, 1, 7, function(err) {
+            expect(tree.count).to.eql(17);
             expect(inspect(tree)).to.deep.eql([
                                           16, 
                           12,                             20,
@@ -782,6 +830,7 @@ describe('AvlTree', function() {
 
         it('1-9', function(done) {
           del(tree, 1, 9, function(err) {
+            expect(tree.count).to.eql(15);
             expect(inspect(tree)).to.deep.eql([
                                          16, 
                          12,                             20,
@@ -795,6 +844,7 @@ describe('AvlTree', function() {
 
         it('1-12', function(done) {
           del(tree, 1, 12, function(err) {
+            expect(tree.count).to.eql(12);
             expect(inspect(tree)).to.deep.eql([
                                          20, 
                          16,                            22,
@@ -807,6 +857,7 @@ describe('AvlTree', function() {
 
         it('1-15', function(done) {
           del(tree, 1, 15, function(err) {
+            expect(tree.count).to.eql(9);
             expect(inspect(tree)).to.deep.eql([
                                          20, 
                          18,                            22,
@@ -819,6 +870,7 @@ describe('AvlTree', function() {
 
         it('1-18', function(done) {
           del(tree, 1, 18, function(err) {
+            expect(tree.count).to.eql(6);
             expect(inspect(tree)).to.deep.eql([
                                          22, 
                          20,                            23,
@@ -830,6 +882,7 @@ describe('AvlTree', function() {
 
         it('1-21', function(done) {
           del(tree, 1, 21, function(err) {
+            expect(tree.count).to.eql(3);
             expect(inspect(tree)).to.deep.eql([
                                          23, 
                          22,                            24,
@@ -840,6 +893,7 @@ describe('AvlTree', function() {
 
         it('1-23', function(done) {
           del(tree, 1, 23, function(err) {
+            expect(tree.count).to.eql(1);
             expect(inspect(tree)).to.deep.eql([24]);
             done();
           });
@@ -847,6 +901,7 @@ describe('AvlTree', function() {
 
         it('1-24', function(done) {
           del(tree, 1, 24, function(err) {
+            expect(tree.count).to.eql(0);
             expect(inspect(tree)).to.deep.eql([]);
             done();
           });
@@ -860,6 +915,7 @@ describe('AvlTree', function() {
 
         it('20', function(done) {
           delSeq(tree, 20, function(err) {
+            expect(tree.count).to.eql(23);
             expect(inspect(tree)).to.deep.eql([
                                           16, 
                           8,                             19,
@@ -873,6 +929,7 @@ describe('AvlTree', function() {
 
         it('16', function(done) {
           delSeq(tree, 20, 16, function(err) {
+            expect(tree.count).to.eql(22);
             expect(inspect(tree)).to.deep.eql([
                                           15, 
                           8,                             19,
@@ -886,6 +943,7 @@ describe('AvlTree', function() {
 
         it('12', function(done) {
           delSeq(tree, 20, 16, 12, function(err) {
+            expect(tree.count).to.eql(21);
             expect(inspect(tree)).to.deep.eql([
                                           15, 
                           8,                             19,
@@ -899,6 +957,7 @@ describe('AvlTree', function() {
 
         it('11', function(done) {
           delSeq(tree, 20, 16, 12, 11, function(err) {
+            expect(tree.count).to.eql(20);
             expect(inspect(tree)).to.deep.eql([
                                           15, 
                           8,                             19,
@@ -912,6 +971,7 @@ describe('AvlTree', function() {
 
         it('10', function(done) {
           delSeq(tree, 20, 16, 12, 11, 10, function(err) {
+            expect(tree.count).to.eql(19);
             expect(inspect(tree)).to.deep.eql([
                                           15, 
                           8,                             19,
@@ -925,6 +985,7 @@ describe('AvlTree', function() {
 
         it('13', function(done) {
           delSeq(tree, 20, 16, 12, 11, 10, 13, function(err) {
+            expect(tree.count).to.eql(18);
             expect(inspect(tree)).to.deep.eql([
                                           15, 
                           8,                             19,
@@ -938,6 +999,7 @@ describe('AvlTree', function() {
 
         it('9', function(done) {
           delSeq(tree, 20, 16, 12, 11, 10, 13, 9, function(err) {
+            expect(tree.count).to.eql(17);
             expect(inspect(tree)).to.deep.eql([
                                           15, 
                           4,                             19,
@@ -951,6 +1013,7 @@ describe('AvlTree', function() {
 
         it('19', function(done) {
           delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, function(err) {
+            expect(tree.count).to.eql(16);
             expect(inspect(tree)).to.deep.eql([
                                           15, 
                           4,                             22,
@@ -964,6 +1027,7 @@ describe('AvlTree', function() {
 
         it('22', function(done) {
           delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, function(err) {
+            expect(tree.count).to.eql(15);
             expect(inspect(tree)).to.deep.eql([
                                           15, 
                           4,                             21,
@@ -977,6 +1041,7 @@ describe('AvlTree', function() {
 
         it('21', function(done) {
           delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, function(err) {
+            expect(tree.count).to.eql(14);
             expect(inspect(tree)).to.deep.eql([
                                           15, 
                           4,                             18,
@@ -991,6 +1056,7 @@ describe('AvlTree', function() {
         it('15', function(done) {
           delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, 15,
                  function(err) {
+            expect(tree.count).to.eql(13);
             expect(inspect(tree)).to.deep.eql([
                                           14, 
                           4,                             18,
@@ -1005,6 +1071,7 @@ describe('AvlTree', function() {
         it('18', function(done) {
           delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, 15, 18,
                  function(err) {
+            expect(tree.count).to.eql(12);
             expect(inspect(tree)).to.deep.eql([
                                           6, 
                           4,                            14,
@@ -1018,6 +1085,7 @@ describe('AvlTree', function() {
         it('14', function(done) {
           delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, 15, 18, 14,
                  function(err) {
+            expect(tree.count).to.eql(11);
             expect(inspect(tree)).to.deep.eql([
                                           6, 
                           4,                             8,
@@ -1031,6 +1099,7 @@ describe('AvlTree', function() {
         it('23', function(done) {
           delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, 15, 18, 14, 23,
                  function(err) {
+            expect(tree.count).to.eql(10);
             expect(inspect(tree)).to.deep.eql([
                                           6, 
                           4,                             8,
@@ -1044,6 +1113,7 @@ describe('AvlTree', function() {
         it('8', function(done) {
           delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, 15, 18, 14, 23,
                  8, function(err) {
+            expect(tree.count).to.eql(9);
             expect(inspect(tree)).to.deep.eql([
                                           6, 
                           4,                             17,
@@ -1057,6 +1127,7 @@ describe('AvlTree', function() {
         it('17', function(done) {
           delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, 15, 18, 14, 23,
                  8, 17, function(err) {
+            expect(tree.count).to.eql(8);
             expect(inspect(tree)).to.deep.eql([
                                           6, 
                           4,                             7,
@@ -1070,6 +1141,7 @@ describe('AvlTree', function() {
         it('7', function(done) {
           delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, 15, 18, 14, 23,
                  8, 17, 7, function(err) {
+            expect(tree.count).to.eql(7);
             expect(inspect(tree)).to.deep.eql([
                                           4, 
                           2,                             6,
@@ -1082,6 +1154,7 @@ describe('AvlTree', function() {
         it('4', function(done) {
           delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, 15, 18, 14, 23,
                  8, 17, 7, 4, function(err) {
+            expect(tree.count).to.eql(6);
             expect(inspect(tree)).to.deep.eql([
                                           3, 
                           2,                             6,
@@ -1094,6 +1167,7 @@ describe('AvlTree', function() {
         it('3', function(done) {
           delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, 15, 18, 14, 23,
                  8, 17, 7, 4, 3, function(err) {
+            expect(tree.count).to.eql(5);
             expect(inspect(tree)).to.deep.eql([
                                           2, 
                           1,                             6,
@@ -1106,6 +1180,7 @@ describe('AvlTree', function() {
         it('2', function(done) {
           delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, 15, 18, 14, 23,
                  8, 17, 7, 4, 3, 2, function(err) {
+            expect(tree.count).to.eql(4);
             expect(inspect(tree)).to.deep.eql([
                                           6, 
                           1,                             24,
@@ -1118,6 +1193,7 @@ describe('AvlTree', function() {
         it('6', function(done) {
           delSeq(tree, 20, 16, 12, 11, 10, 13, 9, 19, 22, 21, 15, 18, 14, 23,
                  8, 17, 7, 4, 3, 2, 6, function(err) {
+            expect(tree.count).to.eql(3);
             expect(inspect(tree)).to.deep.eql([
                                           5, 
                           1,                             24

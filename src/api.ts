@@ -8,7 +8,7 @@ interface RowCb { (row: Row); }
 
 interface RowErrCb { (err: Error, row: Row); }
 
-interface RowArrayCb { (err: Error, array: Array<Row>); }
+interface RowsetCb { (err: Error, rowset: Rowset); }
 
 interface ObjectCb { (err: Error, obj: any); }
 
@@ -32,7 +32,7 @@ interface Domain {
 }
 
 interface Cursor {
-  all(cb: RowArrayCb);
+  all(cb: RowsetCb);
   one(cb: RowErrCb);
   each(eachCb: RowCb);
   then(cb: DoneCb);
@@ -45,6 +45,11 @@ interface Row {
   key: any;
   value: any;
   ref: ObjectRef;
+}
+
+interface Rowset {
+  rows: Array<Row>;
+  total: number;
 }
 
 class ObjectRef {

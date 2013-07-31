@@ -25,8 +25,9 @@ describe('LocalIndex', function() {
       index.ins({name: 'doc7'}, function(err, key) {
         expect(key).to.eql(4);
       });
-      index.find().all(function(err, items) {
-        expect(rows(items)).to.deep.eql([
+      index.find().all(function(err, rowset) {
+        expect(rowset.total).to.eql(7);
+        expect(rows(rowset.rows)).to.deep.eql([
           row(true, {name: 'doc5'}),
           row(1, {name: 'doc1'}),
           row(2, {name: 'doc2'}),
@@ -41,8 +42,9 @@ describe('LocalIndex', function() {
   });
 
   it('sets keys/values', function(done) {
-    index.find().all(function(err, items) {
-      expect(rows(items)).to.deep.eql([
+    index.find().all(function(err, rowset) {
+      expect(rowset.total).to.eql(5);
+      expect(rows(rowset.rows)).to.deep.eql([
         row(true, {name: 'doc5'}),
         row(1, {name: 'doc1'}),
         row(2, {name: 'doc2'}),
@@ -56,8 +58,9 @@ describe('LocalIndex', function() {
   it('deletes keys/values', function(done) {
     index.del('3');
     index.del(2);
-    index.find().all(function(err, items) {
-      expect(rows(items)).to.deep.eql([
+    index.find().all(function(err, rowset) {
+      expect(rowset.total).to.eql(3);
+      expect(rows(rowset.rows)).to.deep.eql([
         row(true, {name: 'doc5'}),
         row(1, {name: 'doc1'}),
         row([4, 3], {name: 'doc4'})
@@ -71,7 +74,16 @@ describe('LocalIndex', function() {
       expect(oldRef).to.be.instanceOf(ObjectRef);
       dbStorage.getIndexData(oldRef, function(err, oldVal) {
         expect(oldVal).to.deep.eql({name: 'doc3'});
-        done();
+        index.find().all(function(err, rowset) {
+          expect(rowset.total).to.eql(4);
+          expect(rows(rowset.rows)).to.deep.eql([
+            row(true, {name: 'doc5'}),
+            row(1, {name: 'doc1'}),
+            row(2, {name: 'doc2'}),
+            row([4, 3], {name: 'doc4'})
+          ]);
+          done();
+        });
       });
     });
   });
@@ -81,7 +93,17 @@ describe('LocalIndex', function() {
       expect(oldRef).to.be.instanceOf(ObjectRef);
       dbStorage.getIndexData(oldRef, function(err, oldVal) {
         expect(oldVal).to.deep.eql({name: 'doc2'});
-        done();
+        index.find().all(function(err, rowset) {
+          expect(rowset.total).to.eql(5);
+          expect(rows(rowset.rows)).to.deep.eql([
+            row(true, {name: 'doc5'}),
+            row(1, {name: 'doc1'}),
+            row(2, [1, 2]),
+            row('3', {name: 'doc3'}),
+            row([4, 3], {name: 'doc4'})
+          ]);
+          done();
+        });
       });
     });
   });
@@ -234,7 +256,7 @@ describe('LocalCursor', function() {
 
       it('query all', function(done) {
         cursor.all(function(err, items) {
-          expect(rows(items)).to.deep.eql(expected);
+          expect(rows(items.rows)).to.deep.eql(expected);
           done();
         });
       });

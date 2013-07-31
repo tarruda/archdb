@@ -33,7 +33,7 @@ function newCustomer() {
   };
 }
 
-var batchSize = 500000;
+var batchSize = 100000;
 var remaining = 500000;
 var totalCount = 0;
 

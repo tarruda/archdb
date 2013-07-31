@@ -88,7 +88,7 @@ class LocalDatabase implements Connection {
       replay = {};
       cached = [];
       for (var k in rev.treeCache) cached.push(rev.treeCache[k]);
-      currentMaster = new AvlTree(this.dbStorage, this.masterRef);
+      currentMaster = new AvlTree(this.dbStorage, this.masterRef, 0);
       nextIndex();
     };
     var nextIndex = () => {
@@ -102,7 +102,7 @@ class LocalDatabase implements Connection {
       currentIndexKey = ['refs', currentIndex.name];
       currentMaster.get(currentIndexKey, currentIndexCb);
     };
-    var currentIndexCb = (err: Error, ref: ObjectRef) => {
+    var currentIndexCb = (err: Error, refCount: Array) => {
       /*
        * If the current index it wasn't modified in the master branch,
        * mark it for fast-forward.
@@ -114,25 +114,26 @@ class LocalDatabase implements Connection {
       var orig, currentMasterIndex;
       if (err) return cb(err);
       orig = currentIndex.tree.getOriginalRootRef();
-      if (!ref || orig.equals(ref)) {
+      if (!refCount || orig.equals(refCount[0])) {
         forwarded[currentIndex.name] = currentIndex;
         return yield(nextIndex);
       }
-      currentMasterIndex = { tree: new AvlTree(this.dbStorage, ref),
+      currentMasterIndex = { tree: new AvlTree(this.dbStorage, refCount[0],
+          refCount[1]),
         name: currentIndex.name, id: currentIndex.id };
-      if (!currentIndex.tree.modified() && !ref.equals(orig)) {
+      if (!currentIndex.tree.modified() && !refCount[0].equals(orig)) {
         refMap[currentIndex.name] = currentMasterIndex;
       } else {
         replay[currentIndex.id] = currentMasterIndex;
       }
       yield(nextIndex);
     };
-    var currentHistoryCb = (err: Error, ref: ObjectRef) => {
+    var currentHistoryCb = (err: Error, refCount: Array) => {
       /*
        * Start iterating the revision history to check for possible conflicts
        */
       if (err) return cb(err);
-      currentHistory = new AvlTree(this.dbStorage, ref);
+      currentHistory = new AvlTree(this.dbStorage, refCount[0], refCount[1]);
       rev.hist.inOrder(new BitArray(rev.id), historyWalkCb);
     };
     var historyWalkCb = (err: Error, next: NextNodeCb, node: IndexNode) => {
@@ -231,12 +232,14 @@ class LocalDatabase implements Connection {
       if (err) return cb(err);
       refMap[currentCommit.name] = currentCommit;
       currentMaster.set(['refs', currentCommit.name],
-          currentCommit.tree.getRootRef(), commitNextTree);
+          [currentCommit.tree.getRootRef(), currentCommit.tree.getCount()],
+          commitNextTree);
     };
     var commitHistoryCb = (err: Error) => {
       if (err) return cb(err);
       currentMaster.set(['refs', HISTORY],
-          currentHistory.getRootRef(), setHistoryRefCb);
+          [currentHistory.getRootRef(), currentHistory.getCount()],
+          setHistoryRefCb);
     };
     var setHistoryRefCb = (err: Error) => {
       if (err) return cb(err);

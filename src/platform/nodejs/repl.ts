@@ -188,9 +188,9 @@ class SyncCursor {
     this.err = null;
   }
 
-  all() {
-    var cb = (e: Error, rows: Array<Row>) => {
-      rv = rows;
+  all(): Rowset {
+    var cb = (e: Error, rowset: Rowset ) => {
+      rv = rowset;
       err = e;
       fiber.run(); 
     };
@@ -203,7 +203,7 @@ class SyncCursor {
     return rv;
   }
 
-  one() {
+  one(): Row {
     var cb = (e: Error, row: Row) => {
       rv = row;
       err = e;
@@ -218,7 +218,7 @@ class SyncCursor {
     return rv;
   }
 
-  next() {
+  next(): Row {
     var rowCb = (row: Row) => {
       this.currentRow = row;
       this.currentFiber.run();

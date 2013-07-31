@@ -35,6 +35,7 @@ interface IndexTree {
   get(key: any, cb: ObjectCb);
   set(key: any, value: any, cb: ObjectCb);
   del(key: any, cb: ObjectCb);
+  getCount(): number;
   inOrder(minKey: IndexKey, cb: VisitNodeCb);
   revInOrder(maxKey: IndexKey, cb: VisitNodeCb);
   commit(releaseCache: boolean, cb: DoneCb);

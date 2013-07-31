@@ -792,9 +792,9 @@ testDatabase = function(options, init) {
 
     function query(domain, q, cb) {
       var rv = [];
-      domain.find(q).all(function(err, items) {
+      domain.find(q).all(function(err, rowset) {
         if (err) return cb(err);
-        items.forEach(function(item) {
+        rowset.rows.forEach(function(item) {
           rv.push(item.key);
           if (item.value) rv.push(item.value);
         });

@@ -80,11 +80,13 @@ class AvlTree implements IndexTree {
   rootRef: ObjectRef;
   originalRootRef: ObjectRef;
   root: AvlNode;
+  count: number;
 
-  constructor(dbStorage: DbStorage, rootRef: ObjectRef) {
+  constructor(dbStorage: DbStorage, rootRef: ObjectRef, count: number) {
     this.dbStorage = dbStorage;
     this.rootRef = rootRef;
     this.originalRootRef = rootRef;
+    this.count = count || 0;
     this.root = null;
   }
 
@@ -126,6 +128,7 @@ class AvlTree implements IndexTree {
         node.right = new AvlNode(key, value);
         node.rightRef = node.right.ref;
       }
+      this.count++;
       this.ensureIsBalanced(oldValue, path, cb);
     };
     var getCb = (err: Error, node: AvlNode) => {
@@ -139,6 +142,7 @@ class AvlTree implements IndexTree {
     if (!this.rootRef) {
       this.root = new AvlNode(key, value);
       this.rootRef = this.root.ref;
+      this.count++;
       return cb(null, null);
     } else if (this.root) {
       this.search(true, key, searchCb);
@@ -161,6 +165,7 @@ class AvlTree implements IndexTree {
     };
     var delCb = (err: Error, oldValue: string) => {
       if (err) return cb(err, null);
+      this.count--;
       this.ensureIsBalanced(oldValue, path, cb);
     };
     var path;
@@ -174,6 +179,10 @@ class AvlTree implements IndexTree {
     } else {
       this.resolveNode(this.rootRef, getCb);
     }
+  }
+
+  getCount(): number {
+    return this.count;
   }
 
   inOrder(minKey: IndexKey, cb: VisitNodeCb) {
