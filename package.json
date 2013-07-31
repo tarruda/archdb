@@ -7,9 +7,15 @@
     "url": "git://github.com/tarruda/archdb.git"
   },
   "main": "./lib/archdb",
+  "bin": {
+    "archdb": "./bin/archdb"
+  },
   "author": {
     "name": "Thiago de Arruda",
     "email": "tpadilha84@gmail.com"
+  },
+  "dependencies": {
+    "fibers": "~1.0.1"
   },
   "devDependencies": {
     "setimmediate": "~1.0.1",

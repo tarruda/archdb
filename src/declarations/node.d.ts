@@ -1,6 +1,63 @@
 // declartions for some of the node.js API,
 // taken from the samples in typescript repository
 
+declare var process: NodeProcess;
+
+declare class NodeProcess extends EventEmitter {
+    stdout: WritableStream;
+    stderr: WritableStream;
+    stdin: ReadableStream;
+    argv: string[];
+    execPath: string;
+    abort(): void;
+    chdir(directory: string): void;
+    cwd(): string;
+    env: any;
+    exit(code?: number): void;
+    getgid(): number;
+    setgid(id: number): void;
+    getuid(): number;
+    setuid(id: number): void;
+    version: string;
+    versions: { http_parser: string; node: string; v8: string; ares: string; uv: string; zlib: string; openssl: string; };
+    config: {
+        target_defaults: {
+            cflags: any[];
+            default_configuration: string;
+            defines: string[];
+            include_dirs: string[];
+            libraries: string[];
+        };
+        variables: {
+        clang: number;
+        host_arch: string;
+        node_install_npm: boolean;
+        node_install_waf: boolean;
+        node_prefix: string;
+        node_shared_openssl: boolean;
+        node_shared_v8: boolean;
+        node_shared_zlib: boolean;
+        node_use_dtrace: boolean;
+        node_use_etw: boolean;
+        node_use_openssl: boolean;
+        target_arch: string;
+        v8_no_strict_aliasing: number;
+        v8_use_snapshot: boolean;
+        visibility: string;
+    };
+    };
+    kill(pid: number, signal?: string): void;
+    pid: number;
+    title: string;
+    arch: string;
+    platform: string;
+    memoryUsage(): { rss: number; heapTotal; number; heapUsed: number; };
+    nextTick(callback: Function): void;
+    umask(mask?: number): number;
+    uptime(): number;
+    hrtime(): number[];
+}
+
 interface NodeBuffer {
     [index: number]: number;
     write(string: string, offset?: number, length?: number, encoding?: string): number;
@@ -113,6 +170,46 @@ declare module "stream" {
         destroy(): void;
         destroySoon(): void;
     }
+}
+
+declare module "repl" {
+    import stream = require("stream");
+    import events = require("events");
+
+    export interface EvalCb { (err: Error, result: any) }
+
+    export interface ReplOptions {
+        prompt?: string;
+        input?: stream.ReadableStream;
+        output?: stream.WritableStream;
+        terminal?: boolean;
+        eval?: Function;
+        useColors?: boolean;
+        useGlobal?: boolean;
+        ignoreUndefined?: boolean;
+        writer?: Function;
+    }
+    export function start(options: ReplOptions): events.EventEmitter;
+
+    export class REPLServer {
+      constructor(opts: ReplOptions);
+      complete(line: string, cb: (completions: Array) => void);
+      createContext();
+      eval: (str: string, context: any, file: string, cb: EvalCb) => any;
+    }
+}
+
+declare module "vm" {
+    export interface Context { }
+    export interface Script {
+        runInThisContext(): void;
+        runInNewContext(sandbox?: Context): void;
+    }
+    export function runInThisContext(code: string, filename?: string): void;
+    export function runInNewContext(code: string, sandbox?: Context, filename?: string): void;
+    export function runInContext(code: string, context: Context, filename?: string): void;
+    export function createContext(initSandbox?: Context): Context;
+    export function createScript(code: string, filename?: string): Script;
 }
 
 declare module "fs" {
@@ -250,4 +347,33 @@ declare module "path" {
     export function basename(p: string, ext?: string): string;
     export function extname(p: string): string;
     export var sep: string;
+}
+
+declare module "util" {
+    export function format(format: any, ...param: any[]): string;
+    export function debug(string: string): void;
+    export function error(...param: any[]): void;
+    export function puts(...param: any[]): void;
+    export function print(...param: any[]): void;
+    export function log(string: string): void;
+    export function inspect(object: any, showHidden?: boolean, depth?: number, color?: boolean): void;
+    export function isArray(object: any): boolean;
+    export function isRegExp(object: any): boolean;
+    export function isDate(object: any): boolean;
+    export function isError(object: any): boolean;
+    export function inherits(constructor: any, superConstructor: any): void;
+}
+
+interface NodeFiber { run(); }
+
+interface FiberModule {
+  (fn): NodeFiber;
+  current: NodeFiber;
+  yield();
+}
+
+declare module "fibers" {
+  var fiberModule: FiberModule;
+
+  export = fiberModule;
 }

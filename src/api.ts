@@ -8,10 +8,11 @@ interface RowArrayCb { (err: Error, array: Array<Row>); }
 
 interface ObjectCb { (err: Error, obj: any); }
 
-interface TransactionCb { (err: Error, tc: Transaction); }
+interface TransactionCb { (err: Error, tx: Transaction); }
 
 interface Connection {
   begin(cb: TransactionCb);
+  close(cb: DoneCb);
 }
 
 interface Transaction {

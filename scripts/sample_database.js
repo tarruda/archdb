@@ -33,8 +33,9 @@ function newCustomer() {
   };
 }
 
-var batchSize = 1;
+var batchSize = 500000;
 var remaining = 1000000;
+var totalCount = 0;
 
 function checkUsage() {
   if (remaining > 0) setImmediate(function() { insert(batchSize); });
@@ -50,8 +51,8 @@ function insert(total) {
     function next() {
       customers.ins(newCustomer(), function(err, key) {
         if (err) throw err;
-        count++;
-        if (count % 1000 === 0) console.log('Row count', key);
+        totalCount = ++count;
+        if (totalCount % 10000 === 0) console.log('Row count', key);
         if (count === total){
           return tx.commit(function(err) {
             if (err) throw err;

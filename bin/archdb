@@ -1,0 +1,5 @@
+#!/usr/bin/env node
+
+require('source-map-support').install();
+var ArchdbREPL = require('archdb').REPL;
+var repl = new ArchdbREPL(process.stdin, process.stdout);
