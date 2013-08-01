@@ -13,5 +13,5 @@ features:
 
 
 ### Install
-  npm install archdb
+    npm install archdb
 
