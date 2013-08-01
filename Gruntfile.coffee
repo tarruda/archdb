@@ -76,9 +76,9 @@ module.exports = (grunt) ->
         'test/init_node.js'
         'test/unit/platform/nodejs/*.js'
         'test/unit/*.js'
-        'test/functional/fs_storage.js'
-        'test/functional/database_api.js'
-        'test/functional/node.js'
+        'test/acceptance/fs_storage.js'
+        'test/acceptance/database_api.js'
+        'test/acceptance/node.js'
       ]
 
     karma:
@@ -224,7 +224,7 @@ module.exports = (grunt) ->
     'copy'
     'mapcat:nodejs_release'
     'mapcat:browser_debug'
-    # 'nodejs_test'
+    'nodejs_test'
     'connect'
     'livereload-start'
     'watch'
@@ -236,7 +236,7 @@ module.exports = (grunt) ->
     'mapcat:nodejs_release'
     'mapcat:browser_debug'
     'mapcat:browser_release'
-    # 'nodejs_test'
+    'nodejs_test'
     'karma'
   ]
 
