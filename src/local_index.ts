@@ -64,12 +64,17 @@ class LocalIndex implements Domain {
       if (err) return cb(err, null);
       if (this.hist) {
         if (oldValue) {
-          old = oldValue;
-          he = [HistoryEntryType.Update, this.id, key, oldValue, newValue];
+          if ((oldValue instanceof ObjectRef && !oldValue.equals(newValue)) ||
+              oldValue !== newValue) {
+            old = oldValue;
+            he = [HistoryEntryType.Update, this.id, key, oldValue, newValue];
+          }
         } else {
           he = [HistoryEntryType.Insert, this.id, key, newValue];
         }
-        return this.saveHistory(he, histCb);
+        if (he) this.saveHistory(he, histCb);
+        else cb(null, newValue);
+        return;
       }
       cb(null, old);
     };
@@ -181,7 +186,8 @@ class LocalCursor extends Emitter implements Cursor {
 
   each(cb: RowCb) {
     var job = (cb) => {
-      this.once('end', cb);
+      jobCb = cb;
+      this.once('end', endCb);
       this.find(visitCb);
     };
     var visitCb = (err: Error, next: NextNodeCb, key: any, val: any) => {
@@ -195,18 +201,23 @@ class LocalCursor extends Emitter implements Cursor {
     };
     var endCb = (err: Error) => {
       if (err) this.err = err;
-      if (this.hasNext()) this.nextNodeCb(true);
+      // if (this.hasNext()) this.nextNodeCb(true);
       this.nextNodeCb = null;
       if (this.thenCb) {
         this.thenCb(err);
         this.thenCb = null;
       }
+      if (jobCb) {
+        jobCb(err);
+        jobCb = null
+      }
     };
+    var jobCb;
 
     if (this.closed) throw new CursorError('Cursor already closed');
     if (this.started) throw new CursorError('Cursor already started');
     this.started = true;
-    this.queue.add(endCb, job);
+    this.queue.add(null, job);
     return this;
   }
 

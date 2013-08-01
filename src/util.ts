@@ -186,25 +186,30 @@ class JobQueue {
   }
 
   add(cb: AnyCb, fn: (cb: AnyCb) => void) {
-    this.jobs.push(new Job(cb, fn));
+    var invokeCb = () => {
+      if (cb) cb.apply(null, args);
+      else if (args[0] instanceof Error) throw args[0]; // FIXME
+      this.running = false;
+      this.run();
+    }
+    var jobCb = () => {
+      if (!jobCb) throw new Error('job callback invoked too many times by ');
+      jobCb = null;
+      args = arguments;
+      yield(invokeCb);
+    };
+    var args;
+
+    this.jobs.push(new Job(jobCb, fn));
     this.run();
   }
 
   run() {
-    var currentJobCb = (...args: any[]) => {
-      if (currentJob.cb) currentJob.cb.apply(null, args);
-      else if (args[0] instanceof Error) throw args[0]; // FIXME debug
-      yield(nextJob);
-    };
     var nextJob = () => {
-      if (!this.jobs.length) {
-        this.running = false;
-        return;
-      }
+      if (!this.jobs.length) return;
       currentJob = this.jobs.shift();
-      currentJob.fn(currentJobCb);
+      currentJob.fn(currentJob.cb);
     };
-
     var currentJob;
 
     if (this.frozen || this.running || !this.jobs.length) return;

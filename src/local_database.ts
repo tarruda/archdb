@@ -43,8 +43,7 @@ class LocalDatabase implements Connection {
             suffix));
     };
 
-    if (!this.masterRef) this.queue.add(cb, job);
-    else job(cb);
+    this.queue.add(cb, job);
   }
 
   close(cb: DoneCb) {
