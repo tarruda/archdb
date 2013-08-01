@@ -394,13 +394,13 @@ class HistoryCursor extends LocalCursor {
       if (err) return cb(err, null);
       rv.domain = name;
       if (getOld) return this.dbStorage.getIndexData(rv.oldRef, getOldCb);
-      getOldCb(null, null);
+      getOldCb(null, rv.oldValue);
     };
     var getOldCb = (err: Error, value: any) => {
       if (err) return cb(err, null);
       rv.oldValue = value;
       if (getNew) return this.dbStorage.getIndexData(rv.ref, getNewCb);
-      getNewCb(null, null);
+      getNewCb(null, rv.value);
     };
     var getNewCb = (err: Error, value: any) => {
       if (err) return cb(err, null);
