@@ -1,4 +1,5 @@
 /// <reference path="./private_api.ts"/>
+/// <reference path="./bit_array.ts"/>
 /// <reference path="./util.ts"/>
 
 module avl {

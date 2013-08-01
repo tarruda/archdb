@@ -3,6 +3,7 @@
 /// <reference path="./local_revision.ts"/>
 /// <reference path="./local_index.ts"/>
 /// <reference path="./custom_errors.ts"/>
+/// <reference path="./bit_array.ts"/>
 /// <reference path="./open.ts"/>
 
 module local_database {
@@ -205,7 +206,15 @@ module local_database {
       };
       var replayHistoryCb = (err: Error, old: any) => {
         if (err) return cb(err);
-        if (old) return cb(new custom_errors.DbError('history entry exists'));
+        if (old) {
+          debugger;
+          // FIXME in the acceptance tests (tx1,tx2,tx3)/(tx1,tx2,tx4)
+          //       with memory backend this condition is happening sometimes
+          //       which causes random tests failure. I only noticed this
+          //       on node.js, this has never happened while running the
+          //       tests on google chrome.
+          return cb(new custom_errors.DbError('history entry exists'));
+        }
         nextHistoryEntry();
       };
       var commitTrees = () => {
@@ -216,7 +225,9 @@ module local_database {
           // the entire revision was fast-forwarded, so populate the commit
           // list with the revision treeCache
           for (var k in rev.treeCache) {
-            if (rev.treeCache[k].tree.modified()) commit.push(rev.treeCache[k]);
+            if (rev.treeCache[k].tree.modified()) {
+              commit.push(rev.treeCache[k]);
+            }
           }
           currentHistory = rev.hist;
           currentMaster = rev.master;
