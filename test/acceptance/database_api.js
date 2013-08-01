@@ -1,6 +1,7 @@
 'use strict';
 
 global.testDatabase = function(options, init) {
+  var ConflictError = custom_errors.ConflictError;
   var suiteName = options.type + ' database with ' + options.storage +
     ' storage';
 

@@ -1,4 +1,7 @@
 describe('BitArray', function() {
+  var BitArray = bit_array.BitArray;
+  var Uid = util.Uid, UidGenerator = util.UidGenerator;
+
   var array;
 
   beforeEach(function () {

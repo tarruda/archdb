@@ -1,6 +1,6 @@
 {
   "name": "archdb",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Simple but powerful NoSQL document-oriented database that runs in nodejs or any modern browser that supports localStorage.",
   "repository": {
     "type": "git",

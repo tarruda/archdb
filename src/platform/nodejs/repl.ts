@@ -11,6 +11,8 @@ import util = require('util');
 import repl = require('repl');
 import Fiber = require('fibers');
 
+var yield = platform.yield;
+
 class REPL extends repl.REPLServer {
   superEval: (str: string, context: any, file: string, cb: repl.EvalCb) => any;
 

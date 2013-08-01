@@ -1,6 +1,6 @@
 /// <reference path="./api.ts"/>
 
-var yield: (fn: (...args: any[]) => any) => any;
+var HISTORY = '$history';
 
 interface PredicateCb { (obj: any): boolean; }
 

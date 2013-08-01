@@ -1,7 +1,10 @@
 // declartions for some of the node.js API,
 // taken from the samples in typescript repository
  
-declare var process: { env: any };
+declare var process: {
+  env: any;
+  nextTick: (fn) => any;
+};
 
 interface NodeBuffer {
     [index: number]: number;

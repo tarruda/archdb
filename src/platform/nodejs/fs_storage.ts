@@ -14,8 +14,8 @@ var BLOCK_SIZE = 4096;
 class FsStorage implements DbStorage {
   tmpId: number;
   kvDir: string;
-  dataWrites: JobQueue;
-  nodeWrites: JobQueue;
+  dataWrites: util.JobQueue;
+  nodeWrites: util.JobQueue;
   nodeOffset: number;
   dataOffset: number;
   nodeFd: number;
@@ -55,8 +55,8 @@ class FsStorage implements DbStorage {
     this.dataFd = fs.openSync(dataFile, 'a+');
     this.nodeOffset = fs.fstatSync(this.nodeFd).size;
     this.dataOffset = fs.fstatSync(this.dataFd).size;
-    this.nodeWrites = new JobQueue();
-    this.dataWrites = new JobQueue();
+    this.nodeWrites = new util.JobQueue();
+    this.dataWrites = new util.JobQueue();
     this.tmpId = 0;
     if (fs.existsSync(metadataFile)) {
       this.metadataCbs = null;
@@ -86,9 +86,9 @@ class FsStorage implements DbStorage {
   set(key: string, obj: any, cb: DoneCb) {
     if (!this.metadata) {
       this.tmpMetadata = this.tmpMetadata || {};
-      this.tmpMetadata[key] = normalize(obj);
+      this.tmpMetadata[key] = util.normalize(obj);
     } else {
-      this.metadata[key] = normalize(obj);
+      this.metadata[key] = util.normalize(obj);
     }
     cb(null);
   }
@@ -99,7 +99,7 @@ class FsStorage implements DbStorage {
       this.metadataCbs.push({cb: cb, key: key});
     } else {
       if (!this.metadata[key]) return cb(null, null);
-      cb(null, denormalize(this.metadata[key]));
+      cb(null, util.denormalize(this.metadata[key]));
     }
   }
 
@@ -145,11 +145,11 @@ class FsStorage implements DbStorage {
       fs.write(this.metadataFd, header, 0, header.length, 0, headerWriteCb);
     };
     var headerWriteCb = (err: Error) => {
-      if (err) return cb(new FatalError('Failed to write metadata header'));
+      if (err) return cb(new custom_errors.FatalError('Failed to write metadata header'));
       fs.fsync(this.metadataFd, headerSyncCb);
     };
     var headerSyncCb = (err: Error) => {
-      if (err) return cb(new FatalError('Failed to sync metadata header'));
+      if (err) return cb(new custom_errors.FatalError('Failed to sync metadata header'));
       this.metadataOffset = pos;
       this.metadataLength = body.length;
       cb(null);
@@ -178,7 +178,7 @@ class FsStorage implements DbStorage {
     fs.close(this.dataFd, closeCb);
   }
 
-  private saveFd(fd: number, pos: number, queue: JobQueue, obj: any,
+  private saveFd(fd: number, pos: number, queue: util.JobQueue, obj: any,
       cb: RefCb) {
     var job = (appendCb) => {
       fs.write(fd, buffer, 0, buffer.length, null, appendCb);

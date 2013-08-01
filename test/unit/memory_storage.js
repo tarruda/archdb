@@ -1,4 +1,5 @@
 describe('MemoryStorage', function() {
+  var MemoryStorage = memory_storage.MemoryStorage;
   var mem;
 
   beforeEach(function() {

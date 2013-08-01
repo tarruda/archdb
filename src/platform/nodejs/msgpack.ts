@@ -1,4 +1,5 @@
 /// <reference path="../../util.ts"/>
+/// <reference path="../../bit_array.ts"/>
 /// <reference path="../../private_api.ts"/>
 /// <reference path="../../open.ts"/>
 /// <reference path="../../declarations/node.d.ts"/>
@@ -8,16 +9,18 @@
  * with the FsStorage backend. 
  * Based on
  * https://github.com/msgpack/msgpack-javascript/blob/master/msgpack.base.js
- * But uses reserved type codes for Uid, ObjectRef, Date and RegExp.
+ * But uses reserved type codes for util.Uid, ObjectRef, Date and RegExp.
  * undefined values are normalized to null
  */
 module msgpack {
+  var yield = platform.yield;
   var ud = undefined;
+  var ObjectType = util.ObjectType;
 
   export function encode(obj): NodeBuffer {
     var encodeRec = (obj) => {
       var b, l, ref, flags, key, keys;
-      var type = typeOf(obj);
+      var type = util.typeOf(obj);
       switch (type) {
         case ObjectType.Null:
         case ObjectType.Undefined:
@@ -68,7 +71,7 @@ module msgpack {
           }
           if (!b) {
             // For doubles or integers with length > 32 we reuse the
-            // BitArray number packing algorithm. This is necessary
+            // bit_array.BitArray number packing algorithm. This is necessary
             // because Buffer.{write,read}DoubleBE seems to fail sometimes
             // when the precision is high, eg:
             // > b = new Buffer(8);
@@ -171,7 +174,7 @@ module msgpack {
       }
     };
     var encodeDouble = (num: number, typeCode: number): NodeBuffer => {
-      var ba = new BitArray(), b = new Buffer(9);
+      var ba = new bit_array.BitArray(), b = new Buffer(9);
       ba.packNumber(num);
       b.writeUInt8(typeCode, 0);
       b.writeUInt32BE(ba.words[0] >>> 0, 1);
@@ -251,7 +254,7 @@ module msgpack {
       };
       var uidCb = (err: Error) => {
         if (err) return cb(err, undefined);
-        cb(null, new Uid(b.slice(offset, offset += 14).toString('hex')));
+        cb(null, new util.Uid(b.slice(offset, offset += 14).toString('hex')));
       };
       var regExpLengthCb = (err: Error) => {
         if (err) return cb(err, undefined);
@@ -376,7 +379,7 @@ module msgpack {
       seek(1, checkType);
     };
     var decodeDouble = (b: NodeBuffer): number => {
-      var ba = new BitArray();
+      var ba = new bit_array.BitArray();
       ba.words = [
         b.readUInt32BE(offset),
         b.readUInt32BE(offset += 4),

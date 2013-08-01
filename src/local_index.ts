@@ -11,10 +11,10 @@ enum HistoryEntryType {
 class LocalIndex implements Domain {
   id: number;
 
-  constructor(private name: string, private db: LocalDatabase,
-      public dbStorage: DbStorage, public queue: JobQueue,
+  constructor(private name: string, private db: local_database.LocalDatabase,
+      public dbStorage: DbStorage, public queue: util.JobQueue,
       public tree: IndexTree, public hist: IndexTree,
-      public uidGenerator: UidGenerator) { }
+      public uidGenerator: util.UidGenerator) { }
 
   ins(value: any, cb: ObjectCb) {
     var insCb = (err: Error) => {
@@ -83,13 +83,13 @@ class LocalIndex implements Domain {
       cb(null, old);
     };
 
-    var old, newValue, type = typeOf(value);
+    var old, newValue, type = util.typeOf(value);
 
     switch (type) {
       // small fixed-length values are stored inline
-      case ObjectType.ObjectRef:
-      case ObjectType.Boolean:
-      case ObjectType.Number:
+      case util.ObjectType.ObjectRef:
+      case util.ObjectType.Boolean:
+      case util.ObjectType.Number:
         set(value);
         break;
       default:
@@ -127,9 +127,9 @@ class LocalIndex implements Domain {
   }
 }
 
-class LocalCursor extends Emitter implements Cursor {
+class LocalCursor extends util.Emitter implements Cursor {
   dbStorage: DbStorage;
-  queue: JobQueue;
+  queue: util.JobQueue;
   tree: IndexTree;
   query: any;
   closed: boolean;
@@ -138,7 +138,7 @@ class LocalCursor extends Emitter implements Cursor {
   nextNodeCb: NextNodeCb;
   thenCb: DoneCb;
 
-  constructor(dbStorage: DbStorage, queue: JobQueue, tree: IndexTree,
+  constructor(dbStorage: DbStorage, queue: util.JobQueue, tree: IndexTree,
       query: any) {
     super();
     this.dbStorage = dbStorage;
@@ -214,8 +214,8 @@ class LocalCursor extends Emitter implements Cursor {
     };
     var jobCb;
 
-    if (this.closed) throw new CursorError('Cursor already closed');
-    if (this.started) throw new CursorError('Cursor already started');
+    if (this.closed) throw new custom_errors.CursorError('Cursor already closed');
+    if (this.started) throw new custom_errors.CursorError('Cursor already started');
     this.started = true;
     this.queue.add(null, job);
     return this;
@@ -230,7 +230,7 @@ class LocalCursor extends Emitter implements Cursor {
   }
 
   next() {
-    if (!this.hasNext()) throw new CursorError('No more rows');
+    if (!this.hasNext()) throw new custom_errors.CursorError('No more rows');
     this.nextNodeCb();
   }
 
@@ -282,15 +282,15 @@ class LocalCursor extends Emitter implements Cursor {
     // [1, 2, 3] is starts with [1, 2]
     // 'ab' starts with 'abc'
     var type;
-    var gte = new BitArray(this.query.$like), lte = gte.clone();
+    var gte = new bit_array.BitArray(this.query.$like), lte = gte.clone();
 
-    if ((type = typeOf(this.query.$like)) === ObjectType.Array) {
+    if ((type = util.typeOf(this.query.$like)) === util.ObjectType.Array) {
       // to properly create the 'upper bound key' for array, we must
       // insert the '1' before its terminator
       lte.rewind(4);
       lte.write(1, 1);
       lte.write(0, 4);
-    } else if (type === ObjectType.String) {
+    } else if (type === util.ObjectType.String) {
       lte.write(1, 1);
     } else {
       throw new Error('invalid object type for $like parameter');
@@ -304,18 +304,18 @@ class LocalCursor extends Emitter implements Cursor {
     var gte, gt, lte, lt;
 
     if (this.query) {
-      gte = this.query.$gte ? new BitArray(this.query.$gte) : null;
-      gt = this.query.$gt ? new BitArray(this.query.$gt) : null;
-      lte = this.query.$lte ? new BitArray(this.query.$lte) : null;
-      lt = this.query.$lt ? new BitArray(this.query.$lt) : null;
+      gte = this.query.$gte ? new bit_array.BitArray(this.query.$gte) : null;
+      gt = this.query.$gt ? new bit_array.BitArray(this.query.$gt) : null;
+      lte = this.query.$lte ? new bit_array.BitArray(this.query.$lte) : null;
+      lt = this.query.$lt ? new bit_array.BitArray(this.query.$lt) : null;
       if (this.query.$rev) return this.findRangeDesc(gte, gt, lte, lt, cb);
     }
 
     this.findRangeAsc(gte, gt, lte, lt, cb);
   }
 
-  private findRangeAsc(gte: BitArray, gt: BitArray, lte: BitArray,
-      lt: BitArray, cb: VisitKvCb) {
+  private findRangeAsc(gte: bit_array.BitArray, gt: bit_array.BitArray, lte: bit_array.BitArray,
+      lt: bit_array.BitArray, cb: VisitKvCb) {
     var nodeCb = (err: Error, next: NextNodeCb, node: IndexNode) => {
       var key;
       if (err || !next) return cb(err, null, null, null);
@@ -340,8 +340,8 @@ class LocalCursor extends Emitter implements Cursor {
     this.tree.inOrder(gte || gt, nodeCb);
   }
 
-  private findRangeDesc(gte: BitArray, gt: BitArray, lte: BitArray,
-      lt: BitArray, cb: VisitKvCb) {
+  private findRangeDesc(gte: bit_array.BitArray, gt: bit_array.BitArray, lte: bit_array.BitArray,
+      lt: bit_array.BitArray, cb: VisitKvCb) {
     var nodeCb = (err: Error, next: NextNodeCb, node: IndexNode) => {
       var key;
       if (err || !next) return cb(err, null, null, null);
@@ -368,23 +368,23 @@ class LocalCursor extends Emitter implements Cursor {
 }
 
 class HistoryIndex extends LocalIndex {
-  constructor(dbStorage: DbStorage, queue: JobQueue, tree: IndexTree,
+  constructor(dbStorage: DbStorage, queue: util.JobQueue, tree: IndexTree,
       private master: IndexTree) {
     super(null, null, dbStorage, queue, tree, null, null);
   }
 
   ins(value: any, cb: ObjectCb) {
-    throw new InvalidOperationError(
+    throw new custom_errors.InvalidOperationError(
         "Direct modifications are forbidden on the $history domain");
   }
 
   set(key: any, value: any, cb: ObjectCb) {
-    throw new InvalidOperationError(
+    throw new custom_errors.InvalidOperationError(
         "Direct modifications are forbidden on the $history domain");
   }
 
   del(key: any, cb: ObjectCb) {
-    throw new InvalidOperationError(
+    throw new custom_errors.InvalidOperationError(
         "Direct modifications are forbidden on the $history domain");
   }
 
@@ -395,7 +395,7 @@ class HistoryIndex extends LocalIndex {
 }
 
 class HistoryCursor extends LocalCursor {
-  constructor(dbStorage: DbStorage, queue: JobQueue, tree: IndexTree,
+  constructor(dbStorage: DbStorage, queue: util.JobQueue, tree: IndexTree,
       query, private master: IndexTree) {
     super(dbStorage, queue, tree, query);
   }
@@ -454,7 +454,7 @@ class HistoryCursor extends LocalCursor {
         }
         break;
       default:
-        throw new CorruptedStateError();
+        throw new custom_errors.CorruptedStateError();
     }
 
     this.master.get(['names', val[1]], getDomainNameCb);
@@ -470,3 +470,4 @@ class HistoryRow {
       public key: any, public oldValue: any, public oldRef: ObjectRef,
       public value: any, public ref: ObjectRef) { }
 }
+

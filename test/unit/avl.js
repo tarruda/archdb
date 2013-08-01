@@ -1,4 +1,9 @@
 describe('AvlTree', function() {
+  var AvlTree = avl.AvlTree;
+  var AvlNode = avl.AvlNode;
+  var MemoryStorage = memory_storage.MemoryStorage;
+  var BitArray = bit_array.BitArray;
+  var normalize = util.normalize, denormalize = util.denormalize;
   var dbStorage, tree;
 
   beforeEach(function() {
@@ -1380,26 +1385,27 @@ describe('AvlTree', function() {
                            delSeqTransaction, inspect);
   generateAvlRotationSuite('committed', insCommit, delCommit,
                            delSeqCommit, inspectStorageTree);
+
+  describe('Node', function() {
+    var node;
+
+    beforeEach(function() {
+      node = new AvlNode(5, 'value');
+      node.leftRef = 'abc';
+      node.rightRef = 'def';
+    });
+
+    it('normalizes to a simple array', function() {
+      expect(node.normalize()).to.deep.eql([5, 'value', 'abc', 'def', 0]);
+    });
+
+    it('has attributes correctly set', function() {
+      expect(node.key.normalize()).to.eql(5);
+      expect(node.value).to.eql('value');
+      expect(node.leftRef).to.eql('abc');
+      expect(node.rightRef).to.eql('def');
+      expect(node.height).to.eql(0);
+    });
+  });
 });
 
-describe('AvlNode', function() {
-  var node;
-
-  beforeEach(function() {
-    node = new AvlNode(5, 'value');
-    node.leftRef = 'abc';
-    node.rightRef = 'def';
-  });
-
-  it('normalizes to a simple array', function() {
-    expect(node.normalize()).to.deep.eql([5, 'value', 'abc', 'def', 0]);
-  });
-
-  it('has attributes correctly set', function() {
-    expect(node.key.normalize()).to.eql(5);
-    expect(node.value).to.eql('value');
-    expect(node.leftRef).to.eql('abc');
-    expect(node.rightRef).to.eql('def');
-    expect(node.height).to.eql(0);
-  });
-});
