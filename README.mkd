@@ -1,0 +1,17 @@
+### ArchDB
+
+NoSQL, document-oriented database implemented in pure javascript. It uses
+pluggable storage backend, so its possible to run it on node.js (filesystem
+backend) or any web browser(memory or localStorage backend). Here are some
+features:
+
+  - Transaction oriented(ACID transactions like classic SQL databases)
+  - Can run in any javascript platform
+  - No locking
+  - Powerful data processing framework(like CouchDB map/reduce, but more
+    flexible).
+
+
+### Install
+  npm install archdb
+
