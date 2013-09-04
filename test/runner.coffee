@@ -13,4 +13,9 @@ global.run = (tests) ->
     else
       suite = ->
         run(v)
-      describe(k, suite)
+      if k.match(/^only:/)
+        describe.only(k, suite)
+      else if k.match(/^skip:/)
+        describe.skip(k, suite)
+      else
+        describe(k, suite)

@@ -3,7 +3,14 @@ BitArray = require('./bit_array')
 
 # using negative numbers as temporary node ids allow us to easily
 # identify if the node is new(was not persisted yet)
-avlNodeId = -1
+avlNodeId = 1
+
+
+refEquals = (a, b) ->
+  if a instanceof ObjectRef
+    return a.equals(b)
+  return a == b
+
 
 class AvlNode
   constructor: (key, value) ->
@@ -14,7 +21,7 @@ class AvlNode
     @right = null
     @rightRef = null
     @height = 0
-    @ref = new ObjectRef(avlNodeId--)
+    @ref = avlNodeId++
 
 
   getKey: -> @key
@@ -26,7 +33,7 @@ class AvlNode
   normalize: -> [@key.normalize(), @value, @leftRef, @rightRef, @height]
 
 
-  volatile: -> @ref.valueOf() < 0
+  volatile: -> typeof @ref == 'number'
 
 
   clone: ->
@@ -274,7 +281,7 @@ class AvlTree
       current.ref = ref
       if parents.length
         parent = parents.pop()
-        if parent.leftRef and parent.leftRef.equals(currentRef)
+        if parent.leftRef and refEquals(parent.leftRef, currentRef)
           parent.leftRef = current.ref
           if releaseCache then parent.left = null
         else
@@ -378,7 +385,7 @@ class AvlTree
       if err then return cb(err, null)
       # replace the node with its child
       if parent
-        if parent.leftRef and parent.leftRef.equals(node.ref)
+        if parent.leftRef and refEquals(parent.leftRef, node.ref)
           parent.leftRef = child.ref
           parent.left = child
         else
@@ -395,7 +402,7 @@ class AvlTree
     else
       if not node.leftRef and not node.rightRef
         if parent
-          if parent.leftRef and parent.leftRef.equals(node.ref)
+          if parent.leftRef and refEquals(parent.leftRef, node.ref)
             parent.leftRef = null
             parent.left = null
           else
@@ -423,7 +430,7 @@ class AvlTree
       if not current.volatile()
         currentRef = current.ref
         current = current.clone()
-        if parent.leftRef and parent.leftRef.equals(currentRef)
+        if parent.leftRef and refEquals(parent.leftRef, currentRef)
           parent.left = current
           parent.leftRef = current.ref
         else
@@ -456,7 +463,7 @@ class AvlTree
 
     childCb = (err, child) =>
       if err then return cb(err, null)
-      if child.ref.equals(node.leftRef) then node.left = child
+      if refEquals(child.ref, node.leftRef) then node.left = child
       else node.right = child
       if (node.leftRef and not node.left) or (node.rightRef and not node.right)
         # TODO remove debug assert

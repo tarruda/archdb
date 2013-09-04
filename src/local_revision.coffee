@@ -4,7 +4,7 @@
 
 
 class LocalRevision extends Emitter
-  constructor: (db, dbStorage, masterRef, suffix) ->
+  constructor: (db, dbStorage, masterRef, @suffix) ->
     errorCb = (err) =>
       @emit('error', err)
 
@@ -17,6 +17,8 @@ class LocalRevision extends Emitter
     @dbStorage = dbStorage
     @originalMasterRef = masterRef
     @uidGenerator = new UidGenerator(suffix)
+    # this id is used mainly to filter out history entries created after
+    # this revision when executing the merge algorithm
     @id = @uidGenerator.generate()
     @queue = new JobQueue()
     @queue.on('error', errorCb)

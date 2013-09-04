@@ -164,7 +164,7 @@ module.exports = (grunt) ->
     done = @async()
     args = @filesSrc
     args = ['--compilers', 'coffee:coffee-script'].concat(args)
-    args.unshift('--check-leaks')
+    # args.unshift('--check-leaks')
     if data.debug and Object.keys(data.debug).length
       args.unshift('--debug-brk')
     opts = stdio: 'inherit'

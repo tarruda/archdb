@@ -13,25 +13,14 @@
 #             for each instance.
 #
 #  Uids are represented by hex strings wrapped on the Uid class
-# /
-
-
-class ObjectRef
-  constructor: (@val) ->
-
-  valueOf: -> @val
-
-  equals: (other) ->
-    if not (other instanceof ObjectRef)
-      return false
-    return @valueOf() == other.valueOf()
-
+#
 
 class Uid
   constructor: (@hex) ->
 
   # the date this uid was generated
   getTime: -> parseInt(@hex.substr(0, 12), 16)
+
 
   byteLength: -> @hex.length / 2
 
@@ -44,6 +33,7 @@ class UidGenerator
       @suffix = suffix
     @genTime = 0
     @genTimeCount = 0
+
 
   generate: (time) ->
     if not time
@@ -63,6 +53,7 @@ class UidGenerator
 
     return new Uid(timeStr + tc + @suffix)
 
+
   generateSuffix: ->
     @suffix = ''
     # generated suffixes are random 7-byte numbers so the resulting
@@ -70,10 +61,12 @@ class UidGenerator
     for i in [1..14]
       @suffix += @random('0123456789abcdef')
 
+
   toTime16: (time) ->
     pad = '000000000000'
     time = time.toString(16)
     return pad.substr(0, pad.length - time.length) + time
+
 
   random: (choices) ->
     radix = choices.length
@@ -83,6 +76,19 @@ class UidGenerator
       choice--
 
     return choices[choice]
+
+
+class ObjectRef
+  constructor: (@val) ->
+
+
+  valueOf: -> @val
+
+
+  equals: (other) ->
+    if not (other instanceof ObjectRef)
+      return false
+    return @valueOf() == other.valueOf()
 
 
 class LinkedListNode
@@ -97,6 +103,7 @@ class LinkedList
     else
       @tail = @head = node
 
+
   shift: ->
     rv = @head.data
     if @head.next
@@ -104,12 +111,14 @@ class LinkedList
     else @head = @tail = null
     return rv
 
+
   each: (cb) ->
     current = @head
     while current
       cb(current.data)
       current = current.next
     return
+
 
   remove: (item) ->
     current = @head
@@ -133,16 +142,19 @@ class Emitter
     @handlers[event] = @handlers[event] || new LinkedList()
     @handlers[event].push(cb)
 
+
   once: (event, cb) ->
     onceCb = =>
       cb.apply(null, arguments)
       @handlers[event].remove(onceCb)
     @on(event, onceCb)
 
+
   off: (event, cb) ->
     if not @handlers or not @handlers[event]
       return
     @handlers[event].remove(cb)
+
 
   emit: (event, args...) ->
     invokeCb = (node) -> node.apply(null, args)
@@ -162,6 +174,7 @@ class JobQueue extends Emitter
     @jobs = []
     @running = false
 
+
   add: (cb, fn) ->
     args = null
 
@@ -175,13 +188,14 @@ class JobQueue extends Emitter
 
     jobCb = =>
       if not jobCb
-        throw new Error('job callback invoked too many times by ')
+        throw new Error('job callback invoked too many times')
       jobCb = null
       args = arguments
       $yield(invokeCb)
 
     @jobs.push(new Job(jobCb, fn))
     @run()
+
 
   run: ->
     nextJob = =>

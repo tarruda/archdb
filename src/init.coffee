@@ -9,7 +9,7 @@ $yield = setImmediate
 
 if typeof Error.captureStackTrace == 'function'
   injectStackTrace = (err) ->
-    Error.captureStackTrace(err, arguments.callee.caller.caller)
+    Error.captureStackTrace(err, arguments.callee.caller)
 else
   injectStackTrace = ->
 

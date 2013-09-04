@@ -1,7 +1,5 @@
 /node_modules/
 /test/
-/build/
-/tmp/
 /scripts/
 *.log
 *.swp

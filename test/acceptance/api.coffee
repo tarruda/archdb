@@ -378,8 +378,11 @@ apiTests =
                       ])
                       done()))))))
 
+
       'with key/value conflict':
         'tx1, tx2, tx3': (done) ->
+          # tx1 updates keys 1/2 of dom1 and key 5 of dom2, which
+          # are also updated by tx1 and tx2
           @tx1.commit( =>
             @tx2.commit( =>
               @tx3dom1.find().all((err, items) =>
@@ -399,17 +402,17 @@ apiTests =
                     index: 'domain1'
                     key: 1
                     originalValue: 1
-                    actualValue: {name: 'one'}
+                    currentValue: {name: 'one'}
                   }, {
-                    index: 'domain1'
                     key: 2
                     originalValue: {name: 'two'}
-                    actualValue: 22
+                    index: 'domain1'
+                    currentValue: 22
                   }, {
                     index: 'domain2'
                     key: 5
                     originalValue: 5
-                    actualValue: 55
+                    currentValue: 55
                   }])
                   done()))))
 

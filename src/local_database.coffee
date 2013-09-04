@@ -1,4 +1,5 @@
-{ObjectRef, JobQueue, UidGenerator, ObjectType, typeOf} = require('./util')
+{ObjectRef, JobQueue, Uid, UidGenerator, ObjectType, typeOf} =
+  require('./util')
 {DbError, ConflictError} = require('./custom_errors')
 {AvlTree} = require('./avl')
 {HistoryEntryType} = require('./local_index')
@@ -31,7 +32,8 @@ class LocalDatabase
 
   begin: (cb) ->
     job = (cb) =>
-      suffix = @uidGenerator.generate().hex.slice(0, 14)
+      hex = @uidGenerator.generate().hex
+      suffix = hex.slice(0, 14)
       cb(null, new LocalRevision(this, @dbStorage, @masterRef, suffix))
 
     @queue.add(cb, job)
@@ -67,8 +69,8 @@ class LocalDatabase
     forwarded = replay = commit = currentHistory = currentCommit =
       cached = currentIndex = currentMaster = revHistoryEntryNode =
       currentIndexKey = historyEntryType = refMap = conflicts =
-      revHistoryEntryKey = revHistoryEntry = nextHistoryEntry = replayTree =
-      null
+      revHistoryEntryValueKey = revHistoryEntryValue = nextHistoryEntry =
+      replayTree = revHistoryEntryKey = null
 
     mergeJob = (nextJob) =>
       # Sets the merge job completion callback and copy cached indexes
@@ -114,9 +116,12 @@ class LocalDatabase
       $yield(nextIndex)
 
     currentHistoryCb = (err, refCount) =>
-      # Start iterating the revision history to check for possible conflicts
+      # Start iterating the revision's history to check for possible conflicts
       if err then return cb(err)
       currentHistory = new AvlTree(@dbStorage, refCount[0], refCount[1])
+      # We are only interested in walking through history entries created
+      # in the revision. Each revision has a timestamped id which we can use
+      # to filter out history entries created in old revisions
       rev.hist.inOrder(new BitArray(rev.id), historyWalkCb)
 
     historyWalkCb = (err, next, node) =>
@@ -130,28 +135,38 @@ class LocalDatabase
         return
       nextHistoryEntry = next
       revHistoryEntryNode = node
-      revHistoryEntry = node.getValue()
-      historyEntryType = revHistoryEntry[0]
-      if not replay[revHistoryEntry[1]] then return nextHistoryEntry()
-      replayTree = replay[revHistoryEntry[1]].tree
-      revHistoryEntryKey = revHistoryEntry[2]
+      revHistoryEntryKey = node.getKey()
+      revHistoryEntryValue = node.getValue()
+      # Even after filtering history entries using the revision's timestamp,
+      # it is still possible to have entries created in previous revisions
+      # that were committed later(and thus have a higher timestamp).
+      # To ensure that this history node was created in this revision
+      # we must compare its uid suffix with the revision's suffix
+      if revHistoryEntryKey.normalize().hex.slice(14) != rev.suffix
+        return $yield(next)
+      if not replay[revHistoryEntryValue[1]]
+        # Don't process nodes for domains that were fast-forwarded
+        return $yield(next)
+      historyEntryType = revHistoryEntryValue[0]
+      replayTree = replay[revHistoryEntryValue[1]].tree
+      revHistoryEntryValueKey = revHistoryEntryValue[2]
       if historyEntryType != HistoryEntryType.Insert
-        return replayTree.get(revHistoryEntryKey, checkIndexCb)
+        return replayTree.get(revHistoryEntryValueKey, checkIndexCb)
       replayOperation()
 
     checkIndexCb = (err, ref) =>
       # Collects all conflicts due to concurrent value updates.
       if ref instanceof ObjectRef
-        hasConflict = not ref.equals(revHistoryEntry[3])
+        hasConflict = not ref.equals(revHistoryEntryValue[3])
       else
-        hasConflict = ref != revHistoryEntry[3]
+        hasConflict = ref != revHistoryEntryValue[3]
       if hasConflict
         conflicts = conflicts or []
         conflicts.push({
-          index: replay[revHistoryEntry[1]].name
-          key: revHistoryEntryKey
-          originalValue: revHistoryEntry[3]
-          actualValue: ref
+          index: replay[revHistoryEntryValue[1]].name
+          key: revHistoryEntryValueKey
+          originalValue: revHistoryEntryValue[3]
+          currentValue: ref
         })
         return nextHistoryEntry()
       replayOperation()
@@ -160,16 +175,16 @@ class LocalDatabase
       # Replays the operation in the current index
       if historyEntryType == HistoryEntryType.Insert or
       historyEntryType == HistoryEntryType.Update
-        replayTree.set(revHistoryEntryKey, revHistoryEntry[4] or
-            revHistoryEntry[3], replayOperationCb)
+        replayTree.set(revHistoryEntryValueKey, revHistoryEntryValue[4] or
+            revHistoryEntryValue[3], replayOperationCb)
       else
-        replayTree.del(revHistoryEntryKey, replayOperationCb)
+        replayTree.del(revHistoryEntryValueKey, replayOperationCb)
 
     replayOperationCb = (err) =>
       # Replays the history entry in the current history
       if err then return cb(err)
-      currentHistory.set(revHistoryEntryNode.getKey(),
-          revHistoryEntry, replayHistoryCb)
+      currentHistory.set(revHistoryEntryKey, revHistoryEntryValue,
+        replayHistoryCb)
 
     replayHistoryCb = (err, old) =>
       if err then return cb(err)
@@ -252,13 +267,13 @@ class LocalDatabase
     nextConflict = =>
       if i == conflicts.length then return cb(new ConflictError(conflicts))
       conflict = conflicts[i++]
-      if typeOf(conflict.actualValue) == ObjectType.ObjectRef
-        return @dbStorage.getIndexData(conflict.actualValue, actualValueCb)
-      actualValueCb(null, conflict.actualValue)
+      if typeOf(conflict.currentValue) == ObjectType.ObjectRef
+        return @dbStorage.getIndexData(conflict.currentValue, currentValueCb)
+      currentValueCb(null, conflict.currentValue)
 
-    actualValueCb = (err, value) =>
+    currentValueCb = (err, value) =>
       if err then return cb(err)
-      conflict.actualValue = value
+      conflict.currentValue = value
       if typeOf(conflict.originalValue) == ObjectType.ObjectRef
         return @dbStorage.getIndexData(conflict.originalValue, originalValueCb)
       originalValueCb(null, conflict.originalValue)

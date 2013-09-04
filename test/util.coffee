@@ -30,6 +30,54 @@ tests =
         @queue.add(done, job3)
 
 
+      'stack job queues': (done) ->
+        i = 0
+        q1 = new JobQueue()
+        q2 = new JobQueue()
+        q3 = new JobQueue()
+        job1 = (cb) ->
+          i++
+          cb()
+
+        cb1 = ->
+          expect(i).to.eql(1)
+
+        job2 = (cb) ->
+          i++
+          cb()
+
+        cb2 = ->
+          expect(i).to.eql(2)
+
+        job3 = (cb) ->
+          i++
+          cb()
+
+        cb3 = ->
+          expect(i).to.eql(3)
+
+        job4 = (cb) ->
+          i++
+          cb()
+
+        cb4 = ->
+          expect(i).to.eql(4)
+          done()
+
+        addQ1 = (cb, job) ->
+          q1.add(cb, ((c) ->
+            q3.add(c, job)))
+
+        addQ2 = (cb, job) ->
+          q2.add(cb, ((c) ->
+            q3.add(c, job)))
+
+        addQ1(cb1, job1)
+        addQ2(cb2, job2)
+        addQ1(cb3, job3)
+        addQ2(cb4, job4)
+
+
     'Emitter':
       '**setup**': ->
         @cb = =>
