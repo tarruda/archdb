@@ -111,8 +111,6 @@ apiTests =
 
   'transactions/concurrency behavior':
     '**setup**': (done) ->
-      i = 0
-      d = -> if ++i == 4 then done()
       @dom1 = @tx.domain(domain1)
       @dom2 = @tx.domain(domain2)
       # commit initial data in 2 steps
@@ -129,28 +127,34 @@ apiTests =
             @tx1 = transaction
             @tx1dom1 = @tx1.domain(domain1)
             @tx1dom2 = @tx1.domain(domain2)
-            @tx1dom1.set(1, name: 'one')
-            @tx1dom1.set(2, 22, d))
-          @db.begin((err, transaction) =>
-            @tx2 = transaction
-            @tx2dom1 = @tx2.domain(domain1)
-            @tx2dom2 = @tx2.domain(domain2)
-            @tx2dom2.set(5, 55)
-            @tx2dom2.del(6, d))
-          @db.begin((err, transaction) =>
-            @tx3 = transaction
-            @tx3dom1 = @tx3.domain(domain1)
-            @tx3dom2 = @tx3.domain(domain2)
-            @tx3dom1.set(1, 111)
-            @tx3dom1.del(2)
-            @tx3dom2.set(5, 555, d))
-          @db.begin((err, transaction) =>
-            @tx4 = transaction
-            @tx4dom1 = @tx4.domain(domain1)
-            @tx4dom2 = @tx4.domain(domain2)
-            @tx4dom1.del(3)
-            @tx4dom1.set(7, 7)
-            @tx4dom2.set(8, 8, d))))
+            @db.begin((err, transaction) =>
+              @tx2 = transaction
+              @tx2dom1 = @tx2.domain(domain1)
+              @tx2dom2 = @tx2.domain(domain2)
+              @db.begin((err, transaction) =>
+                @tx3 = transaction
+                @tx3dom1 = @tx3.domain(domain1)
+                @tx3dom2 = @tx3.domain(domain2)
+                @db.begin((err, transaction) =>
+                  @tx4 = transaction
+                  @tx4dom1 = @tx4.domain(domain1)
+                  @tx4dom2 = @tx4.domain(domain2)
+                  @tx1dom1.set(1, name: 'one')
+                  @tx1dom1.set(2, 22, =>
+                    # since each transaction has independent uid generators
+                    # we need to use this setTimeout hack to ensure the
+                    # expected chronological order of updates
+                    setTimeout(=>
+                      @tx2dom2.set(5, 55)
+                      @tx2dom2.del(6, =>
+                        setTimeout(=>
+                          @tx3dom1.set(1, 111)
+                          @tx3dom1.del(2)
+                          @tx3dom2.set(5, 555, =>
+                            setTimeout(=>
+                              @tx4dom1.del(3)
+                              @tx4dom1.set(7, 7)
+                              @tx4dom2.set(8, 8, done)))))))))))))
 
 
     'uncommitted':
@@ -313,7 +317,40 @@ apiTests =
                     row(4, 4)
                     row(5, 55)
                   ])
-                  done())))))
+                  @tx2.domain('$history').find().all((err, items) =>
+                    expect(items.total).to.eql(10)
+                    expect(items.rows.map(mapHistory)).to.deep.eql([{
+                      type: 'Insert', domain: 'domain1', key: 1,
+                      oldValue: null, value: 1
+                    }, {
+                      type: 'Insert', domain: 'domain1', key: 2,
+                      oldValue: null, value: {name: 'two'}
+                    }, {
+                      type: 'Insert', domain: 'domain1', key: 3,
+                      oldValue: null, value: 3
+                    }, {
+                      type: 'Insert', domain: 'domain2', key: 4,
+                      oldValue: null, value: 4
+                    }, {
+                      type: 'Insert', domain: 'domain2', key: 5,
+                      oldValue: null, value: 5
+                    }, {
+                      type: 'Insert', domain: 'domain2', key: 6,
+                      oldValue: null, value: 6
+                    }, {
+                      type: 'Update', domain: 'domain1', key: 1,
+                      oldValue: 1, value: {name: 'one'}
+                    }, {
+                      type: 'Update', domain: 'domain1', key: 2,
+                      oldValue: {name: 'two'}, value: 22
+                    }, {
+                      type: 'Update', domain: 'domain2', key: 5,
+                      oldValue: 5, value: 55
+                    }, {
+                      type: 'Delete', domain: 'domain2', key: 6,
+                      oldValue: 6, value: null
+                    }])
+                    done()))))))
 
 
       'tx2, tx1': (done) ->
@@ -342,7 +379,40 @@ apiTests =
                     row(4, 4)
                     row(5, 55)
                   ])
-                  done())))))
+                  @tx1.domain('$history').find().all((err, items) =>
+                    expect(items.total).to.eql(10)
+                    expect(items.rows.map(mapHistory)).to.deep.eql([{
+                      type: 'Insert', domain: 'domain1', key: 1,
+                      oldValue: null, value: 1
+                    }, {
+                      type: 'Insert', domain: 'domain1', key: 2,
+                      oldValue: null, value: {name: 'two'}
+                    }, {
+                      type: 'Insert', domain: 'domain1', key: 3,
+                      oldValue: null, value: 3
+                    }, {
+                      type: 'Insert', domain: 'domain2', key: 4,
+                      oldValue: null, value: 4
+                    }, {
+                      type: 'Insert', domain: 'domain2', key: 5,
+                      oldValue: null, value: 5
+                    }, {
+                      type: 'Insert', domain: 'domain2', key: 6,
+                      oldValue: null, value: 6
+                    }, {
+                      type: 'Update', domain: 'domain1', key: 1,
+                      oldValue: 1, value: {name: 'one'}
+                    }, {
+                      type: 'Update', domain: 'domain1', key: 2,
+                      oldValue: {name: 'two'}, value: 22
+                    }, {
+                      type: 'Update', domain: 'domain2', key: 5,
+                      oldValue: 5, value: 55
+                    }, {
+                      type: 'Delete', domain: 'domain2', key: 6,
+                      oldValue: 6, value: null
+                    }])
+                    done()))))))
 
 
     'concurrent commit within the same domain':
@@ -376,7 +446,49 @@ apiTests =
                         row(5, 55)
                         row(8, 8)
                       ])
-                      done()))))))
+                    @tx4.domain('$history').find().all((err, items) =>
+                      expect(items.total).to.eql(13)
+                      expect(items.rows.map(mapHistory)).to.deep.eql([{
+                        type: 'Insert', domain: 'domain1', key: 1,
+                        oldValue: null, value: 1
+                      }, {
+                        type: 'Insert', domain: 'domain1', key: 2,
+                        oldValue: null, value: {name: 'two'}
+                      }, {
+                        type: 'Insert', domain: 'domain1', key: 3,
+                        oldValue: null, value: 3
+                      }, {
+                        type: 'Insert', domain: 'domain2', key: 4,
+                        oldValue: null, value: 4
+                      }, {
+                        type: 'Insert', domain: 'domain2', key: 5,
+                        oldValue: null, value: 5
+                      }, {
+                        type: 'Insert', domain: 'domain2', key: 6,
+                        oldValue: null, value: 6
+                      }, {
+                        type: 'Update', domain: 'domain1', key: 1,
+                        oldValue: 1, value: {name: 'one'}
+                      }, {
+                        type: 'Update', domain: 'domain1', key: 2,
+                        oldValue: {name: 'two'}, value: 22
+                      }, {
+                        type: 'Update', domain: 'domain2', key: 5,
+                        oldValue: 5, value: 55
+                      }, {
+                        type: 'Delete', domain: 'domain2', key: 6,
+                        oldValue: 6, value: null
+                      }, {
+                        type: 'Delete', domain: 'domain1', key: 3,
+                        oldValue: 3, value: null
+                      }, {
+                        type: 'Insert', domain: 'domain1', key: 7,
+                        oldValue: null, value: 7
+                      }, {
+                        type: 'Insert', domain: 'domain2', key: 8,
+                        oldValue: null, value: 8
+                      }])
+                      done())))))))
 
 
       'with key/value conflict':

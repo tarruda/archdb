@@ -70,7 +70,7 @@ class LocalDatabase
       cached = currentIndex = currentMaster = revHistoryEntryNode =
       currentIndexKey = historyEntryType = refMap = conflicts =
       revHistoryEntryValueKey = revHistoryEntryValue = nextHistoryEntry =
-      replayTree = revHistoryEntryKey = null
+      replayTree = revHistoryEntryKey = revHistoryEntryDomain = null
 
     mergeJob = (nextJob) =>
       # Sets the merge job completion callback and copy cached indexes
@@ -137,6 +137,8 @@ class LocalDatabase
       revHistoryEntryNode = node
       revHistoryEntryKey = node.getKey()
       revHistoryEntryValue = node.getValue()
+      revHistoryEntryValueKey = revHistoryEntryValue[2]
+      revHistoryEntryDomain = revHistoryEntryValue[1]
       # Even after filtering history entries using the revision's timestamp,
       # it is still possible to have entries created in previous revisions
       # that were committed later(and thus have a higher timestamp).
@@ -144,14 +146,13 @@ class LocalDatabase
       # we must compare its uid suffix with the revision's suffix
       if revHistoryEntryKey.normalize().hex.slice(14) != rev.suffix
         return $yield(next)
-      if not replay[revHistoryEntryValue[1]]
-        # Don't process nodes for domains that were fast-forwarded
-        return $yield(next)
       historyEntryType = revHistoryEntryValue[0]
-      replayTree = replay[revHistoryEntryValue[1]].tree
-      revHistoryEntryValueKey = revHistoryEntryValue[2]
-      if historyEntryType != HistoryEntryType.Insert
-        return replayTree.get(revHistoryEntryValueKey, checkIndexCb)
+      if replay[revHistoryEntryDomain]
+        # if not a fast-forward, get the current value from the index
+        # to check for conflicts
+        replayTree = replay[revHistoryEntryDomain].tree
+        if historyEntryType != HistoryEntryType.Insert
+          return replayTree.get(revHistoryEntryValueKey, checkIndexCb)
       replayOperation()
 
     checkIndexCb = (err, ref) =>
@@ -172,6 +173,9 @@ class LocalDatabase
       replayOperation()
 
     replayOperation = =>
+      if not replay[revHistoryEntryDomain]
+        # only replay history entries for fast-forwared domains
+        return replayOperationCb(null)
       # Replays the operation in the current index
       if historyEntryType == HistoryEntryType.Insert or
       historyEntryType == HistoryEntryType.Update
@@ -188,13 +192,7 @@ class LocalDatabase
 
     replayHistoryCb = (err, old) =>
       if err then return cb(err)
-      if old
-        # FIXME in the acceptance tests (tx1,tx2,tx3)/(tx1,tx2,tx4)
-        #       with memory backend this condition is happening sometimes
-        #       which causes random tests failure. I only noticed this
-        #       on node.js, this has never happened while running the
-        #       tests on google chrome.
-        return cb(new DbError('history entry exists'))
+      if old then return cb(new DbError('history entry exists'))
       nextHistoryEntry()
 
     commitTrees = =>
