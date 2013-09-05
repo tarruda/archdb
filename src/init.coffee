@@ -1,5 +1,6 @@
 undef = `void 0`
 HISTORY = '$history'
+HOOKS = '$hooks'
 backends = {}
 frontends = {}
 

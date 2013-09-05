@@ -96,19 +96,27 @@ class LinkedListNode
 
 
 class LinkedList
+  constructor: ->
+    @length = 0
+
+
   push: (data) ->
     node = new LinkedListNode(data)
     if @tail
       @tail = @tail.next = node
     else
       @tail = @head = node
+    @length++
 
 
   shift: ->
+    if not @head
+      return
     rv = @head.data
     if @head.next
       @head = @head.next
     else @head = @tail = null
+    @length--
     return rv
 
 
@@ -118,6 +126,28 @@ class LinkedList
       cb(current.data)
       current = current.next
     return
+
+
+  eachAsync: (cb) ->
+    current = @head
+
+    if not current
+      return
+
+    next = =>
+      data = current.data
+      current = current.next
+      called = false
+      if current
+        nextCb = (stop) =>
+          if called
+            throw new Error('called too many times')
+          called = true
+          if not stop
+            $yield(next)
+      cb(data, nextCb)
+
+    next()
 
 
   remove: (item) ->
@@ -157,11 +187,30 @@ class Emitter
 
 
   emit: (event, args...) ->
-    invokeCb = (node) -> node.apply(null, args)
+    invokeCb = (handler) -> handler.apply(null, args)
 
     if not @handlers or not @handlers[event]
       return
     @handlers[event].each(invokeCb)
+
+
+class AsyncEmitter extends Emitter
+  emit: (event, args..., cb) ->
+    invokeCb = (handler, next) ->
+      if next
+        nextCb = (stop) =>
+          if stop
+            return cb()
+          next(stop)
+      else
+        nextCb = cb
+      a = args.slice()
+      a.unshift(nextCb)
+      handler.apply(null, a)
+
+    if not @handlers or not @handlers[event]
+      return
+    @handlers[event].eachAsync(invokeCb)
 
 
 class Job
@@ -171,7 +220,7 @@ class Job
 class JobQueue extends Emitter
   constructor: (@frozen = false) ->
     super()
-    @jobs = []
+    @jobs = new LinkedList()
     @running = false
 
 
@@ -361,6 +410,7 @@ exports.Uid = Uid
 exports.UidGenerator = UidGenerator
 exports.LinkedList = LinkedList
 exports.Emitter = Emitter
+exports.AsyncEmitter = AsyncEmitter
 exports.Job = Job
 exports.JobQueue = JobQueue
 exports.ObjectType = ObjectType

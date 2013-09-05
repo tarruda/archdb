@@ -6,10 +6,13 @@
     "type": "git",
     "url": "git://github.com/tarruda/archdb.git"
   },
-  "main": "./lib/archdb",
-  "bin": {
-    "archdb": "./bin/archdb"
-  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://github.com/tarruda/archdb/blob/master/LICENSE-MIT"
+    }
+  ],
+  "main": "./build/node/archdb.js",
   "author": {
     "name": "Thiago de Arruda",
     "email": "tpadilha84@gmail.com"

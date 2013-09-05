@@ -1,5 +1,5 @@
 {
-  JobQueue, Uid, Emitter, LinkedList, UidGenerator, ObjectRef
+  JobQueue, Uid, Emitter, AsyncEmitter, LinkedList, UidGenerator, ObjectRef
   normalize: n, denormalize: d
 } = require('../src/util')
 
@@ -113,6 +113,32 @@ tests =
         expect(@args).to.deep.eql([4, 5, 6, 2, 3, 4])
 
         
+    'AsyncEmitter':
+      'handlers are executed serially': (done) ->
+        e = new AsyncEmitter()
+        items = []
+
+        e.on('async event', (next, a1, a2) =>
+          items.push(a1)
+          items.push(a2)
+          next())
+
+        e.on('async event', (next, a1, a2) =>
+          items.push(a1 * 2)
+          items.push(a2 * 2)
+          next(true))
+
+        e.on('async event', (next, a1, a2) =>
+          # will not be executed
+          items.push(a1 * 3)
+          items.push(a2 * 3)
+          next())
+
+        e.emit('async event', 1, 2, =>
+          expect(items).to.deep.eql([1, 2, 2, 4])
+          done())
+
+
     'LinkedList':
       '**setup**': ->
         @items = =>
@@ -150,6 +176,17 @@ tests =
         expect(@items()).to.deep.eql([])
         expect(@l.head).to.be.null
         expect(@l.tail).to.be.null
+
+
+      'eachAsync': (done) ->
+        items = []
+
+        @l.eachAsync((n, next) =>
+          items.push(n)
+          if not next
+            expect(items).to.deep.eql([1, 2, 3, 4])
+            return done()
+          next())
 
 
     'Normalization/denormalization':
