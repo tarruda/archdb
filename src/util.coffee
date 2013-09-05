@@ -175,8 +175,8 @@ class Emitter
 
   once: (event, cb) ->
     onceCb = =>
-      cb.apply(null, arguments)
       @handlers[event].remove(onceCb)
+      cb.apply(null, arguments)
     @on(event, onceCb)
 
 
@@ -195,7 +195,27 @@ class Emitter
 
 
 class AsyncEmitter extends Emitter
-  emit: (event, args..., cb) ->
+  onAsync: (event, cb) ->
+    @handlersAsync = @handlersAsync || {}
+    @handlersAsync[event] = @handlersAsync[event] || new LinkedList()
+    @handlersAsync[event].push(cb)
+
+
+  onceAsync: (event, cb) ->
+    onceCb = =>
+      @handlersAsync[event].remove(onceCb)
+      cb.apply(null, arguments)
+
+    @onAsync(event, onceCb)
+
+
+  offAsync: (event, cb) ->
+    if not @handlersAsync or not @handlersAsync[event]
+      return
+    @handlersAsync[event].remove(cb)
+
+
+  emitAsync: (event, args..., cb) ->
     invokeCb = (handler, next) ->
       if next
         nextCb = (stop) =>
@@ -208,9 +228,9 @@ class AsyncEmitter extends Emitter
       a.unshift(nextCb)
       handler.apply(null, a)
 
-    if not @handlers or not @handlers[event]
+    if not @handlersAsync or not @handlersAsync[event]
       return
-    @handlers[event].eachAsync(invokeCb)
+    @handlersAsync[event].eachAsync(invokeCb)
 
 
 class Job

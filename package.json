@@ -9,7 +9,7 @@
   "licenses": [
     {
       "type": "MIT",
-      "url": "https://github.com/tarruda/archdb/blob/master/LICENSE-MIT"
+      "url": "https://raw.github.com/tarruda/archdb/master/LICENSE-MIT"
     }
   ],
   "main": "./build/node/archdb.js",

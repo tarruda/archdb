@@ -118,25 +118,27 @@ tests =
         e = new AsyncEmitter()
         items = []
 
-        e.on('async event', (next, a1, a2) =>
+        e.onAsync('ev', (next, a1, a2) =>
           items.push(a1)
           items.push(a2)
           next())
 
-        e.on('async event', (next, a1, a2) =>
+        e.onceAsync('ev', (next, a1, a2) =>
           items.push(a1 * 2)
           items.push(a2 * 2)
           next(true))
 
-        e.on('async event', (next, a1, a2) =>
+        e.onAsync('ev', (next, a1, a2) =>
           # will not be executed
           items.push(a1 * 3)
           items.push(a2 * 3)
           next())
 
-        e.emit('async event', 1, 2, =>
+        e.emitAsync('ev', 1, 2, =>
           expect(items).to.deep.eql([1, 2, 2, 4])
-          done())
+          e.emitAsync('ev', 1, 2, =>
+            expect(items).to.deep.eql([1, 2, 2, 4, 1, 2, 3, 6])
+            done()))
 
 
     'LinkedList':
