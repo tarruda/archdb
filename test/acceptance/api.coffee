@@ -1,6 +1,6 @@
 {ObjectRef} = require('../../src/util')
 {IndexRow} = require('../../src/local_index')
-{ConflictError} = require('../../src/custom_errors')
+{ConflictError} = require('../../src/errors')
 require('../../src/local_database')
 
 

@@ -43,7 +43,7 @@ function checkUsage() {
 }
 
 function insert(total) {
-  var conn = connect({type: 'local', storage: 'fs', path: dbPath});
+  var conn = connect({type: 'local', storage: 'fs', compression: 'zlib', path: dbPath});
   conn.begin(function(err, tx) {
     if (err) throw err;
     var customers = tx.domain('customers');

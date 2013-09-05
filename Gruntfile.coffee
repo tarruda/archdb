@@ -36,8 +36,8 @@ module.exports = (grunt) ->
           disableModuleWrap: [
             'node_modules/setimmediate/setImmediate.js'
             'src/init.coffee'
-            'platform/node_export.coffee'
-            'platform/browser_export.coffee'
+            'platform/nodejs/export.coffee'
+            'platform/browser/export.coffee'
           ]
         browser:
           files: [{
@@ -93,8 +93,8 @@ module.exports = (grunt) ->
     test:
       all: [
         'test/index.js'
-        # 'test/acceptance/10000.js'
-        # 'test/acceptance/100000.js'
+        'test/acceptance/10000.js'
+        'test/acceptance/100000.js'
         'build/node/test.js'
       ]
 

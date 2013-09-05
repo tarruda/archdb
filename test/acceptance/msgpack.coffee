@@ -43,26 +43,27 @@ tests = [
 ]
 
 
-suite =
+testWithCompression = (compression) ->
   'messagepack encoder/decoder':
     'encodes/decodes each': (done) ->
       next = =>
         if not t.length then return done()
         item = t.pop()
-        encoded = encode(item)
-        decode(encoded, null, (err, decoded) =>
-          expect(decoded).to.deep.eql(item)
-          $yield(next))
+        encode(item, compression, (err, encoded) =>
+          decode(encoded, null, (err, decoded) =>
+            expect(decoded).to.deep.eql(item)
+            $yield(next)))
       t = tests.slice()
       next()
 
 
     'encodes/decodes deep object': (done) ->
       obj = name: 'deep', type: {name: 'object', items: tests}
-      encoded = encode(obj)
-      decode(encoded, null, (err, decoded) =>
-        expect(decoded).to.deep.eql(obj)
-        done())
+      encode(obj, compression, (err, encoded) =>
+        decode(encoded, null, (err, decoded) =>
+          expect(decoded).to.deep.eql(obj)
+          done()))
+
 
     'can decodes object split in multiple buffers': (done) ->
       # encoded data:
@@ -99,17 +100,21 @@ suite =
     # are made to the 'msgpack' module
     'skip:10000 keys map': (done) ->
       @timeout(10000)
-      encoded = encode(solid10000)
-      decode(encoded, null, (err, decoded) =>
-        expect(decoded).to.deep.eql(solid10000)
-        done())
+      encode(solid10000, compression, (err, encoded) =>
+        decode(encoded, null, (err, decoded) =>
+          expect(decoded).to.deep.eql(solid10000)
+          done()))
 
     'skip:100000 keys map': (done) ->
       @timeout(600000)
-      encoded = encode(solid100000)
-      decode(encoded, null, (err, decoded) =>
-        expect(decoded).to.deep.eql(solid100000)
-        done())
+      encode(solid100000, compression, (err, encoded) =>
+        decode(encoded, null, (err, decoded) =>
+          expect(decoded).to.deep.eql(solid100000)
+          done()))
 
 
-run(suite)
+# run(testWithCompression(null))
+run(testWithCompression('zlib'))
+try
+  require('snappy')
+  run(testWithCompression('snappy'))

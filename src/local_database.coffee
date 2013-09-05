@@ -1,6 +1,6 @@
 {ObjectRef, JobQueue, Uid, UidGenerator, ObjectType, typeOf} =
   require('./util')
-{DbError, ConflictError} = require('./custom_errors')
+{DbError, ConflictError} = require('./errors')
 {AvlTree} = require('./avl')
 {HistoryEntryType} = require('./local_index')
 BitArray = require('./bit_array')

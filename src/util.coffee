@@ -298,7 +298,7 @@ ObjectType = {
 
 typeOf = (obj) ->
   if obj == null then return ObjectType.Null
-  if obj == undefined then return ObjectType.Undefined
+  if obj == undef then return ObjectType.Undefined
   if obj instanceof Uid then return ObjectType.Uid
   if obj instanceof ObjectRef then return ObjectType.ObjectRef
   type = /\[object\s(\w+)]/.exec(Object.prototype.toString.call(obj))[1]

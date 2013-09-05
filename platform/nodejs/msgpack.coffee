@@ -1,8 +1,30 @@
+zlib = require('zlib')
 BitArray = require('../../src/bit_array')
 {ObjectRef, ObjectType, Uid, typeOf} = require('../../src/util')
 
 
-encode = (obj) ->
+compressedTypes =
+  zlib: [0xd4, 0xd5, 0xd6]
+  snappy: [0xd7, 0xd8, 0xd9]
+
+
+compress =
+  zlib: zlib.deflate
+
+
+decompress =
+  zlib: zlib.inflate
+
+
+try
+  snappy = require('snappy')
+  compress.snappy = (buffer, cb) ->
+    snappy.compress(buffer, cb)
+  decompress.snappy = (buffer, cb) ->
+    snappy.decompress(buffer, snappy.parsers.raw, cb)
+
+
+encode = (obj, compression, cb) ->
   offset = 0; chunks = []
 
   encodeRec = (obj) =>
@@ -59,7 +81,7 @@ encode = (obj) ->
           # > n = -14.49090013186719
           # > b.writeDoubleBE(n, 0)
           # > b.readDoubleBE(0) === n // false, it is -14.490900131870829
-          b = encodeDouble(obj, 0xd4)
+          b = encodeDouble(obj, 0xc9)
         chunks.push(b)
       when ObjectType.String
         b = new Buffer(obj, 'utf8')
@@ -154,11 +176,37 @@ encode = (obj) ->
     return b
 
   encodeRec(obj)
-  return Buffer.concat(chunks, offset)
+  buffer = Buffer.concat(chunks, offset)
+
+  if compression
+    if not hasProp(compress, compression)
+      throw new Error("compression library '#{compression}' not found")
+    if buffer.length >= 20
+      compress[compression](buffer, (err, compressed) =>
+        if compressed.length <= 0xff
+          type = compressedTypes[compression][0]
+          rv = Buffer.concat([new Buffer([type, 0]), compressed])
+          rv.writeUInt8(compressed.length, 1)
+        else if compressed.length <= 0xffff
+          type = compressedTypes[compression][1]
+          rv = Buffer.concat([new Buffer([type, 0, 0]), compressed])
+          rv.writeUInt16BE(compressed.length, 1)
+        else
+          type = compressedTypes[compression][2]
+          rv = Buffer.concat([new Buffer([type, 0, 0, 0, 0]), compressed])
+          rv.writeUInt32BE(compressed.length, 1)
+        if rv.length < buffer.length
+          return cb(null, rv)
+        # compression actually inflated the buffer due to overhead.
+        # return the original buffer
+        cb(null, buffer))
+      return
+  cb(null, buffer)
 
 
 decode = (b, read, cb) ->
-  bTrail = continueCb = amountNeeded = undef; offset = 0
+  compression = compressedLen = bTrail = continueCb = amountNeeded = undef
+  offset = 0
 
   decodeRec = (cb) =>
     l = key = rv = flags = type = undef
@@ -189,7 +237,7 @@ decode = (b, read, cb) ->
         when 0xc6 then return seek(8, ref64Cb)
         when 0xc7 then return seek(14, uidCb)
         when 0xc8 then return seek(3, regExpLengthCb)
-        when 0xd4 then return seek(8, doubleCb)
+        when 0xc9 then return seek(8, doubleCb)
         when 0xcc then return seek(1, uint8Cb)
         when 0xcd then return seek(2, uint16Cb)
         when 0xce then return seek(4, uint32Cb)
@@ -205,6 +253,12 @@ decode = (b, read, cb) ->
         when 0x80 then rv = {}; return mapNext()
         when 0xde then return seek(2, mapLengthCb)
         when 0xdf then return seek(4, mapLengthCb)
+        when compressedTypes.zlib[0], compressedTypes.snappy[0]
+          return seek(1, compressedLengthCb)
+        when compressedTypes.zlib[1], compressedTypes.snappy[1]
+          return seek(2, compressedLengthCb)
+        when compressedTypes.zlib[2], compressedTypes.snappy[2]
+          return seek(4, compressedLengthCb)
 
     dateCb = (err) =>
       if err then return cb(err, undef)
@@ -337,6 +391,33 @@ decode = (b, read, cb) ->
     mapValueDecodeCb = (err, value) =>
       rv[key] = value
       $yield(mapNext)
+
+    compressedLengthCb = (err) =>
+      if type in [compressedTypes.zlib[0], compressedTypes.snappy[0]]
+        l = b.readUInt8(offset)
+        offset += 1
+      else if type in [compressedTypes.zlib[1], compressedTypes.snappy[1]]
+        l = b.readUInt16BE(offset)
+        offset += 2
+      else
+        l = b.readUInt32BE(offset)
+        offset += 4
+      compression = 'zlib'
+      if type > 0xd6
+        if not hasProp(decompress, 'snappy')
+          return cb(new Error("compression library 'snappy' not found"))
+        compression = 'snappy'
+      compressedLen = l
+      seek(l, decodeCompression)
+
+    decodeCompression = (err) =>
+      compressed = b.slice(offset, compressedLen + offset)
+      trail = b.slice(compressedLen)
+      decompress[compression](compressed, (err, buffer) =>
+        if err then console.log(err)
+        b = Buffer.concat([buffer, trail])
+        offset = 0
+        decodeRec(cb))
 
     seek(1, checkType)
 

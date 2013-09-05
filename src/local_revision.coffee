@@ -1,9 +1,11 @@
-{Emitter, Uid, JobQueue, UidGenerator, ObjectRef} = require('./util')
+{AsyncEmitter, Uid, JobQueue, UidGenerator, ObjectRef} = require('./util')
+{DbError} = require('./errors')
 {AvlTree} = require('./avl')
-{LocalIndex, HistoryIndex} = require('./local_index')
+{LocalIndex} = require('./local_index')
+{HistoryIndex} = require('./history_index')
 
 
-class LocalRevision extends Emitter
+class LocalRevision extends AsyncEmitter
   constructor: (db, dbStorage, masterRef, @suffix) ->
     errorCb = (err) =>
       @emit('error', err)
@@ -28,11 +30,16 @@ class LocalRevision extends Emitter
 
 
   domain: (name) ->
-    switch name
-      when HISTORY
+    if name[0] == '$'
+      # special domain
+      if name == HISTORY
         return @historyDomain()
-      else
-        return @simpleDomain(name)
+      if match = HOOK_DOMAIN_PATTERN.exec(name)
+        domain = match[3]
+        name = "$on-#{match[1]}-#{match[2]}"
+        return @hooksDomain(name, domain)
+      throw new DbError("Invalid special domain '#{name}'")
+    return @simpleDomain(name)
 
 
   historyDomain: ->

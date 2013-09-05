@@ -2,7 +2,7 @@ fs = require('fs')
 path = require('path')
 
 
-{FatalError} = require('../../src/custom_errors')
+{FatalError} = require('../../src/errors')
 {ObjectRef, JobQueue, normalize, denormalize} = require('../../src/util')
 {encode, decode} = require('./msgpack')
 
@@ -12,6 +12,7 @@ BLOCK_SIZE = 4096
 
 class FsStorage
   constructor: (options) ->
+    @compression = options.compression or null
     nodeFile = dataFile = metadataFile = buffer = undef
     dataDir = path.resolve(options.path)
 
@@ -95,8 +96,19 @@ class FsStorage
 
 
   flush: (cb) ->
-    pos = undef
-    body = encode(@metadata)
+    body = pos = undef
+
+    encodeCb = (err, buf) =>
+      body = buf
+      # save the metadata body first. if the buffer fits
+      # before the current metadata offset, then save at the beginning
+      # (offset 8, after the header), else save after the current
+      # metadata body
+      if (8 + body.length) < @metadataOffset
+        pos = 8
+      else
+        pos = @metadataOffset + @metadataLength
+      fs.write(@metadataFd, body, 0, body.length, pos, bodyWriteCb)
 
     bodyWriteCb = (err) =>
       if err then return cb(err)
@@ -132,15 +144,7 @@ class FsStorage
       @metadataLength = body.length
       cb(null)
 
-    # save the metadata body first. if the buffer fits
-    # before the current metadata offset, then save at the beginning
-    # (offset 8, after the header), else save after the current
-    # metadata body
-    if (8 + body.length) < @metadataOffset
-      pos = 8
-    else
-      pos = @metadataOffset + @metadataLength
-    fs.write(@metadataFd, body, 0, body.length, pos, bodyWriteCb)
+    encode(@metadata, @compression, encodeCb)
 
 
   close: (cb) ->
@@ -156,7 +160,11 @@ class FsStorage
 
 
   saveFd: (fd, pos, queue, obj, cb) ->
-    buffer = encode(obj)
+    buffer = null
+
+    encodeCb = (err, buf) =>
+      buffer = buf
+      queue.add(appendCb, job)
 
     job = (appendCb) =>
       fs.write(fd, buffer, 0, buffer.length, null, appendCb)
@@ -167,7 +175,7 @@ class FsStorage
       else @dataOffset += written
       cb(null, new ObjectRef(pos))
 
-    queue.add(appendCb, job)
+    encode(obj, @compression, encodeCb)
 
 
   getFd: (fd, ref, cb) ->
