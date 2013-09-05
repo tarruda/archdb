@@ -70,7 +70,8 @@ class LocalDatabase
       cached = currentIndex = currentMaster = revHistoryEntryNode =
       currentIndexKey = historyEntryType = refMap = conflicts =
       revHistoryEntryValueKey = revHistoryEntryValue = nextHistoryEntry =
-      replayTree = revHistoryEntryKey = revHistoryEntryDomain = null
+      replayTree = revHistoryEntryKey = revHistoryEntryDomain =
+      insertConflictCheck = null
 
     mergeJob = (nextJob) =>
       # Sets the merge job completion callback and copy cached indexes
@@ -151,22 +152,27 @@ class LocalDatabase
         # if not a fast-forward, get the current value from the index
         # to check for conflicts
         replayTree = replay[revHistoryEntryDomain].tree
-        if historyEntryType != HistoryEntryType.Insert
-          return replayTree.get(revHistoryEntryValueKey, checkIndexCb)
+        insertConflictCheck = historyEntryType == HistoryEntryType.Insert
+        return replayTree.get(revHistoryEntryValueKey, checkIndexCb)
       replayOperation()
 
     checkIndexCb = (err, ref) =>
       # Collects all conflicts due to concurrent value updates.
-      if ref instanceof ObjectRef
-        hasConflict = not ref.equals(revHistoryEntryValue[3])
+      if insertConflictCheck
+        hasConflict = ref?
+        originalValue = null
       else
-        hasConflict = ref != revHistoryEntryValue[3]
+        if ref instanceof ObjectRef
+          hasConflict = not ref.equals(revHistoryEntryValue[3])
+        else
+          hasConflict = ref != revHistoryEntryValue[3]
+        originalValue = revHistoryEntryValue[3]
       if hasConflict
         conflicts = conflicts or []
         conflicts.push({
           index: replay[revHistoryEntryValue[1]].name
           key: revHistoryEntryValueKey
-          originalValue: revHistoryEntryValue[3]
+          originalValue: originalValue
           currentValue: ref
         })
         return nextHistoryEntry()

@@ -139,22 +139,27 @@ apiTests =
                   @tx4 = transaction
                   @tx4dom1 = @tx4.domain(domain1)
                   @tx4dom2 = @tx4.domain(domain2)
-                  @tx1dom1.set(1, name: 'one')
-                  @tx1dom1.set(2, 22, =>
-                    # since each transaction has independent uid generators
-                    # we need to use this setTimeout hack to ensure the
-                    # expected chronological order of updates
-                    setTimeout(=>
-                      @tx2dom2.set(5, 55)
-                      @tx2dom2.del(6, =>
-                        setTimeout(=>
-                          @tx3dom1.set(1, 111)
-                          @tx3dom1.del(2)
-                          @tx3dom2.set(5, 555, =>
-                            setTimeout(=>
-                              @tx4dom1.del(3)
-                              @tx4dom1.set(7, 7)
-                              @tx4dom2.set(8, 8, done)))))))))))))
+                  @db.begin((err, transaction) =>
+                    @tx5 = transaction
+                    @tx5dom2 = @tx5.domain(domain2)
+                    @tx1dom1.set(1, name: 'one')
+                    @tx1dom1.set(2, 22, =>
+                      # since each transaction has independent uid generators
+                      # we need to use this setTimeout hack to ensure the
+                      # expected chronological order of history entries
+                      setTimeout(=>
+                        @tx2dom2.set(5, 55)
+                        @tx2dom2.del(6, =>
+                          setTimeout(=>
+                            @tx3dom1.set(1, 111)
+                            @tx3dom1.del(2)
+                            @tx3dom2.set(5, 555, =>
+                              setTimeout(=>
+                                @tx4dom1.del(3)
+                                @tx4dom1.set(7, 7)
+                                @tx4dom2.set(8, 8, =>
+                                  setTimeout(=>
+                                    @tx5dom2.set(8, 80, done))))))))))))))))
 
 
     'uncommitted':
@@ -495,8 +500,8 @@ apiTests =
         'tx1, tx2, tx3': (done) ->
           # tx1 updates keys 1/2 of dom1 and key 5 of dom2, which
           # are also updated by tx1 and tx2
-          @tx1.commit( =>
-            @tx2.commit( =>
+          @tx1.commit(=>
+            @tx2.commit(=>
               @tx3dom1.find().all((err, items) =>
                 expect(items.rows.map(noref)).to.deep.eql([
                   row(1, 111)
@@ -527,6 +532,26 @@ apiTests =
                     currentValue: 55
                   }])
                   done()))))
+
+
+        'tx4, tx5': (done) ->
+          @tx4.commit(=>
+            @tx5dom2.find().all((err, items) =>
+              expect(items.rows.map(noref)).to.deep.eql([
+                row(4, 4)
+                row(5, 5)
+                row(6, 6)
+                row(8, 80) # tx4 already inserted a different value
+              ])
+              @tx5.commit((err) =>
+                expect(err).to.be.instanceOf(ConflictError)
+                expect(err.conflicts).to.deep.eql([{
+                  index: 'domain2'
+                  key: 8
+                  originalValue: null
+                  currentValue: 8
+                }])
+                done())))
 
 
   'special domains':
