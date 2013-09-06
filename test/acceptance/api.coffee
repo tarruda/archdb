@@ -911,7 +911,6 @@ testApi = (options, init) ->
             done())))
     '**teardown**': (done) -> @db.close(done)
 
-
   for own k, v of apiTests
     suite[title][k] = v
 

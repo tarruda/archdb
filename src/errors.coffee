@@ -1,8 +1,7 @@
 class DbError extends Error
   name: 'DbError'
 
-  constructor: (message) ->
-    super(message)
+  constructor: (@message) ->
     injectStackTrace(this)
 
 

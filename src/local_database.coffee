@@ -16,12 +16,9 @@ class LocalDatabase
 
 
   begin: (cb) ->
-    job = (cb) =>
-      hex = @uidGenerator.generate().hex
-      suffix = hex.slice(0, 14)
-      cb(null, new LocalRevision(this, @dbStorage, @masterRef, suffix))
-
-    @queue.add(cb, job)
+    hex = @uidGenerator.generate().hex
+    suffix = hex.slice(0, 14)
+    cb(null, new LocalRevision(this, @dbStorage, @masterRef, suffix))
 
 
   open: (cb) ->
@@ -229,9 +226,9 @@ class LocalDatabase
     commitNextTree = (err) =>
       if err then return cb(err)
       if not commit.length
-        return currentHistory.commit(true, commitHistoryCb)
+        return currentHistory.commit(false, commitHistoryCb)
       currentCommit = commit.shift()
-      currentCommit.tree.commit(true, commitTreeCb)
+      currentCommit.tree.commit(false, commitTreeCb)
 
     commitTreeCb = (err) =>
       if err then return cb(err)
@@ -248,7 +245,7 @@ class LocalDatabase
 
     setHistoryRefCb = (err) =>
       if err then return cb(err)
-      currentMaster.commit(true, commitMasterCb)
+      currentMaster.commit(false, commitMasterCb)
 
     commitMasterCb = (err) =>
       if err then return cb(err)

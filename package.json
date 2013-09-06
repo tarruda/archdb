@@ -18,7 +18,8 @@
     "email": "tpadilha84@gmail.com"
   },
   "dependencies": {
-    "vm.js": "0.0.4"
+    "vm.js": "0.0.4",
+    "int53": "0.2.3"
   },
   "optionalDependencies": {
     "snappy": "~2.1.1"

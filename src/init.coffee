@@ -17,8 +17,7 @@ $yield = setImmediate
 
 
 if typeof Error.captureStackTrace == 'function'
-  injectStackTrace = (err) ->
-    Error.captureStackTrace(err)
+  injectStackTrace = Error.captureStackTrace
 else
   injectStackTrace = ->
 

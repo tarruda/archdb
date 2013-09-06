@@ -2,7 +2,7 @@
 var fs = require('fs');
 var path = require('path');
 
-var connect = require('archdb').connect;
+var archdb = require('archdb');
 var Faker = require('Faker');
 var wrench = require('wrench');
 
@@ -34,7 +34,7 @@ function newCustomer() {
 }
 
 var batchSize = 100000;
-var remaining = 500000;
+var remaining = 200000;
 
 function checkUsage() {
   if (remaining > 0) setImmediate(function() { insert(batchSize); });
@@ -42,8 +42,10 @@ function checkUsage() {
 }
 
 function insert(total) {
-  connect({type: 'local', storage: 'leveldb', path: dbPath}, function(err, conn) {
-    conn.begin(function(err, tx) {
+  var db = archdb.db({type: 'local', storage: 'leveldb', path: dbPath})
+  // var db = archdb.db({type: 'local', storage: 'fs', path: dbPath})
+  db.open(function(err) {
+    db.begin(function(err, tx) {
       if (err) throw err;
       var customers = tx.domain('customers');
       var count = 0;
@@ -54,7 +56,7 @@ function insert(total) {
           if (count === total){
             return tx.commit(function(err) {
               if (err) throw err;
-              conn.close(function(err) {
+              db.close(function(err) {
                 if (err) throw err;
                 setImmediate(checkUsage);
                 remaining -= count;
