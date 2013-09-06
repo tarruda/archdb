@@ -9,7 +9,7 @@ AFTER_INSERT_HOOKS = '$on-after-insert'
 AFTER_UPDATE_HOOKS = '$on-after-update'
 AFTER_DELETE_HOOKS = '$on-after-delete'
 HOOKS_DOMAIN = /^\$on-(before|after)-(query|insert|update|delete):(.+)$/
-backends = {}
+storages = {}
 frontends = {}
 
 
@@ -18,16 +18,15 @@ $yield = setImmediate
 
 if typeof Error.captureStackTrace == 'function'
   injectStackTrace = (err) ->
-    Error.captureStackTrace(err, arguments.callee.caller)
+    Error.captureStackTrace(err)
 else
   injectStackTrace = ->
 
 
-registerBackend = (name, klass) -> backends[name] = klass
+registerStorage = (name, klass) -> storages[name] = klass
 
 
-registerFrontend = (name, klass) ->
-  frontends[name] = klass
+registerFrontend = (name, klass) -> frontends[name] = klass
 
 
 _hasProp = Object.prototype.hasOwnProperty
@@ -36,7 +35,14 @@ _hasProp = Object.prototype.hasOwnProperty
 hasProp = (obj, key) -> _hasProp.call(obj, key)
 
 
-connect = (options) ->
+db = (options = {}) ->
   frontendClass = frontends[options.type]
-  backendClass = backends[options.storage]
-  return new frontendClass(new backendClass(options), options)
+  storageClass = storages[options.storage]
+
+  if typeof storageClass == 'function'
+    storage = new storageClass(options)
+    frontend = new frontendClass(storage, options)
+  else
+    frontend = new frontendClass(options)
+
+  return frontend

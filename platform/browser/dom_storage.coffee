@@ -16,6 +16,12 @@ class DomStorage
     cb(null)
 
 
+  save: (ns, value, cb) ->
+    ref = new ObjectRef(++@uid)
+    @setItem(ns, ref.valueOf(), value)
+    cb(null, ref)
+
+
   saveIndexNode: (obj, cb) ->
     @save('n', obj, cb)
 
@@ -35,13 +41,10 @@ class DomStorage
   flush: (cb) -> cb(null)
 
 
+  open: (cb) -> cb(null)
+
+
   close: (cb) -> cb(null)
-
-
-  save: (ns, value, cb) ->
-    ref = new ObjectRef(++@uid)
-    @setItem(ns, ref.valueOf(), value)
-    cb(null, ref)
 
 
   getItem: (ns, key) ->
@@ -57,4 +60,4 @@ class DomStorage
     localStorage.setItem(@prefix + key, JSON.stringify(normalize(value)))
 
 
-registerBackend('dom', DomStorage)
+registerStorage('dom', DomStorage)

@@ -3,4 +3,5 @@
 /tmp/
 /build/
 /lib/
-/.tmpdb/
+/.tmpDb/
+/.tmpLevelDb/

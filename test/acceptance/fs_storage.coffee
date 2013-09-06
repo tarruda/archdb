@@ -5,7 +5,7 @@ wrench = require('wrench')
 FsStorage = require('../../platform/nodejs/fs_storage')
 
 
-tmpDb = path.resolve('.tmpdb')
+tmpDb = path.resolve('.tmpDb')
 
 
 suite =
@@ -24,10 +24,11 @@ suite =
 
     'get/set': (done) ->
       storage = new FsStorage(path: tmpDb)
-      storage.set('mastetRef', ref: '0001', (err) =>
-        storage.get('mastetRef', (err, obj) =>
-          expect(obj).to.deep.eql(ref: '0001')
-          done()))
+      storage.open((err) =>
+        storage.set('mastetRef', ref: '0001', (err) =>
+          storage.get('mastetRef', (err, obj) =>
+            expect(obj).to.deep.eql(ref: '0001')
+            done())))
 
 
     # this slow test is skipped. this is only here to verify messagepack

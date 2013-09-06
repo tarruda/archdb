@@ -13,70 +13,18 @@ BLOCK_SIZE = 4096
 class FsStorage
   constructor: (options) ->
     @compression = options.compression or null
-    nodeFile = dataFile = metadataFile = buffer = undef
-    dataDir = path.resolve(options.path)
-
-    metadataDecodeCb = (err, md) =>
-      @metadata = md
-      if @tmpMetadata
-        for own k, v of @tmpMetadata
-          @metadata[k] = v
-        @tmpMetadata = null
-      if @metadataCbs
-        while @metadataCbs.length
-          mdGet = @metadataCbs.shift()
-          mdGet.cb(null, md[mdGet.key])
-        @metadataCbs = null
-
-    nodeFile = path.join(dataDir, 'nodes')
-    dataFile = path.join(dataDir, 'data')
-    metadataFile = path.join(dataDir, 'metadata')
-    @nodeFd = fs.openSync(nodeFile, 'a+')
-    @dataFd = fs.openSync(dataFile, 'a+')
-    @nodeOffset = fs.fstatSync(@nodeFd).size
-    @dataOffset = fs.fstatSync(@dataFd).size
-    @nodeWrites = new JobQueue()
-    @dataWrites = new JobQueue()
-    @tmpId = 0
-    if fs.existsSync(metadataFile)
-      @metadataCbs = null
-      @tmpMetadata = null
-      # read the metadata file
-      # the header is stored in the first 8 bytes of the file,
-      # and is composed of two 32-bit unsigned integers which correspond to:
-      # - offset where the metadata body begins
-      # - length of the metadata body
-      @metadataFd = fs.openSync(metadataFile, 'r+')
-      buffer = new Buffer(8)
-      fs.readSync(@metadataFd, buffer, 0, buffer.length, 0)
-      @metadataOffset = buffer.readUInt32BE(0)
-      @metadataLength = buffer.readUInt32BE(4)
-      buffer = new Buffer(@metadataLength)
-      fs.readSync(@metadataFd, buffer, 0, @metadataLength, @metadataOffset)
-      decode(buffer, null, metadataDecodeCb)
-    else
-      @metadataFd = fs.openSync(metadataFile, 'w+')
-      @metadataOffset = 8
-      @metadataLength = 0
-      @metadata = {}
+    @dataDir = path.resolve(options.path)
+    @ready = false
 
 
   set: (key, obj, cb) ->
-    if not @metadata
-      @tmpMetadata = @tmpMetadata or {}
-      @tmpMetadata[key] = normalize(obj)
-    else
-      @metadata[key] = normalize(obj)
+    @metadata[key] = normalize(obj)
     cb(null)
 
 
   get: (key, cb) ->
-    if not @metadata
-      @metadataCbs = @metadataCbs or []
-      @metadataCbs.push(cb: cb, key: key)
-    else
-      if not @metadata[key] then return cb(null, null)
-      cb(null, denormalize(@metadata[key]))
+    if not @metadata[key] then return cb(null, null)
+    cb(null, denormalize(@metadata[key]))
 
 
   saveIndexNode: (obj, cb) ->
@@ -147,6 +95,44 @@ class FsStorage
     encode(@metadata, @compression, encodeCb)
 
 
+  open: (cb) ->
+    metadataDecodeCb = (err, md) =>
+      if err then return cb(err)
+      @metadata = md
+      cb(null)
+
+    nodeFile = path.join(@dataDir, 'nodes')
+    dataFile = path.join(@dataDir, 'data')
+    metadataFile = path.join(@dataDir, 'metadata')
+    @nodeFd = fs.openSync(nodeFile, 'a+')
+    @dataFd = fs.openSync(dataFile, 'a+')
+    @nodeOffset = fs.fstatSync(@nodeFd).size
+    @dataOffset = fs.fstatSync(@dataFd).size
+    @nodeWrites = new JobQueue()
+    @dataWrites = new JobQueue()
+
+    if fs.existsSync(metadataFile)
+      # read the metadata file
+      # the header is stored in the first 8 bytes of the file,
+      # and is composed of two 32-bit unsigned integers which correspond to:
+      # - offset where the metadata body begins
+      # - length of the metadata body
+      @metadataFd = fs.openSync(metadataFile, 'r+')
+      buffer = new Buffer(8)
+      fs.readSync(@metadataFd, buffer, 0, buffer.length, 0)
+      @metadataOffset = buffer.readUInt32BE(0)
+      @metadataLength = buffer.readUInt32BE(4)
+      buffer = new Buffer(@metadataLength)
+      fs.readSync(@metadataFd, buffer, 0, @metadataLength, @metadataOffset)
+      decode(buffer, null, metadataDecodeCb)
+    else
+      @metadataFd = fs.openSync(metadataFile, 'w+')
+      @metadataOffset = 8
+      @metadataLength = 0
+      @metadata = {}
+      cb(null)
+
+
   close: (cb) ->
     remainingFds = 3
 
@@ -200,7 +186,7 @@ class FsStorage
     fs.read(fd, buffer, 0, buffer.length, pos, readCb)
 
 
-registerBackend('fs', FsStorage)
+registerStorage('fs', FsStorage)
 
 
 module.exports = FsStorage

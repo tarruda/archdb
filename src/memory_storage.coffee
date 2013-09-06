@@ -37,6 +37,9 @@ class MemoryStorage
   flush: (cb) -> cb(null)
 
 
+  open: (cb) -> cb(null)
+
+
   close: (cb) -> cb(null)
 
 
@@ -46,7 +49,7 @@ class MemoryStorage
     cb(null, ref)
 
 
-registerBackend('memory', MemoryStorage)
+registerStorage('memory', MemoryStorage)
 
 
 module.exports = MemoryStorage

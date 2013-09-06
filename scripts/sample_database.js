@@ -35,7 +35,6 @@ function newCustomer() {
 
 var batchSize = 100000;
 var remaining = 500000;
-var totalCount = 0;
 
 function checkUsage() {
   if (remaining > 0) setImmediate(function() { insert(batchSize); });
@@ -43,32 +42,34 @@ function checkUsage() {
 }
 
 function insert(total) {
-  var conn = connect({type: 'local', storage: 'fs', compression: 'zlib', path: dbPath});
-  conn.begin(function(err, tx) {
-    if (err) throw err;
-    var customers = tx.domain('customers');
-    var count = 0;
-    function next() {
-      customers.ins(newCustomer(), function(err, key) {
-        if (err) throw err;
-        totalCount = ++count;
-        if (totalCount % 10000 === 0) console.log('Row count', key);
-        if (count === total){
-          return tx.commit(function(err) {
-            if (err) throw err;
-            conn.close(function(err) {
+  connect({type: 'local', storage: 'leveldb', path: dbPath}, function(err, conn) {
+    conn.begin(function(err, tx) {
+      if (err) throw err;
+      var customers = tx.domain('customers');
+      var count = 0;
+      function next() {
+        customers.ins(newCustomer(), function(err, key) {
+          if (err) throw err;
+          if (++count % 10000 === 0) console.log('Row count', key);
+          if (count === total){
+            return tx.commit(function(err) {
               if (err) throw err;
-              setImmediate(checkUsage);
-              remaining -= count;
+              conn.close(function(err) {
+                if (err) throw err;
+                setImmediate(checkUsage);
+                remaining -= count;
+              });
             });
-          });
-        }
-        setImmediate(next);
-      });
-    }
-    next();
+          }
+          setImmediate(next);
+        });
+      }
+      next();
+    });
   });
 }
 
+
 var begin = new Date();
 insert(batchSize);
+

@@ -8,26 +8,11 @@ LocalRevision = require('./local_revision')
 
 
 class LocalDatabase
-  constructor: (dbStorage) ->
-    sequencesJob = (cb) =>
-      @dbStorage.get('sequences', cb)
-
-    sequencesCb = (err, sequences) =>
-      @sequences = sequences || [1]
-
-    masterRefJob = (cb) =>
-      @dbStorage.get('masterRef', cb)
-
-    masterRefCb = (err, masterRef) =>
-      @masterRef = masterRef
-
-    @dbStorage = dbStorage
+  constructor: (@dbStorage) ->
     @queue = new JobQueue()
     @uidGenerator = new UidGenerator()
     @sequences = null
     @masterRef = null
-    @queue.add(sequencesCb, sequencesJob)
-    @queue.add(masterRefCb, masterRefJob)
 
 
   begin: (cb) ->
@@ -39,7 +24,31 @@ class LocalDatabase
     @queue.add(cb, job)
 
 
-  close: (cb) -> @dbStorage.close(cb)
+  open: (cb) ->
+    openCb = (err) =>
+      if err then return cb(err)
+      @queue.add(sequencesCb, sequencesJob)
+      @queue.add(masterRefCb, masterRefJob)
+
+    sequencesJob = (sequencesCb) =>
+      @dbStorage.get('sequences', sequencesCb)
+
+    sequencesCb = (err, sequences) =>
+      if err then return cb(err)
+      @sequences = sequences || [1]
+
+    masterRefJob = (masterRefCb) =>
+      @dbStorage.get('masterRef', masterRefCb)
+
+    masterRefCb = (err, masterRef) =>
+      if err then return cb(err)
+      @masterRef = masterRef
+      cb(null)
+
+    @dbStorage.open(openCb)
+
+
+  close: (cb) -> @queue.add(cb, (cb) => @dbStorage.close(cb))
 
 
   # High level description of the merge(commit) algorithm:

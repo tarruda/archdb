@@ -1,3 +1,3 @@
-exports.connect = connect
-exports.registerBackend = registerBackend
+exports.db = db
+exports.registerStorage = registerStorage
 exports.registerFrontend = registerFrontend

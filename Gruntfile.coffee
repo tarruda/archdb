@@ -171,7 +171,7 @@ module.exports = (grunt) ->
     data.child = spawn('./node_modules/.bin/mocha', args, opts)
     data.child.on 'close', (code) ->
       data.child = null
-      done(code is 0)
+      done(code == 0)
 
   grunt.registerTask 'build', [
     'clean'

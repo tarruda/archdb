@@ -3,6 +3,8 @@ global.run = (tests) ->
     if typeof v == 'function'
       if k == '**setup**'
         beforeEach(v)
+      else if k == '**teardown**'
+        afterEach(v)
       else
         if k.match(/^only:/)
           it.only(k.replace(/^only:/, ''), v)

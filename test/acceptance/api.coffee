@@ -62,37 +62,37 @@ apiTests =
         done())
 
 
-    'returns old values when keys are deleted': (done) ->
-      @dom1.del('3', (err, oldRef) =>
-        expect(oldRef).to.be.instanceOf(ObjectRef)
-        @dbStorage.getIndexData(oldRef, (err, oldVal) =>
-          expect(oldVal).to.deep.eql(name: 'doc3')
-          @dom1.find().all((err, rowset) =>
-            expect(rowset.total).to.eql(4)
-            expect(rows(rowset.rows)).to.deep.eql([
-              row(true, name: 'doc5')
-              row(1, name: 'doc1')
-              row(2, name: 'doc2')
-              row([4, 3], name: 'doc4')
-            ])
-            done())))
+    # 'returns old values when keys are deleted': (done) ->
+    #   @dom1.del('3', (err, oldRef) =>
+    #     expect(oldRef).to.be.instanceOf(ObjectRef)
+    #     @dbStorage.getIndexData(oldRef, (err, oldVal) =>
+    #       expect(oldVal).to.deep.eql(name: 'doc3')
+    #       @dom1.find().all((err, rowset) =>
+    #         expect(rowset.total).to.eql(4)
+    #         expect(rows(rowset.rows)).to.deep.eql([
+    #           row(true, name: 'doc5')
+    #           row(1, name: 'doc1')
+    #           row(2, name: 'doc2')
+    #           row([4, 3], name: 'doc4')
+    #         ])
+    #         done())))
 
 
-    'returns old values when keys are updated': (done) ->
-      @dom1.set(2, [1, 2], (err, oldRef) =>
-        expect(oldRef).to.be.instanceOf(ObjectRef)
-        @dbStorage.getIndexData(oldRef, (err, oldVal) =>
-          expect(oldVal).to.deep.eql(name: 'doc2')
-          @dom1.find().all((err, rowset) =>
-            expect(rowset.total).to.eql(5)
-            expect(rows(rowset.rows)).to.deep.eql([
-              row(true, name: 'doc5')
-              row(1, name: 'doc1')
-              row(2, [1, 2])
-              row('3', name: 'doc3')
-              row([4, 3], name: 'doc4')
-            ])
-            done())))
+    # 'returns old values when keys are updated': (done) ->
+    #   @dom1.set(2, [1, 2], (err, oldRef) =>
+    #     expect(oldRef).to.be.instanceOf(ObjectRef)
+    #     @dbStorage.getIndexData(oldRef, (err, oldVal) =>
+    #       expect(oldVal).to.deep.eql(name: 'doc2')
+    #       @dom1.find().all((err, rowset) =>
+    #         expect(rowset.total).to.eql(5)
+    #         expect(rows(rowset.rows)).to.deep.eql([
+    #           row(true, name: 'doc5')
+    #           row(1, name: 'doc1')
+    #           row(2, [1, 2])
+    #           row('3', name: 'doc3')
+    #           row([4, 3], name: 'doc4')
+    #         ])
+    #         done())))
 
 
     'numbers are stored inline': (done) ->
@@ -437,7 +437,7 @@ apiTests =
                     row(5, 5)
                     row(6, 6)
                     row(8, 8)
-                  ]))
+                  ])
                 @tx4.commit( =>
                   @tx4dom1.find().all((err, items) =>
                     expect(items.rows.map(noref)).to.deep.eql([
@@ -451,49 +451,49 @@ apiTests =
                         row(5, 55)
                         row(8, 8)
                       ])
-                    @tx4.domain('$history').find().all((err, items) =>
-                      expect(items.total).to.eql(13)
-                      expect(items.rows.map(mapHistory)).to.deep.eql([{
-                        type: 'Insert', domain: 'domain1', key: 1,
-                        oldValue: null, value: 1
-                      }, {
-                        type: 'Insert', domain: 'domain1', key: 2,
-                        oldValue: null, value: {name: 'two'}
-                      }, {
-                        type: 'Insert', domain: 'domain1', key: 3,
-                        oldValue: null, value: 3
-                      }, {
-                        type: 'Insert', domain: 'domain2', key: 4,
-                        oldValue: null, value: 4
-                      }, {
-                        type: 'Insert', domain: 'domain2', key: 5,
-                        oldValue: null, value: 5
-                      }, {
-                        type: 'Insert', domain: 'domain2', key: 6,
-                        oldValue: null, value: 6
-                      }, {
-                        type: 'Update', domain: 'domain1', key: 1,
-                        oldValue: 1, value: {name: 'one'}
-                      }, {
-                        type: 'Update', domain: 'domain1', key: 2,
-                        oldValue: {name: 'two'}, value: 22
-                      }, {
-                        type: 'Update', domain: 'domain2', key: 5,
-                        oldValue: 5, value: 55
-                      }, {
-                        type: 'Delete', domain: 'domain2', key: 6,
-                        oldValue: 6, value: null
-                      }, {
-                        type: 'Delete', domain: 'domain1', key: 3,
-                        oldValue: 3, value: null
-                      }, {
-                        type: 'Insert', domain: 'domain1', key: 7,
-                        oldValue: null, value: 7
-                      }, {
-                        type: 'Insert', domain: 'domain2', key: 8,
-                        oldValue: null, value: 8
-                      }])
-                      done())))))))
+                      @tx4.domain('$history').find().all((err, items) =>
+                        expect(items.total).to.eql(13)
+                        expect(items.rows.map(mapHistory)).to.deep.eql([{
+                          type: 'Insert', domain: 'domain1', key: 1,
+                          oldValue: null, value: 1
+                        }, {
+                          type: 'Insert', domain: 'domain1', key: 2,
+                          oldValue: null, value: {name: 'two'}
+                        }, {
+                          type: 'Insert', domain: 'domain1', key: 3,
+                          oldValue: null, value: 3
+                        }, {
+                          type: 'Insert', domain: 'domain2', key: 4,
+                          oldValue: null, value: 4
+                        }, {
+                          type: 'Insert', domain: 'domain2', key: 5,
+                          oldValue: null, value: 5
+                        }, {
+                          type: 'Insert', domain: 'domain2', key: 6,
+                          oldValue: null, value: 6
+                        }, {
+                          type: 'Update', domain: 'domain1', key: 1,
+                          oldValue: 1, value: {name: 'one'}
+                        }, {
+                          type: 'Update', domain: 'domain1', key: 2,
+                          oldValue: {name: 'two'}, value: 22
+                        }, {
+                          type: 'Update', domain: 'domain2', key: 5,
+                          oldValue: 5, value: 55
+                        }, {
+                          type: 'Delete', domain: 'domain2', key: 6,
+                          oldValue: 6, value: null
+                        }, {
+                          type: 'Delete', domain: 'domain1', key: 3,
+                          oldValue: 3, value: null
+                        }, {
+                          type: 'Insert', domain: 'domain1', key: 7,
+                          oldValue: null, value: 7
+                        }, {
+                          type: 'Insert', domain: 'domain2', key: 8,
+                          oldValue: null, value: 8
+                        }])
+                        done()))))))))
 
 
       'with key/value conflict':
@@ -512,26 +512,26 @@ apiTests =
                     row(4, 4)
                     row(5, 555)
                     row(6, 6)
-                  ]))
-                @tx3.commit((err) =>
-                  expect(err).to.be.instanceOf(ConflictError)
-                  expect(err.conflicts).to.deep.eql([{
-                    index: 'domain1'
-                    key: 1
-                    originalValue: 1
-                    currentValue: {name: 'one'}
-                  }, {
-                    key: 2
-                    originalValue: {name: 'two'}
-                    index: 'domain1'
-                    currentValue: 22
-                  }, {
-                    index: 'domain2'
-                    key: 5
-                    originalValue: 5
-                    currentValue: 55
-                  }])
-                  done()))))
+                  ])
+                  @tx3.commit((err) =>
+                    expect(err).to.be.instanceOf(ConflictError)
+                    expect(err.conflicts).to.deep.eql([{
+                      index: 'domain1'
+                      key: 1
+                      originalValue: 1
+                      currentValue: {name: 'one'}
+                    }, {
+                      key: 2
+                      originalValue: {name: 'two'}
+                      index: 'domain1'
+                      currentValue: 22
+                    }, {
+                      index: 'domain2'
+                      key: 5
+                      originalValue: 5
+                      currentValue: 55
+                    }])
+                    done())))))
 
 
         'tx4, tx5': (done) ->
@@ -901,13 +901,16 @@ testApi = (options, init) ->
   suite[title] =
     '**setup**': (done) ->
       init(=>
-        @db = connect(options)
-        @dbStorage = @db.dbStorage
-        @db.begin((err, transaction) =>
-          @tx = transaction
-          @dom1 = @tx.domain(domain1)
-          @dom2 = @tx.domain(domain2)
-          done()))
+        @db = db(options)
+        @db.open((err) =>
+          if err then throw err
+          @db.begin((err, transaction) =>
+            @tx = transaction
+            @dom1 = @tx.domain(domain1)
+            @dom2 = @tx.domain(domain2)
+            done())))
+    '**teardown**': (done) -> @db.close(done)
+
 
   for own k, v of apiTests
     suite[title][k] = v

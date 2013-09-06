@@ -7,3 +7,5 @@
 *.tgz
 Gruntfile.coffee
 karma.conf.js
+/.tmpDb/
+/.tmpLevelDb/
