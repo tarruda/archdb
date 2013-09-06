@@ -1,7 +1,7 @@
 {ObjectRef} = require('../../src/util')
-{IndexRow} = require('../../src/local_index')
+{DomainRow} = require('../../src/domain_base')
 {ConflictError} = require('../../src/errors')
-require('../../src/local_database')
+require('../../src/local/database')
 
 
 domain1 = 'domain1'
@@ -9,7 +9,7 @@ domain2 = 'domain2'
 
 
 apiTests =
-  'LocalIndex':
+  'LocalDomain':
     '**setup**': (done) ->
       @dom1.ins(name: 'doc1')
       @dom1.ins(name: 'doc2')
@@ -819,7 +819,7 @@ cursorApiTests =
   '**setup**': (done) ->
 
 
-row = (key, value) -> new IndexRow(key, value, null)
+row = (key, value) -> new DomainRow(key, value, null)
 
 
 rows = (array) -> array.map(noref)

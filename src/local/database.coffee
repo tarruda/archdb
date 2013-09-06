@@ -1,10 +1,10 @@
-{ObjectRef, JobQueue, Uid, UidGenerator, ObjectType, typeOf} =
-  require('./util')
-{DbError, ConflictError} = require('./errors')
-{AvlTree} = require('./avl')
-{HistoryEntryType} = require('./local_index')
-BitArray = require('./bit_array')
-LocalRevision = require('./local_revision')
+{ObjectRef, JobQueue, UidGenerator, ObjectType, typeOf} =
+  require('../util')
+{DbError, ConflictError} = require('../errors')
+{AvlTree} = require('../avl')
+{HistoryEntryType} = require('../history_domain')
+BitArray = require('../bit_array')
+LocalRevision = require('./revision')
 
 
 class LocalDatabase

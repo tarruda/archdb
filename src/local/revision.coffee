@@ -1,8 +1,7 @@
-{AsyncEmitter, Uid, JobQueue, UidGenerator, ObjectRef} = require('./util')
-{DbError} = require('./errors')
-{AvlTree} = require('./avl')
-{LocalIndex} = require('./local_index')
-{HistoryIndex} = require('./history_index')
+{AsyncEmitter, Uid, JobQueue, UidGenerator, ObjectRef} = require('../util')
+{DbError} = require('../errors')
+{AvlTree} = require('../avl')
+{LocalDomain, LocalHistoryDomain} = require('./domain')
 
 
 class LocalRevision extends AsyncEmitter
@@ -43,7 +42,7 @@ class LocalRevision extends AsyncEmitter
 
 
   historyDomain: ->
-    rv = new HistoryIndex(@dbStorage, @queue, @hist, @master)
+    rv = new LocalHistoryDomain(@dbStorage, @queue, @hist, @master)
 
     committedCb = =>
       rv.tree = @hist
@@ -60,7 +59,7 @@ class LocalRevision extends AsyncEmitter
         id: null
         name: name
     tree = cacheEntry.tree
-    rv = new LocalIndex(name, @db, @dbStorage, @queue, tree, @hist,
+    rv = new LocalDomain(name, @db, @dbStorage, @queue, tree, @hist,
       @uidGenerator)
     
     getIdJob = (cb) =>
