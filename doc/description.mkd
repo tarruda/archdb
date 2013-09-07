@@ -3,6 +3,13 @@ processing framework and support for multi-document atomic transactions.
 Documents are partitioned by domain, and every interaction must be done through
 a transaction/revision.
 
+Documents are automatically sorted by key when querying(optionally in reverse
+order). Keys can be any of the following types:
+
+- Any javascript primitive
+- Date objects
+- Array objects containing any other valid key(will sort by each individual item)
+
 Quick API overview:
 
 Database object methods:
@@ -18,6 +25,18 @@ Domain object methods:
  - set: save/update the object under the specified key
  - del: deletes object under specified key
  - find: returns a cursor object(accepts an optional query argument)
+
+Queries are plain js objects with the following optional properties:
+ - $eq: key equals to
+ - $lte: less or equal than key
+ - $lt: less than key
+ - $gte: greater or equal than key
+ - $gt: greater than key
+ - $like: string or array key that 'starts with' prefix(similar to 
+   'LIKE string%' in SQL databases, but works with arrays too)
+ - $rev: iterate database in reverse order
+ - $limit: limit rows
+ - $skip: skip n rows
 
 Cursor object methods:
  - each: pass a callback to iterate through each row
