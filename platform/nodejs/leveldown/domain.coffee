@@ -10,6 +10,9 @@ BitArray = require('../../../src/bit_array')
 {HISTORY_ID, INDEX_PREFIX, VALUE_PREFIX} = require('./constants')
 
 
+MAX_REV_ID = 0xffffffffffffffff
+
+
 keyToBuffer = (type, key) ->
   bytes = key.getBytes()
   bytes.unshift(type)
@@ -27,6 +30,7 @@ bufferToKey = (buffer) ->
 
 valuePrefix = new Buffer([VALUE_PREFIX])
 
+
 class LeveldownDomain extends DomainBase
   constructor: (@id, @db, @rev, @leveldown, @queue, @uidGenerator) ->
 
@@ -35,8 +39,29 @@ class LeveldownDomain extends DomainBase
     query)
 
 
+  getAll: (key, cb) ->
+    nextCb = (err, key, value) ->
+
+
+    opts =
+      limit: -1
+      keyAsBuffer: true
+      valueAsBuffer: true
+      start: keyToBuffer(INDEX_PREFIX, new BitArray([@id, key]))
+      end: keyToBuffer(INDEX_PREFIX, new BitArray([@id, key, MAX_REV_ID]))
+    iterator = @leveldown.iterator(opts)
+
+
   setIndex: (key, value, cb) ->
     oldValue = undef
+
+    getCacheCb = (err, old) =>
+      if err
+        if /notfound/i.test(err.message)
+          # search on the default index namespace
+        return cb(err)
+
+
 
     getCb = (err, old) =>
       if err and not /notfound/i.test(err.message) then return cb(err)
@@ -51,8 +76,9 @@ class LeveldownDomain extends DomainBase
       if err then return cb(err)
       cb(null, oldValue)
 
-    key = keyToBuffer(1, new BitArray([@id, key]))
-    @rev.get(key, getCb)
+    cacheKey = keyToBuffer(REVISION_CACHE_PREFIX,
+      new BitArray([@rev.id, @id, key]))
+    @rev.get(cacheKey, getCacheCb)
 
 
   delIndex: (key, value, cb) ->
