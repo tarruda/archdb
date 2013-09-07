@@ -1,90 +1,100 @@
+{writeUInt64BE, readUInt64BE} = require('int53')
+
 {ObjectRef, Emitter, ObjectType, typeOf} = require('../../../src/util')
+{ObjectRef} = require('../../../src/util')
 {CursorError} = require('../../../src/errors')
+{DomainBase, CursorBase} = require('../../../src/domain_base')
+{HistoryEntryType} = require('../../../src/domain_base')
 BitArray = require('../../../src/bit_array')
-{LocalDomain, LocalCursor, HistoryEntryType} =
-  require('../../../src/local/domain')
+{encode, decode} = require('../msgpack')
+{HISTORY_ID, INDEX_PREFIX, VALUE_PREFIX} = require('./constants')
 
 
-# keyToBuffer = (key) ->
-#   return new
+keyToBuffer = (type, key) ->
+  bytes = key.getBytes()
+  bytes.unshift(type)
+  return new Buffer(bytes)
 
 
+bufferToKey = (buffer) ->
+  rv = new BitArray()
 
-class LeveldownDomain extends LocalDomain
-  constructor: (@name, @db, @leveldown, @queue, @uidGenerator) ->
+  for i in [1...buffer.length]
+    rv.write(buffer[i], 8)
 
-
-  find: (query) -> new LeveldownCursor(@db, @leveldown, @queue, query)
-
-
-  setJob: (key, value, cb) ->
-    old = newValue = null; type = typeOf(value)
-
-    refCb = (err, ref) => set(ref)
-
-    set = (ref) =>
-      newValue = ref
-      @tree.set(key, ref, setCb)
-
-    setCb = (err, oldValue) =>
-      if err then return cb(err, null)
-      if @hist
-        if oldValue
-          if (oldValue instanceof ObjectRef and
-          not oldValue.equals(newValue)) or
-          oldValue != newValue
-            old = oldValue
-            he = [HistoryEntryType.Update, @id, key, oldValue, newValue]
-        else
-          he = [HistoryEntryType.Insert, @id, key, newValue]
-        if he then @saveHistory(he, histCb)
-        else cb(null, newValue)
-        return
-      cb(null, old)
-
-    histCb = (err) =>
-      if err then return cb(err, null)
-      cb(null, old)
-
-    switch type
-      # small fixed-length values are stored inline
-      when ObjectType.ObjectRef, ObjectType.Boolean, ObjectType.Number
-        set(value)
-      else
-        @dbStorage.saveIndexData(value, refCb)
+  return rv
 
 
-  delJob: (key, cb) ->
-    old = null
+valuePrefix = new Buffer([VALUE_PREFIX])
 
-    delCb = (err, oldValue) =>
-      if err then return cb(err, null)
-      if @hist
-        if oldValue
-          old = oldValue
-          he = [HistoryEntryType.Delete, @id, key, oldValue]
-          return @saveHistory(he, histCb)
-      cb(null, null)
-
-    histCb = (err) =>
-      if err then return cb(err, null)
-      cb(null, old)
-
-    @tree.del(key, delCb)
+class LeveldownDomain extends DomainBase
+  constructor: (@id, @db, @rev, @leveldown, @queue, @uidGenerator) ->
 
 
-  saveHistory: (historyEntry, cb) ->
-    key = @uidGenerator.generate()
-    @hist.set(key, historyEntry, cb)
+  find: (query) -> new LeveldownCursor(@id, @db, @rev, @leveldown, @queue,
+    query)
 
 
-class LeveldownCursor extends LocalCursor
-  constructor: (@db, @leveldown, @queue, @query) ->
-    @closed = false
-    @started = false
-    @err = null
-    @nextNodeCb = null
-    @thenCb = null
+  setIndex: (key, value, cb) ->
+    oldValue = undef
+
+    getCb = (err, old) =>
+      if err and not /notfound/i.test(err.message) then return cb(err)
+      oldValue = old
+      encode(value, encodeValueCb)
+
+    encodeValueCb = (err, encoded) =>
+      if err then return cb(err)
+      @rev.put(key, encoded, putCb)
+
+    putCb = (err) =>
+      if err then return cb(err)
+      cb(null, oldValue)
+
+    key = keyToBuffer(1, new BitArray([@id, key]))
+    @rev.get(key, getCb)
+
+
+  delIndex: (key, value, cb) ->
+    oldValue = undef
+
+    getCb = (err, old) =>
+      if err and not /notfound/i.test(err.message) then return cb(err)
+      oldValue = old
+      @rev.del(key, delCb)
+
+    delCb = (err) =>
+      if err then return cb(err)
+      cb(null, oldValue)
+
+    key = keyToBuffer(1, new BitArray([@id, key]))
+    @rev.get(key, getCb)
+
+
+  setHistoryIndex: (key, historyEntry, cb) ->
+    encodeValueCb = (err, encoded) =>
+      if err then return cb(err)
+      @rev.put(key, encoded, cb)
+
+    key = keyToBuffer(1, new BitArray([HISTORY_ID, key]))
+    encode(historyEntry, encodeValueCb)
+
+
+  saveValue: (value, cb) ->
+    encodeCb = (err, encoded) =>
+      if err then return cb(err)
+      @rev.putValue(key, ref, encoded, cb)
+
+    ref = new ObjectRef(@uid++)
+    key = new Buffer(8)
+    writeUInt64BE(ref.valueOf(), key, 0)
+    key = Buffer.concat([valuePrefix, key.slice(1)], 8)
+    encode(value, null, encodeCb)
+
+
+class LeveldownCursor extends CursorBase
+  constructor: (@id, @db, @rev, @leveldown, queue, query) ->
+    super(queue, query)
     @iterator = null
 
 

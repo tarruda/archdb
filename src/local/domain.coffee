@@ -8,72 +8,23 @@ class LocalDomain extends DomainBase
   constructor: (@name, @db, @dbStorage, @queue, @tree, @hist, @uidGenerator) ->
 
 
-  find: (query) -> new LocalCursor(@dbStorage, @queue, @tree, query)
+  find: (query) -> new LocalCursor(@dbStorage, @tree, @queue, query)
 
 
-  setJob: (key, value, cb) ->
-    old = newValue = null; type = typeOf(value)
-
-    refCb = (err, ref) => set(ref)
-
-    set = (ref) =>
-      newValue = ref
-      @tree.set(key, ref, setCb)
-
-    setCb = (err, oldValue) =>
-      if err then return cb(err, null)
-      if @hist
-        if oldValue
-          if (oldValue instanceof ObjectRef and
-          not oldValue.equals(newValue)) or
-          oldValue != newValue
-            old = oldValue
-            he = [HistoryEntryType.Update, @id, key, oldValue, newValue]
-        else
-          he = [HistoryEntryType.Insert, @id, key, newValue]
-        if he then @saveHistory(he, histCb)
-        else cb(null, newValue)
-        return
-      cb(null, old)
-
-    histCb = (err) =>
-      if err then return cb(err, null)
-      cb(null, old)
-
-    switch type
-      # small fixed-length values are stored inline
-      when ObjectType.ObjectRef, ObjectType.Boolean, ObjectType.Number
-        set(value)
-      else
-        @dbStorage.saveIndexData(value, refCb)
+  setIndex: (key, value, cb) -> @tree.set(key, value, cb)
 
 
-  delJob: (key, cb) ->
-    old = null
-
-    delCb = (err, oldValue) =>
-      if err then return cb(err, null)
-      if @hist
-        if oldValue
-          old = oldValue
-          he = [HistoryEntryType.Delete, @id, key, oldValue]
-          return @saveHistory(he, histCb)
-      cb(null, null)
-
-    histCb = (err) =>
-      if err then return cb(err, null)
-      cb(null, old)
-
-    @tree.del(key, delCb)
+  delIndex: (key, cb) -> @tree.del(key, cb)
 
 
-  saveHistory: (historyEntry, cb) ->
-    key = @uidGenerator.generate()
-    @hist.set(key, historyEntry, cb)
+  setHistoryIndex: (key, historyEntry, cb) -> @hist.set(key, historyEntry, cb)
+
+
+  saveValue: (value, cb) -> @dbStorage.saveIndexData(value, cb)
 
 
 class LocalCursor extends CursorBase
-  constructor: (@dbStorage, queue, @tree, query) ->
+  constructor: (@dbStorage, @tree, queue, query) ->
     super(queue, query)
 
 
@@ -127,10 +78,10 @@ class LocalCursor extends CursorBase
   fetchKey: (key, cb) -> @tree.get(key, cb)
 
 
-  fetchObj: (ref, cb) -> @dbStorage.getIndexData(ref, cb)
+  fetchValue: (ref, cb) -> @dbStorage.getIndexData(ref, cb)
 
 
-  fetchValue: (key, val, cb) ->
+  fetchRow: (key, val, cb) ->
     rv = new DomainRow(key, null, null)
 
     refCb = (err, obj) =>
@@ -140,7 +91,7 @@ class LocalCursor extends CursorBase
 
     if val instanceof ObjectRef
       rv.ref = val
-      return @fetchObj(val, refCb)
+      return @fetchValue(val, refCb)
 
     refCb(null, val)
 
@@ -159,7 +110,7 @@ class LocalHistoryDomain extends LocalDomain
 
 class LocalHistoryCursor extends LocalCursor
   constructor: (dbStorage, queue, tree, query, @master) ->
-    super(dbStorage, queue, tree, query)
+    super(dbStorage, tree, queue, query)
 
 
   fetchDomainName: (id, cb) ->

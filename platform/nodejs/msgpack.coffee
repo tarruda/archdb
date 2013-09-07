@@ -414,7 +414,7 @@ decode = (b, read, cb) ->
       compressed = b.slice(offset, compressedLen + offset)
       trail = b.slice(compressedLen)
       decompress[compression](compressed, (err, buffer) =>
-        if err then console.log(err)
+        if err then return cb(err)
         b = Buffer.concat([buffer, trail])
         offset = 0
         decodeRec(cb))

@@ -1,0 +1,6 @@
+exports.HISTORY_ID = 0
+exports.METADATA_PREFIX = 0
+exports.INDEX_PREFIX = 1
+exports.VALUE_PREFIX = 2
+exports.REVISION_CACHE_PREFIX = 3
+

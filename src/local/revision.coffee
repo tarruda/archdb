@@ -5,7 +5,7 @@
 
 
 class LocalRevision extends AsyncEmitter
-  constructor: (db, dbStorage, masterRef, @suffix) ->
+  constructor: (@db, @dbStorage, @originalMasterRef, @suffix) ->
     errorCb = (err) =>
       @emit('error', err)
 
@@ -14,9 +14,6 @@ class LocalRevision extends AsyncEmitter
       @hist = tree
 
     super()
-    @db = db
-    @dbStorage = dbStorage
-    @originalMasterRef = masterRef
     @uidGenerator = new UidGenerator(suffix)
     # this id is used mainly to filter out history entries created after
     # this revision when executing the merge algorithm
@@ -24,7 +21,7 @@ class LocalRevision extends AsyncEmitter
     @queue = new JobQueue()
     @queue.on('error', errorCb)
     @treeCache = {}
-    @master = new AvlTree(dbStorage, masterRef, 0)
+    @master = new AvlTree(dbStorage, @originalMasterRef, 0)
     @hist = new IndexProxy(HISTORY, @master, dbStorage, @queue, historyCb)
 
 

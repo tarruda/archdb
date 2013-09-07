@@ -1,6 +1,7 @@
-{Emitter, ObjectType, typeOf} = require('./util')
+{ObjectRef, Emitter, ObjectType, typeOf} = require('./util')
 BitArray = require('./bit_array')
 {CursorError} = require('./errors')
+{HistoryEntryType} = require('./history_domain')
 
 
 class DomainBase
@@ -34,13 +35,66 @@ class DomainBase
     @queue.add(cb, job)
 
 
-  find: -> throw new Error('not implemented')
+  setJob: (key, value, cb) ->
+    old = newValue = null; type = typeOf(value)
+
+    refCb = (err, ref) => set(ref)
+
+    set = (ref) =>
+      newValue = ref
+      # @tree.set(key, ref, setCb)
+      @setIndex(key, ref, setCb)
+
+    setCb = (err, oldValue) =>
+      if err then return cb(err, null)
+      if @hist
+        if oldValue
+          if (oldValue instanceof ObjectRef and
+          not oldValue.equals(newValue)) or
+          oldValue != newValue
+            old = oldValue
+            he = [HistoryEntryType.Update, @id, key, oldValue, newValue]
+        else
+          he = [HistoryEntryType.Insert, @id, key, newValue]
+        if he then @saveHistory(he, histCb)
+        else cb(null, newValue)
+        return
+      cb(null, old)
+
+    histCb = (err) =>
+      if err then return cb(err, null)
+      cb(null, old)
+
+    switch type
+      # small fixed-length values are stored inline
+      when ObjectType.ObjectRef, ObjectType.Boolean, ObjectType.Number
+        set(value)
+      else
+        @saveValue(value, refCb)
 
 
-  setJob: -> throw new Error('not implemented')
+  delJob: (key, cb) ->
+    old = null
+
+    delCb = (err, oldValue) =>
+      if err then return cb(err, null)
+      if @hist
+        if oldValue
+          old = oldValue
+          he = [HistoryEntryType.Delete, @id, key, oldValue]
+          return @saveHistory(he, histCb)
+      cb(null, null)
+
+    histCb = (err) =>
+      if err then return cb(err, null)
+      cb(null, old)
+
+    @delIndex(key, delCb)
 
 
-  delJob: -> throw new Error('not implemented')
+  saveHistory: (historyEntry, cb) ->
+    key = @uidGenerator.generate()
+    @setHistoryIndex(key, historyEntry, cb)
 
 
 class CursorBase extends Emitter
@@ -51,9 +105,6 @@ class CursorBase extends Emitter
     @err = null
     @nextNodeCb = null
     @thenCb = null
-
-
-  count: -> throw new Error('not implemented')
 
 
   all: (cb) ->
@@ -98,9 +149,9 @@ class CursorBase extends Emitter
     visitCb = (err, next, key, val) =>
       @nextNodeCb = next
       if err or not next then return @emit('end', err)
-      @fetchValue(key, val, fetchValueCb)
+      @fetchRow(key, val, fetchRowCb)
 
-    fetchValueCb = (err, row) =>
+    fetchRowCb = (err, row) =>
       if err then return @emit('end', err)
       cb.call(this, row)
 
@@ -199,18 +250,6 @@ class CursorBase extends Emitter
       if @query.$rev then return @findRangeDesc(gte, gt, lte, lt, cb)
 
     @findRangeAsc(gte, gt, lte, lt, cb)
-
-
-  findRangeAsc: (gte, gt, lte, lt, cb) -> throw new Error('not implemented')
-
-
-  findRangeDesc: (gte, gt, lte, lt, cb) -> throw new Error('not implemented')
-
-  
-  fetchKey: (ref, cb) -> throw new Error('not implemented')
-
-
-  fetchValue: (ref, cb) -> throw new Error('not implemented')
 
 
 class DomainRow

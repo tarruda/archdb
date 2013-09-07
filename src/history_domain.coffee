@@ -1,4 +1,3 @@
-{DomainBase, CursorBase} = require('./domain_base')
 {ObjectRef} = require('./util')
 {InvalidOperationError, CorruptedStateError} = require('./errors')
 Mixin = require('./mixin')
@@ -33,7 +32,7 @@ class HistoryDomainMixin extends Mixin
 
 
 class HistoryCursorMixin extends Mixin
-  fetchValue: (key, val, cb) ->
+  fetchRow: (key, val, cb) ->
     getOld = getNew = false
     rv = new HistoryRow(new Date(key.getTime()), HistoryEntryType[val[0]],
         null, val[2], null, null, null, null)
@@ -41,13 +40,13 @@ class HistoryCursorMixin extends Mixin
     getDomainNameCb = (err, name) =>
       if err then return cb(err, null)
       rv.domain = name
-      if getOld then return @fetchObj(rv.oldRef, getOldCb)
+      if getOld then return @fetchValue(rv.oldRef, getOldCb)
       getOldCb(null, rv.oldValue)
 
     getOldCb = (err, value) =>
       if err then return cb(err, null)
       rv.oldValue = value
-      if getNew then return @fetchObj(rv.ref, getNewCb)
+      if getNew then return @fetchValue(rv.ref, getNewCb)
       getNewCb(null, rv.value)
 
     getNewCb = (err, value) =>
