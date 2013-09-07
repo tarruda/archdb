@@ -74,6 +74,8 @@ to be executed at special database events. For example, to build a lazy view
 tx.domain('$on-before-query:average_customer_age').ins({
   type: 'vm.js',
   code: function() {
+    // This should actually be a string, I'm showing as a function to get
+    // syntax highlighting
     var historyQuery;
     var lastProcessedEntry = domain('average_customer_age').get(0);
     var result = domain('average_customer_age').get(1) || {count: 0, age_sum: 0};
