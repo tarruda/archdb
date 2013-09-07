@@ -1,0 +1,118 @@
+ArchDB is a document-oriented MVCC key/value store with a powerful data
+processing framework and support for multi-document atomic transactions.
+Documents are partitioned by domain, and every interaction must be done through
+a transaction/revision.
+
+Quick API overview:
+
+Database object methods:
+ - begin: returns new Revision object
+
+Revision(transaction) object methods:
+ - domain: returns a domain object
+ - commit: merges modifications atomically, checking for conflicts on
+   concurrent updates of the same key
+
+Domain object methods:
+ - ins: inserts the object under a automatically generated numeric key
+ - set: save/update the object under the specified key
+ - del: deletes object under specified key
+ - find: returns a cursor object(accepts an optional query argument)
+
+Cursor object methods:
+ - each: pass a callback to iterate through each row
+ - all: returns rowset with count/rows that matches the query
+ - one: returns the first row that matches the query
+
+Eg:
+
+```js
+var db = archdb.db({type: 'local', storage: 'fs', path: '/path/to/dir'});
+db.begin(function(err, tx) {
+  var customers = tx.domain('customers');
+  customers.ins({name: 'quentin tarantino', age: 40});
+  customers.ins({name: 'john travolta', age: 50});
+  customers.set(2, {name: 'john doe'});
+  customers.ins({name: 'harvey keitel', age: 60}, function(err, key) {
+    customers.find({limit: 1, skip: 1}).all(err, rowset) {
+      console.log(rowset) // {total: 3, rows: [{key: 2, value: {name: 'john travolta', age: 50}}]}
+      customers.find({$eq: key}).one(function(err, row) {
+        console.log(row) // {key: 3, value: {name: 'harvey keitel', age: 60}}
+        customers.del(3);
+      });
+    });
+    console.log('done!');
+  });
+});
+```
+
+There domain names starting with '$' are special to the database. For example,
+there's the '$history' domain that logs every update made on the database:
+```js
+tx.domain('$history').find().all(function(err, rowset) {
+  console.log(rowset.rows) /* prints:
+  [
+    {type: 'Insert', domain: 'customers', key: 1, oldValue: null,
+     value: {name: 'quentin tarantino', age: 40}},
+    {type: 'Insert', domain: 'customers', key: 1, oldValue: null,
+     value: {name: 'john travolta', age: 50}},
+    {type: 'Insert', domain: 'customers', key: 2, oldValue: null,
+     value: {name: 'harvey keitel', age: 60}},
+    {type: 'Update', domain: 'customers', key: 2,
+     oldValue: {name: 'john travolta', age: 50}, value: {name: 'john doe'}},
+    {type: 'Delete', domain: 'customers', key: 3,
+     oldValue: {name: 'harvey keitel', age: 60}, value: null}
+  ]
+  */
+});
+```
+
+Other important special domains are the 'hook domains' which store procedures
+to be executed at special database events. For example, to build a lazy view
+ that shows the sum or average ages of all customers:
+```js
+tx.domain('$on-before-query:average_customer_age').ins({
+  type: 'vm.js',
+  code: '
+    var historyQuery;
+    var lastProcessedEntry = domain('average_customer_age').get(0);
+    var result = domain('average_customer_age').get(1) || {count: 0, age_sum: 0};
+
+    if (lastProcessedEntry)
+      historyQuery = {gt: lastProcessedEntry};
+
+    for (let entry of domain('$history').find(historyQuery).each()) {
+      if (entry.type == 'Insert') {
+        result.total++;
+        result.age_sum += entry.value.age;
+      } else if (entry.type == 'Delete') {
+        result.total--;
+        result.age_sum -= entry.oldValue.age;
+      } else {
+        result.age_sum -= entry.oldValue.age;
+        result.age_sum += entry.value.age;
+      }
+      lastProcessedEntry = entry.timestamp;
+    }
+    domain('average_customer_age').set(0, lastProcessedEntry);
+    domain('average_customer_age').set(1, result);
+  '
+
+})
+```
+
+In the above hook, type means the 'hook server'(similar to couchdb view server)
+which will be responsible for executing the hook. In that case it will be run
+by vm.js a javascript vm implemented in pure javascript(thus the nice
+syncronous harmony iterator API)
+
+Since the $history domain is keyed by unique timestamp, the
+'average_customer_age view' will never process the same data again as long
+as one keeps track of the last processed history entry like the above example.
+
+Some things that can be done with hooks:
+- Anything that can be done with couchdb map/reduce framework
+- Index existingdomains by other fields(each history entry contains
+  ref/oldRef property that can be used to create other domains that reference
+  the same data)
+- Validate/enforce schemas(with $on-before-{insert,update,delete} hooks)
