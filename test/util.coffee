@@ -6,7 +6,7 @@
 tests =
   'util':
     'JobQueue':
-      '**setup**': -> @queue = new JobQueue()
+      beforeEach: -> @queue = new JobQueue()
 
 
       'runs async jobs serially': (done) ->
@@ -79,7 +79,7 @@ tests =
 
 
     'Emitter':
-      '**setup**': ->
+      beforeEach: ->
         @cb = =>
           @args = @args.concat(Array.prototype.slice.call(arguments))
 
@@ -142,7 +142,7 @@ tests =
 
 
     'LinkedList':
-      '**setup**': ->
+      beforeEach: ->
         @items = =>
           rv = []
           @l.each((i) -> rv.push(i))
@@ -266,7 +266,7 @@ tests =
 
     'UidGenerator': ->
       'generate':
-        '**setup**': ->
+        beforeEach: ->
           @suffix = '05050505050505'
           @time = 11
           @generator = new UidGenerator(suffix)

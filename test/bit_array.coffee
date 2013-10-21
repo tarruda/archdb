@@ -4,7 +4,7 @@ BitArray = require('../src/bit_array')
 
 tests =
   'BitArray':
-    '**setup**': ->
+    beforeEach: ->
       @array = new BitArray()
 
 
@@ -250,7 +250,7 @@ tests =
 
 
   'pack and compare keys':
-    '**setup**': ->
+    beforeEach: ->
       @keys = []
       @sorted = ->
         for arg in arguments

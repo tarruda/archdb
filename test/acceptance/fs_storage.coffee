@@ -10,7 +10,7 @@ tmpDb = path.resolve('.tmpDb')
 
 suite =
   'fs_storage':
-    '**setup**': ->
+    beforeEach: ->
       if fs.existsSync(tmpDb)
         wrench.rmdirSyncRecursive(tmpDb)
 

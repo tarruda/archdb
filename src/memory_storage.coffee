@@ -49,6 +49,7 @@ class MemoryStorage
     cb(null, ref)
 
 
+
 registerStorage('memory', MemoryStorage)
 
 

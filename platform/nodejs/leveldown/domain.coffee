@@ -31,25 +31,83 @@ bufferToKey = (buffer) ->
 valuePrefix = new Buffer([VALUE_PREFIX])
 
 
+getOld = (leveldown, id, rev, key, cb) ->
+  value = null
+
+  nextCb = (err, key, val) =>
+    if err then return cb(err)
+    if not arguments.length then return cb()
+    value = val
+    decode(bufferToKey(key), null, decodeKeyCb)
+
+  decodeKeyCb = (err, decoded) =>
+    if err then return cb(err)
+    key = decoded.normalize()
+    if key[2] of rev.uncommitted
+      return iterator.next(nextCb)
+    decode(value, null, decodeValueCb)
+
+  decodeValueCb = (err, decoded) =>
+    if err then return cb(err)
+    cb(null, decoded)
+
+  cacheKey = keyToBuffer(REVISION_CACHE_PREFIX,
+    new BitArray([@rev.id, @id, key]))
+  @ld.get(cacheKey, getCacheCb)
+  # search on the default index namespace, we want the entry with the
+  # biggest committed transaction id
+  opts =
+    keys: false
+    reverse: true
+    start: key
+  iterator = leveldown.iterator(opts)
+  iterator.next(nextCb)
+
+
 class LeveldownDomain extends DomainBase
-  constructor: (@id, @db, @rev, @leveldown, @queue, @uidGenerator) ->
+  constructor: (@id, @db, @rev, @ld, @queue, @uidGenerator) ->
 
 
-  find: (query) -> new LeveldownCursor(@id, @db, @rev, @leveldown, @queue,
+  find: (query) -> new LeveldownCursor(@id, @db, @rev, @ld, @queue,
     query)
 
 
-  getAll: (key, cb) ->
-    nextCb = (err, key, value) ->
 
+  getIndex: (key, cb) ->
+    iterator = error = value = null
 
-    opts =
-      limit: -1
-      keyAsBuffer: true
-      valueAsBuffer: true
-      start: keyToBuffer(INDEX_PREFIX, new BitArray([@id, key]))
-      end: keyToBuffer(INDEX_PREFIX, new BitArray([@id, key, MAX_REV_ID]))
-    iterator = @leveldown.iterator(opts)
+    getCacheCb = (err, val) =>
+      if err and not /notfound/i.test(err.message) then return cb(err)
+      # search on the default index namespace, we want the entry with the
+      # biggest committed transaction id
+      k = keyToBuffer(INDEX_PREFIX, new BitArray([id, key, MAX_REV_ID]))
+      opts =
+        keys: false
+        reverse: true
+        start: k
+      iterator = @ld.iterator(opts)
+      iterator.next(nextCb)
+
+    nextCb = (err, key, val) =>
+      if err then return cb(err)
+      if not arguments.length then return cb()
+      value = val
+      decode(bufferToKey(key), null, decodeKeyCb)
+
+    decodeKeyCb = (err, decoded) =>
+      if err then return cb(err)
+      key = decoded.normalize()
+      if key[2] of rev.uncommitted
+        return iterator.next(nextCb)
+      decode(value, null, decodeValueCb)
+
+    decodeValueCb = (err, decoded) =>
+      if err then return cb(err)
+      cb(null, decoded)
+
+    cacheKey = keyToBuffer(REVISION_CACHE_PREFIX,
+      new BitArray([@rev.id, @id, key]))
+    @ld.get(cacheKey, getCacheCb)
 
 
   setIndex: (key, value, cb) ->
@@ -58,19 +116,20 @@ class LeveldownDomain extends DomainBase
     getCacheCb = (err, old) =>
       if err
         if /notfound/i.test(err.message)
-          # search on the default index namespace
+          k = keyToBuffer(INDEX_PREFIX, new BitArray([id, key, MAX_REV_ID]))
+          return getOld(@ld, @id, @rev, k, getCb)
         return cb(err)
-
-
+      oldValue = old
+      encode(value, encodeValueCb)
 
     getCb = (err, old) =>
-      if err and not /notfound/i.test(err.message) then return cb(err)
-      oldValue = old
+      if err then return cb(err)
+      oldValue = value
       encode(value, encodeValueCb)
 
     encodeValueCb = (err, encoded) =>
       if err then return cb(err)
-      @rev.put(key, encoded, putCb)
+      @ld.put(key, encoded, putCb)
 
     putCb = (err) =>
       if err then return cb(err)
@@ -78,23 +137,37 @@ class LeveldownDomain extends DomainBase
 
     cacheKey = keyToBuffer(REVISION_CACHE_PREFIX,
       new BitArray([@rev.id, @id, key]))
-    @rev.get(cacheKey, getCacheCb)
+    @ld.get(cacheKey, getCacheCb)
 
 
   delIndex: (key, value, cb) ->
     oldValue = undef
 
-    getCb = (err, old) =>
-      if err and not /notfound/i.test(err.message) then return cb(err)
+    getCacheCb = (err, old) =>
+      if err
+        if /notfound/i.test(err.message)
+          k = keyToBuffer(INDEX_PREFIX, new BitArray([id, key, MAX_REV_ID]))
+          return getOld(@ld, @id, @rev, k, getCb)
+        return cb(err)
       oldValue = old
-      @rev.del(key, delCb)
+      encode(value, encodeValueCb)
 
-    delCb = (err) =>
+    getCb = (err, old) =>
+      if err then return cb(err)
+      oldValue = value
+      encode(value, encodeValueCb)
+
+    encodeValueCb = (err, encoded) =>
+      if err then return cb(err)
+      @ld.put(key, encoded, putCb)
+
+    putCb = (err) =>
       if err then return cb(err)
       cb(null, oldValue)
 
-    key = keyToBuffer(1, new BitArray([@id, key]))
-    @rev.get(key, getCb)
+    cacheKey = keyToBuffer(REVISION_CACHE_PREFIX,
+      new BitArray([@rev.id, @id, key]))
+    @ld.get(cacheKey, getCacheCb)
 
 
   setHistoryIndex: (key, historyEntry, cb) ->
@@ -119,7 +192,7 @@ class LeveldownDomain extends DomainBase
 
 
 class LeveldownCursor extends CursorBase
-  constructor: (@id, @db, @rev, @leveldown, queue, query) ->
+  constructor: (@id, @db, @rev, @ld, queue, query) ->
     super(queue, query)
     @iterator = null
 
@@ -146,7 +219,7 @@ class LeveldownCursor extends CursorBase
     if end = lte or lt
       opts.end = new Buffer(end.getBytes())
 
-    @iterator = @leveldown.iterator(opts)
+    @iterator = @ld.iterator(opts)
     @iterator.next(nextCb)
 
 

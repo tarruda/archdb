@@ -2,13 +2,6 @@
 path = require 'path'
 
 module.exports = (grunt) ->
-  data =
-    # map used to store files with the debugger statement
-    # used to automatically turn debugging on/off
-    debug: null
-    # current test runner process
-    child: null
-
   grunt.initConfig
     pkg: grunt.file.readJSON('package.json')
 
@@ -82,21 +75,33 @@ module.exports = (grunt) ->
             dest: 'build/node/test.js'
           }]
 
-    check_debug:
-      all: [
-        'platform/**/*.js'
-        'platform/**/*.coffee'
-        'src/**/*.coffee'
-        'test/**/*.coffee'
-      ]
-
-    test:
-      all: [
-        'test/index.js'
-        'test/acceptance/10000.js'
-        'test/acceptance/100000.js'
-        'build/node/test.js'
-      ]
+    mocha_debug:
+      options:
+        reporter: 'dot'
+        check:[
+          'platform/**/*.js'
+          'platform/**/*.coffee'
+          'src/**/*.coffee'
+          'test/**/*.coffee'
+        ]
+      nodejs:
+        options:
+          src: [
+            'test/index.js'
+            'test/acceptance/10000.js'
+            'test/acceptance/100000.js'
+            'build/node/test.js'
+          ]
+      browser:
+        options:
+          phantomjs: true
+          listenAddress: '0.0.0.0'
+          src: [
+            'test/index.js'
+            'test/acceptance/10000.js'
+            'test/acceptance/100000.js'
+            'build/node/test.js'
+          ]
 
     watch:
       options:
@@ -110,8 +115,6 @@ module.exports = (grunt) ->
         tasks: [
           'coffeelint:changed'
           'coffee_build:nodejs'
-          'check_debug:changed'
-          'test'
         ]
       nodejs:
         files: [
@@ -122,8 +125,7 @@ module.exports = (grunt) ->
         tasks: [
           'coffeelint:changed'
           'coffee_build:nodejs'
-          'check_debug:changed'
-          'test'
+          'mocha_debug'
         ]
 
     connect:
@@ -149,29 +151,8 @@ module.exports = (grunt) ->
   grunt.loadNpmTasks 'grunt-contrib-clean'
   grunt.loadNpmTasks 'grunt-coffeelint'
   grunt.loadNpmTasks 'grunt-coffee-build'
+  grunt.loadNpmTasks 'grunt-mocha-debug'
   grunt.loadNpmTasks 'grunt-release'
-
-  grunt.registerMultiTask 'check_debug', ->
-    data.debug = {}
-    files = @filesSrc
-    for file in files
-      code = grunt.file.read(file)
-      if /^\s*debugger\s*/gm.test(code)
-        data.debug[file] = true
-      else delete data.debug[file]
-
-  grunt.registerMultiTask 'test', ->
-    done = @async()
-    args = @filesSrc
-    args = ['--compilers', 'coffee:coffee-script'].concat(args)
-    # args.unshift('--check-leaks')
-    if data.debug and Object.keys(data.debug).length
-      args.unshift('--debug-brk')
-    opts = stdio: 'inherit'
-    data.child = spawn('./node_modules/.bin/mocha', args, opts)
-    data.child.on 'close', (code) ->
-      data.child = null
-      done(code == 0)
 
   grunt.registerTask 'build', [
     'clean'
@@ -198,8 +179,7 @@ module.exports = (grunt) ->
     'clean'
     'common-rebuild'
     'coffee_build'
-    'check_debug'
-    'test'
+    'mocha_debug'
     'watch:nodejs'
   ]
 
@@ -210,10 +190,8 @@ module.exports = (grunt) ->
 
   grunt.event.on 'watch', (action, filepath) ->
     coffeelint = grunt.config.getRaw('coffeelint')
-    checkDebug = grunt.config.getRaw('check_debug')
+    mochaDebug = grunt.config.getRaw('mocha_debug')
     if /\.coffee$/.test filepath
-      checkDebug.changed = [filepath]
+      mochaDebug.options.check = filepath
       coffeelint.changed = src: filepath
       grunt.regarde = changed: ['test.js']
-      if data.child
-        data.child.kill('SIGTERM')

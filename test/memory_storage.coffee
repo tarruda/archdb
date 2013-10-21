@@ -4,7 +4,7 @@ MemoryStorage = require('../src/memory_storage')
 
 tests =
   'MemoryStorage':
-    '**setup**': ->
+    beforeEach: ->
       @mem = new MemoryStorage()
 
     'saves/retrieves objects with unique ids': (done) ->

@@ -40,7 +40,8 @@
     "chai": "~1.7.2",
     "source-map-support": "~0.2.1",
     "wrench": "~1.5.1",
-    "Faker": "~0.5.11"
+    "Faker": "~0.5.11",
+    "grunt-mocha-debug": "0.0.2"
   },
   "keywords": [
     "database",

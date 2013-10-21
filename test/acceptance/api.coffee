@@ -10,7 +10,7 @@ domain2 = 'domain2'
 
 apiTests =
   'LocalDomain':
-    '**setup**': (done) ->
+    beforeEach: (done) ->
       @dom1.ins(name: 'doc1')
       @dom1.ins(name: 'doc2')
       @dom1.set('3', name: 'doc3')
@@ -110,7 +110,7 @@ apiTests =
 
 
   'transactions/concurrency behavior':
-    '**setup**': (done) ->
+    beforeEach: (done) ->
       @dom1 = @tx.domain(domain1)
       @dom2 = @tx.domain(domain2)
       # commit initial data in 2 steps
@@ -556,7 +556,7 @@ apiTests =
 
   'special domains':
     '$history domain':
-      '**setup**': (done) ->
+      beforeEach: (done) ->
         @dom1.set(1, name: 'test1')
         @dom1.set(2, name: 'test2')
         @dom1.set(3, 33)
@@ -816,7 +816,7 @@ apiTests =
 
 
 cursorApiTests =
-  '**setup**': (done) ->
+  beforeEach: (done) ->
 
 
 row = (key, value) -> new DomainRow(key, value, null)
@@ -855,7 +855,7 @@ testCursorApi = (query, expectedStart, expectedEnd) ->
   expected = cursorApiTestExpected.slice(expectedStart, expectedEnd)
 
   return {
-    '**setup**': (done) ->
+    beforeEach: (done) ->
       @cursor = @dom1.find(query)
       @dom1.set(1, name: 'doc1')
       @dom1.set(2, name: 'doc2')
@@ -899,7 +899,7 @@ testApi = (options, init) ->
     init = (cb) -> cb()
 
   suite[title] =
-    '**setup**': (done) ->
+    beforeEach: (done) ->
       init(=>
         @db = db(options)
         @db.open((err) =>
@@ -909,7 +909,7 @@ testApi = (options, init) ->
             @dom1 = @tx.domain(domain1)
             @dom2 = @tx.domain(domain2)
             done())))
-    '**teardown**': (done) -> @db.close(done)
+    afterEach: (done) -> @db.close(done)
 
   for own k, v of apiTests
     suite[title][k] = v

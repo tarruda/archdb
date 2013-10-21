@@ -5,7 +5,7 @@ BitArray = require('../src/bit_array')
 
 tests =
   'AvlNode':
-    '**setup**': ->
+    beforeEach: ->
       @node = new AvlNode(5, 'value')
       @node.leftRef = 'abc'
       @node.rightRef = 'def'
@@ -24,7 +24,7 @@ tests =
 
 
   'AvlTree':
-    '**setup**': ->
+    beforeEach: ->
       @dbStorage = new MemoryStorage()
       @tree = new AvlTree(@dbStorage)
 
@@ -101,7 +101,7 @@ iterationHeightSuite =
 
 
   'iterate':
-    '**setup**': (done) ->
+    beforeEach: (done) ->
       @size = 80
       @ins(@tree, @size, 1, done)
 
@@ -147,7 +147,7 @@ iterationHeightSuite =
 
 
   'random access':
-    '**setup**': (done) -> @ins(@tree, 1, 80, done)
+    beforeEach: (done) -> @ins(@tree, 1, 80, done)
 
 
     'inserted keys': ->
@@ -686,9 +686,9 @@ generateInsertSuite = (suite) ->
 
 generateDeleteSuite = (suite, reverseInsert = false) ->
   if reverseInsert
-    rv = '**setup**': (done) -> @ins(@tree, 24, 1, done)
+    rv = beforeEach: (done) -> @ins(@tree, 24, 1, done)
   else
-    rv = '**setup**': (done) -> @ins(@tree, 1, 24, done)
+    rv = beforeEach: (done) -> @ins(@tree, 1, 24, done)
   for own k, v of suite
     name = k
     if /^(?:only|skip):/.test(k)
@@ -706,7 +706,7 @@ generateDeleteSuite = (suite, reverseInsert = false) ->
 
 
 generateDeleteSeqSuite = (suite) ->
-  rv = '**setup**': (done) -> @ins(@tree, 1, 24, done)
+  rv = beforeEach: (done) -> @ins(@tree, 1, 24, done)
   for own k, v of suite
     name = k
     if /^(?:only|skip):/.test(k)
@@ -726,7 +726,7 @@ generateDeleteSeqSuite = (suite) ->
 generateSuite = (title, ins, del, delSeq, inspect) ->
   rv = {}
   rv[title] =
-    '**setup**': ->
+    beforeEach: ->
       @dbStorage = new MemoryStorage()
       @tree = new AvlTree(@dbStorage)
       @ins = (args...) => ins.apply(this, args)
